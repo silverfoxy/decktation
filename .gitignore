@@ -1,0 +1,33 @@
+# Node modules
+node_modules/
+pnpm-lock.yaml
+
+# Build artifacts (keep dist/index.js but ignore other build files)
+*.log
+.DS_Store
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+
+# Dependencies installed by plugin (auto-installed on Steam Deck)
+faster_whisper/
+sounddevice/
+numpy/
+pynput/
+*.dist-info/
+*.so
+*.dll
+
+# Context file (user-specific)
+wow_context.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

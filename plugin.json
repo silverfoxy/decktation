@@ -1,0 +1,10 @@
+{
+  "name": "Decktation",
+  "author": "silverfoxy",
+  "flags": ["debug"],
+  "publish": {
+    "tags": ["voice", "dictation", "speech-to-text", "input", "chat", "gaming", "accessibility"],
+    "description": "Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using faster-whisper.",
+    "image": ""
+  }
+}
