@@ -20,7 +20,10 @@ from evdev import ecodes
 
 STATE_FILE = "/tmp/decktation_l5"
 PID_FILE = "/tmp/decktation_listener.pid"
-CONFIG_FILE = "/tmp/decktation_button_config.json"
+# Config in user home directory for persistence and write access
+CONFIG_DIR = os.path.expanduser("~/.config/decktation")
+os.makedirs(CONFIG_DIR, exist_ok=True)
+CONFIG_FILE = os.path.join(CONFIG_DIR, "button_config.json")
 
 # Button name to evdev code mapping (digital buttons - EV_KEY)
 BUTTON_CODES = {

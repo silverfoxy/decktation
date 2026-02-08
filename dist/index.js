@@ -100,7 +100,7 @@
                   title: message,
                   body: body,
                   duration: duration,
-                  critical: true
+                  critical: false
               });
           };
           // Handler for RegisterForControllerStateChanges (antiquitte style)
@@ -201,18 +201,25 @@
       const [modelLoading, setModelLoading] = React.useState(false);
       const [buttonState, setButtonState] = React.useState("None");
       const [buttons, setButtons] = React.useState(["L1", "R1"]);
+      const [showNotifications, setShowNotifications] = React.useState(true);
+      const prevRecordingRef = React__default["default"].useRef(false);
       React.useEffect(() => {
           setEnabled(logic.enabled);
           setRecording(logic.recording);
           logic.onButtonChange = () => {
               setButtonState(logic.lastButtonState);
           };
-          // Load button configuration
+          // Load button configuration and settings
           logic.serverAPI.callPluginMethod('get_button_config', {}).then((result) => {
               if (result.success && result.result) {
                   const config = result.result.config;
-                  if (config && config.buttons) {
-                      setButtons(config.buttons);
+                  if (config) {
+                      if (config.buttons) {
+                          setButtons(config.buttons);
+                      }
+                      if (config.showNotifications !== undefined) {
+                          setShowNotifications(config.showNotifications);
+                      }
                   }
               }
           });
@@ -228,12 +235,19 @@
                   setModelReady(result.result.model_ready);
                   setModelLoading(result.result.model_loading);
                   if (logic.enabled) {
-                      setRecording(result.result.recording);
+                      const isRecording = result.result.recording;
+                      // Show notification only when recording starts
+                      if (showNotifications && isRecording && !prevRecordingRef.current) {
+                          console.log("[Decktation] Showing notification - recording started");
+                          logic.notify("Recording", 1500, "🎤 Recording...");
+                      }
+                      prevRecordingRef.current = isRecording;
+                      setRecording(isRecording);
                   }
               }
           }, 1000);
           return () => clearInterval(interval);
-      }, [logic.enabled]);
+      }, [logic.enabled, showNotifications]);
       return (React__default["default"].createElement("div", null,
           React__default["default"].createElement(deckyFrontendLib.PanelSection, null,
               !serviceReady && (React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
@@ -268,6 +282,15 @@
                           }
                       } })),
               React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                  React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: "Show Notifications", description: "Show toast when recording starts/stops", checked: showNotifications, onChange: async (e) => {
+                          setShowNotifications(e);
+                          // Save setting
+                          await logic.serverAPI.callPluginMethod('set_button_config', {
+                              buttons: buttons,
+                              showNotifications: e
+                          });
+                      } })),
+              React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                   React__default["default"].createElement("div", { style: {
                           padding: '8px',
                           backgroundColor: '#1a1a1a',
@@ -286,7 +309,8 @@
                               newButtons[index] = option.data;
                               setButtons(newButtons);
                               await logic.serverAPI.callPluginMethod('set_button_config', {
-                                  buttons: newButtons
+                                  buttons: newButtons,
+                                  showNotifications: showNotifications
                               });
                           } })),
                   buttons.length > 1 && (React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
@@ -294,7 +318,8 @@
                               const newButtons = buttons.filter((_, i) => i !== index);
                               setButtons(newButtons);
                               await logic.serverAPI.callPluginMethod('set_button_config', {
-                                  buttons: newButtons
+                                  buttons: newButtons,
+                                  showNotifications: showNotifications
                               });
                           }, style: {
                               width: '100%',
@@ -320,7 +345,8 @@
                               const newButtons = [...buttons, availableButton.data];
                               setButtons(newButtons);
                               await logic.serverAPI.callPluginMethod('set_button_config', {
-                                  buttons: newButtons
+                                  buttons: newButtons,
+                                  showNotifications: showNotifications
                               });
                           }
                       } }, "+ Add Button"))),

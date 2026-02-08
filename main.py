@@ -51,7 +51,10 @@ except ImportError as e:
 # File paths for subprocess communication
 STATE_FILE = "/tmp/decktation_l5"
 PID_FILE = "/tmp/decktation_listener.pid"
-BUTTON_CONFIG_FILE = "/tmp/decktation_button_config.json"
+# Config in user home directory for persistence and write access
+CONFIG_DIR = os.path.expanduser("~/.config/decktation")
+os.makedirs(CONFIG_DIR, exist_ok=True)
+BUTTON_CONFIG_FILE = os.path.join(CONFIG_DIR, "button_config.json")
 
 
 class Plugin:
@@ -143,6 +146,7 @@ class Plugin:
         """Poll the state file for button presses"""
         logger.info("Button state polling started")
         last_state = False
+        last_recording_state = False
 
         while Plugin.poll_running:
             try:
@@ -167,6 +171,12 @@ class Plugin:
                             Plugin.voice_service.stop_recording()
 
                     last_state = state
+
+                # Log recording state changes for notification debugging
+                current_recording = Plugin.voice_service.is_recording if Plugin.voice_service else False
+                if current_recording != last_recording_state:
+                    logger.info(f"Recording state changed: {last_recording_state} -> {current_recording}")
+                    last_recording_state = current_recording
 
                 time.sleep(0.05)  # 50ms polling interval
             except Exception as e:
@@ -231,22 +241,25 @@ class Plugin:
         return {"success": True}
 
     async def get_button_config(self):
-        """Get current button configuration"""
+        """Get current button configuration and settings"""
         try:
             if os.path.exists(BUTTON_CONFIG_FILE):
                 import json
                 with open(BUTTON_CONFIG_FILE, 'r') as f:
                     config = json.load(f)
+                    # Ensure showNotifications exists for backward compatibility
+                    if "showNotifications" not in config:
+                        config["showNotifications"] = True
                     return {"success": True, "config": config}
             else:
-                # Default: L1+R1
-                return {"success": True, "config": {"buttons": ["L1", "R1"]}}
+                # Default: L1+R1, notifications enabled
+                return {"success": True, "config": {"buttons": ["L1", "R1"], "showNotifications": True}}
         except Exception as e:
             logger.error(f"Error getting button config: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
 
-    async def set_button_config(self, buttons: list):
-        """Set button configuration and restart listener"""
+    async def set_button_config(self, buttons: list, showNotifications: bool = True):
+        """Set button configuration and settings, restart listener"""
         try:
             import json
 
@@ -262,13 +275,16 @@ class Plugin:
                     seen.add(btn)
                     unique_buttons.append(btn)
 
-            config = {"buttons": unique_buttons}
+            config = {
+                "buttons": unique_buttons,
+                "showNotifications": showNotifications
+            }
 
             with open(BUTTON_CONFIG_FILE, 'w') as f:
                 json.dump(config, f)
 
             combo_str = "+".join(unique_buttons)
-            logger.info(f"Button config updated: {combo_str}")
+            logger.info(f"Button config updated: {combo_str}, notifications: {showNotifications}")
 
             # Restart controller listener if enabled
             if Plugin.controller_enabled:

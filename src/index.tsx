@@ -45,7 +45,7 @@ class DectationLogic {
 			title: message,
 			body: body,
 			duration: duration,
-			critical: true
+			critical: false
 		});
 	}
 
@@ -149,6 +149,8 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 	const [modelLoading, setModelLoading] = useState<boolean>(false);
 	const [buttonState, setButtonState] = useState<string>("None");
 	const [buttons, setButtons] = useState<string[]>(["L1", "R1"]);
+	const [showNotifications, setShowNotifications] = useState<boolean>(true);
+	const prevRecordingRef = React.useRef<boolean>(false);
 
 	useEffect(() => {
 		setEnabled(logic.enabled);
@@ -157,12 +159,17 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 			setButtonState(logic.lastButtonState);
 		};
 
-		// Load button configuration
+		// Load button configuration and settings
 		logic.serverAPI.callPluginMethod('get_button_config', {}).then((result) => {
 			if (result.success && result.result) {
 				const config = result.result.config;
-				if (config && config.buttons) {
-					setButtons(config.buttons);
+				if (config) {
+					if (config.buttons) {
+						setButtons(config.buttons);
+					}
+					if (config.showNotifications !== undefined) {
+						setShowNotifications(config.showNotifications);
+					}
 				}
 			}
 		});
@@ -180,12 +187,21 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 				setModelReady(result.result.model_ready);
 				setModelLoading(result.result.model_loading);
 				if (logic.enabled) {
-					setRecording(result.result.recording);
+					const isRecording = result.result.recording;
+
+					// Show notification only when recording starts
+					if (showNotifications && isRecording && !prevRecordingRef.current) {
+						console.log("[Decktation] Showing notification - recording started");
+						logic.notify("Recording", 1500, "🎤 Recording...");
+					}
+
+					prevRecordingRef.current = isRecording;
+					setRecording(isRecording);
 				}
 			}
 		}, 1000);
 		return () => clearInterval(interval);
-	}, [logic.enabled]);
+	}, [logic.enabled, showNotifications]);
 
 	return (
 		<div>
@@ -239,6 +255,22 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 				</PanelSectionRow>
 
 				<PanelSectionRow>
+					<ToggleField
+						label="Show Notifications"
+						description="Show toast when recording starts/stops"
+						checked={showNotifications}
+						onChange={async (e) => {
+							setShowNotifications(e);
+							// Save setting
+							await logic.serverAPI.callPluginMethod('set_button_config', {
+								buttons: buttons,
+								showNotifications: e
+							});
+						}}
+					/>
+				</PanelSectionRow>
+
+				<PanelSectionRow>
 					<div style={{
 						padding: '8px',
 						backgroundColor: '#1a1a1a',
@@ -264,7 +296,8 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 									newButtons[index] = option.data as string;
 									setButtons(newButtons);
 									await logic.serverAPI.callPluginMethod('set_button_config', {
-										buttons: newButtons
+										buttons: newButtons,
+										showNotifications: showNotifications
 									});
 								}}
 							/>
@@ -276,7 +309,8 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 										const newButtons = buttons.filter((_, i) => i !== index);
 										setButtons(newButtons);
 										await logic.serverAPI.callPluginMethod('set_button_config', {
-											buttons: newButtons
+											buttons: newButtons,
+											showNotifications: showNotifications
 										});
 									}}
 									style={{
@@ -314,7 +348,8 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 									const newButtons = [...buttons, availableButton.data as string];
 									setButtons(newButtons);
 									await logic.serverAPI.callPluginMethod('set_button_config', {
-										buttons: newButtons
+										buttons: newButtons,
+										showNotifications: showNotifications
 									});
 								}
 							}}
