@@ -1,21 +1,30 @@
 #!/bin/bash
-# Installation script for WoW Voice Chat Decky Plugin dependencies
+# Installation script for Decktation Plugin dependencies
+# This bundles dependencies into the lib/ folder for distribution
 
-echo "Installing Python dependencies for WoW Voice Chat..."
+echo "Installing dependencies for Decktation..."
 
 PLUGIN_DIR="$(dirname "$0")"
+LIB_DIR="$PLUGIN_DIR/lib"
 
-# Install dependencies to plugin directory
-python3 -m pip install --target="$PLUGIN_DIR" \
-    faster-whisper \
-    sounddevice \
-    numpy \
-    pynput
+# Remove old lib directory if it exists
+if [ -d "$LIB_DIR" ]; then
+    echo "Removing old lib directory..."
+    rm -rf "$LIB_DIR"
+fi
 
-echo "Dependencies installed!"
+# Install Python dependencies to lib folder
+echo "Installing Python dependencies to lib/..."
+# Use venv pip to install packages
+"$PLUGIN_DIR/venv/bin/pip" install --target "$LIB_DIR" faster-whisper sounddevice numpy evdev-binary
+
 echo ""
-echo "Note: The Whisper model will be downloaded on first use."
-echo "Model size: ~150MB for 'base' model"
+echo "Installation complete!"
 echo ""
-echo "To use a smaller/faster model, edit main.py and change:"
-echo "  WhisperModel('base', ...) to WhisperModel('tiny', ...)"
+echo "Dependencies bundled in lib/:"
+echo "  - faster-whisper (Whisper speech recognition)"
+echo "  - sounddevice (audio recording)"
+echo "  - numpy (audio processing)"
+echo ""
+echo "Note: xdotool is used for keyboard input (pre-installed on Steam Deck)"
+echo ""

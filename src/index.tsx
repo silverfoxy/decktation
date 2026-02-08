@@ -4,13 +4,14 @@ import {
 	PanelSectionRow,
 	ServerAPI,
 	quickAccessMenuClasses,
+	Router,
 	ToggleField,
 	ButtonItem,
-	Dropdown,
-	SingleDropdownOption,
+	DropdownItem,
+	DropdownOption,
 } from "decky-frontend-lib";
 
-import {
+import React, {
 	VFC,
 	useEffect,
 	useState,
@@ -18,64 +19,22 @@ import {
 
 import { FaMicrophone } from "react-icons/fa";
 
-// Steam Deck button mappings
-const BUTTONS = {
-	R2: 0,
-	L2: 1,
-	R1: 2,
-	L1: 3,
-	Y: 4,
-	B: 5,
-	X: 6,
-	A: 7,
-	UP: 8,
-	RIGHT: 9,
-	LEFT: 10,
-	DOWN: 11,
-	SELECT: 12,
-	STEAM: 13,
-	START: 14,
-	L5: 15,
-	R5: 16,
-};
-
-const BUTTON_OPTIONS: SingleDropdownOption[] = [
-	{ label: "A", data: BUTTONS.A },
-	{ label: "B", data: BUTTONS.B },
-	{ label: "X", data: BUTTONS.X },
-	{ label: "Y", data: BUTTONS.Y },
-	{ label: "L1", data: BUTTONS.L1 },
-	{ label: "R1", data: BUTTONS.R1 },
-	{ label: "L2", data: BUTTONS.L2 },
-	{ label: "R2", data: BUTTONS.R2 },
-	{ label: "L5", data: BUTTONS.L5 },
-	{ label: "R5", data: BUTTONS.R5 },
-	{ label: "D-Pad Up", data: BUTTONS.UP },
-	{ label: "D-Pad Down", data: BUTTONS.DOWN },
-	{ label: "D-Pad Left", data: BUTTONS.LEFT },
-	{ label: "D-Pad Right", data: BUTTONS.RIGHT },
-];
+// L5 = bit 15, R5 = bit 16 in ulButtons (same as antiquitte/decky-dictation)
+const L5_MASK = 1 << 15;
+const R5_MASK = 1 << 16;
 
 class DectationLogic {
 	serverAPI: ServerAPI;
 	enabled: boolean = false;
 	recording: boolean = false;
-	lastButtonPress: number = Date.now();
-	selectedButton: number = BUTTONS.A; // Default: Steam + A
-	steamPressed: boolean = false;
+	lastButtonState: string = "None";
+	inputRegistered: boolean = false;
+	inputError: string = "";
+	onButtonChange: (() => void) | null = null;
+	l5Held: boolean = false;
 
 	constructor(serverAPI: ServerAPI) {
 		this.serverAPI = serverAPI;
-		// Load saved button preference
-		const saved = localStorage.getItem('decktation_button');
-		if (saved !== null) {
-			this.selectedButton = parseInt(saved);
-		}
-	}
-
-	setButton(buttonId: number) {
-		this.selectedButton = buttonId;
-		localStorage.setItem('decktation_button', buttonId.toString());
 	}
 
 	notify = async (message: string, duration: number = 2000, body: string = "") => {
@@ -90,34 +49,66 @@ class DectationLogic {
 		});
 	}
 
-	handleButtonInput = async (val: any[]) => {
+	// Handler for RegisterForControllerStateChanges (antiquitte style)
+	handleControllerState = (val: any[]) => {
+		if (!val || val.length === 0) return;
+
+		const inputs = val[0];
+		if (!inputs) return;
+
+		const ulButtons = inputs.ulButtons || 0;
+		const l5Pressed = (ulButtons & L5_MASK) !== 0;
+
+		// Debug: show button state
+		this.lastButtonState = l5Pressed ? "L5" : "None";
+		if (this.onButtonChange) this.onButtonChange();
+
 		if (!this.enabled) {
 			return;
 		}
 
-		for (const inputs of val) {
-			const steamPressed = !!(inputs.ulButtons && inputs.ulButtons & (1 << BUTTONS.STEAM));
-			const buttonPressed = !!(inputs.ulButtons && inputs.ulButtons & (1 << this.selectedButton));
+		// Push-to-talk: L5 held = recording
+		if (l5Pressed && !this.l5Held) {
+			this.l5Held = true;
+			this.recording = true;
+			// Disable system buttons temporarily
+			(Router as any).DisableHomeAndQuickAccessButtons();
+			setTimeout(() => {
+				(Router as any).EnableHomeAndQuickAccessButtons();
+			}, 1000);
+			this.serverAPI.callPluginMethod('start_recording', {});
+			this.notify("Decktation", 1500, "Recording...");
+		} else if (!l5Pressed && this.l5Held) {
+			this.l5Held = false;
+			this.recording = false;
+			this.serverAPI.callPluginMethod('stop_recording', {});
+			this.notify("Decktation", 1500, "Transcribing...");
+		}
+	}
 
-			// Check if Steam + selected button combo is pressed
-			const comboPressed = steamPressed && buttonPressed;
+	// Fallback handler for RegisterForControllerInputMessages
+	handleButtonInput = (controllerIndex: number, gamepadButton: number, isButtonPressed: boolean) => {
+		// L5 = 44 in this API
+		const buttonName = gamepadButton === 44 ? "L5" : `btn${gamepadButton}`;
+		this.lastButtonState = isButtonPressed ? buttonName : "None";
+		if (this.onButtonChange) this.onButtonChange();
 
-			// Start recording when combo is pressed
-			if (comboPressed && !this.recording) {
-				// Debounce
-				if (Date.now() - this.lastButtonPress < 200) {
-					continue;
-				}
-				this.lastButtonPress = Date.now();
+		if (!this.enabled) {
+			return;
+		}
+
+		if (gamepadButton === 44) { // L5
+			if (isButtonPressed && !this.recording) {
 				this.recording = true;
-				await this.serverAPI.callPluginMethod('start_recording', {});
+				(Router as any).DisableHomeAndQuickAccessButtons();
+				setTimeout(() => {
+					(Router as any).EnableHomeAndQuickAccessButtons();
+				}, 1000);
+				this.serverAPI.callPluginMethod('start_recording', {});
 				this.notify("Decktation", 1500, "Recording...");
-			}
-			// Stop recording when combo is released
-			else if (!comboPressed && this.recording) {
-				this.lastButtonPress = Date.now();
+			} else if (!isButtonPressed && this.recording) {
 				this.recording = false;
-				await this.serverAPI.callPluginMethod('stop_recording', {});
+				this.serverAPI.callPluginMethod('stop_recording', {});
 				this.notify("Decktation", 1500, "Transcribing...");
 			}
 		}
@@ -136,25 +127,60 @@ class DectationLogic {
 	}
 }
 
+// Available button options
+const BUTTON_OPTIONS: DropdownOption[] = [
+	{ data: "L1", label: "L1 (Left Bumper)" },
+	{ data: "R1", label: "R1 (Right Bumper)" },
+	{ data: "L2", label: "L2 (Left Trigger)" },
+	{ data: "R2", label: "R2 (Right Trigger)" },
+	{ data: "L5", label: "L5 (Left Back Grip)" },
+	{ data: "R5", label: "R5 (Right Back Grip)" },
+	{ data: "A", label: "A Button" },
+	{ data: "B", label: "B Button" },
+	{ data: "X", label: "X Button" },
+	{ data: "Y", label: "Y Button" },
+];
+
 const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 	const [enabled, setEnabled] = useState<boolean>(false);
 	const [recording, setRecording] = useState<boolean>(false);
-	const [selectedButton, setSelectedButton] = useState<number>(logic.selectedButton);
-	const [depsInstalled, setDepsInstalled] = useState<boolean>(false);
 	const [serviceReady, setServiceReady] = useState<boolean>(false);
+	const [modelReady, setModelReady] = useState<boolean>(false);
+	const [modelLoading, setModelLoading] = useState<boolean>(false);
+	const [buttonState, setButtonState] = useState<string>("None");
+	const [button1, setButton1] = useState<string>("L1");
+	const [button2, setButton2] = useState<string>("R1");
 
 	useEffect(() => {
 		setEnabled(logic.enabled);
 		setRecording(logic.recording);
+		logic.onButtonChange = () => {
+			setButtonState(logic.lastButtonState);
+		};
+
+		// Load button configuration
+		logic.serverAPI.callPluginMethod('get_button_config', {}).then((result) => {
+			if (result.success && result.result) {
+				const config = result.result.config;
+				if (config) {
+					setButton1(config.button1 || "L1");
+					setButton2(config.button2 || "R1");
+				}
+			}
+		});
+
+		return () => {
+			logic.onButtonChange = null;
+		};
 	}, []);
 
-	// Poll plugin status
 	useEffect(() => {
 		const interval = setInterval(async () => {
 			const result = await logic.serverAPI.callPluginMethod('get_status', {});
 			if (result.success && result.result) {
-				setDepsInstalled(result.result.dependencies_installed);
 				setServiceReady(result.result.service_ready);
+				setModelReady(result.result.model_ready);
+				setModelLoading(result.result.model_loading);
 				if (logic.enabled) {
 					setRecording(result.result.recording);
 				}
@@ -163,28 +189,10 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 		return () => clearInterval(interval);
 	}, [logic.enabled]);
 
-	const getButtonLabel = (buttonId: number): string => {
-		const option = BUTTON_OPTIONS.find(opt => opt.data === buttonId);
-		return option ? option.label : "Unknown";
-	};
-
 	return (
 		<div>
 			<PanelSection>
-				{!depsInstalled && (
-					<PanelSectionRow>
-						<div style={{
-							padding: '10px',
-							backgroundColor: '#ff9800',
-							borderRadius: '8px',
-							textAlign: 'center',
-							fontWeight: 'bold'
-						}}>
-							⏳ Installing dependencies... (first run)
-						</div>
-					</PanelSectionRow>
-				)}
-				{depsInstalled && !serviceReady && (
+				{!serviceReady && (
 					<PanelSectionRow>
 						<div style={{
 							padding: '10px',
@@ -193,7 +201,20 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 							textAlign: 'center',
 							fontWeight: 'bold'
 						}}>
-							⏳ Loading Whisper model...
+							Initializing service...
+						</div>
+					</PanelSectionRow>
+				)}
+				{serviceReady && modelLoading && (
+					<PanelSectionRow>
+						<div style={{
+							padding: '10px',
+							backgroundColor: '#2196f3',
+							borderRadius: '8px',
+							textAlign: 'center',
+							fontWeight: 'bold'
+						}}>
+							Loading Whisper model...
 						</div>
 					</PanelSectionRow>
 				)}
@@ -201,30 +222,21 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 					<ToggleField
 						label="Enable Dictation"
 						checked={enabled}
-						disabled={!serviceReady}
-						onChange={(e) => {
+						disabled={!serviceReady || modelLoading}
+						onChange={async (e) => {
 							setEnabled(e);
 							logic.enabled = e;
+							await logic.serverAPI.callPluginMethod('set_enabled', { enabled: e });
+							if (e && !modelReady) {
+								setModelLoading(true);
+								await logic.serverAPI.callPluginMethod('load_model', {});
+							}
 							if (!e && logic.recording) {
 								logic.serverAPI.callPluginMethod('stop_recording', {});
 								logic.recording = false;
 								setRecording(false);
 							}
 						}}
-					/>
-				</PanelSectionRow>
-
-				<PanelSectionRow>
-					<Dropdown
-						rgOptions={BUTTON_OPTIONS}
-						label="Push-to-Talk Button"
-						strDefaultLabel={getButtonLabel(selectedButton)}
-						selectedOption={selectedButton}
-						onChange={(option) => {
-							setSelectedButton(option.data);
-							logic.setButton(option.data);
-						}}
-						disabled={recording}
 					/>
 				</PanelSectionRow>
 
@@ -237,11 +249,58 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 						textAlign: 'center',
 						border: '1px solid #444'
 					}}>
-						Hold: <strong>Steam + {getButtonLabel(selectedButton)}</strong>
+						Hold <strong>{button1}+{button2}</strong> to record
 					</div>
 				</PanelSectionRow>
 
-				{enabled && (
+				<PanelSectionRow>
+					<DropdownItem
+						label="Button 1"
+						menuLabel="Select First Button"
+						rgOptions={BUTTON_OPTIONS}
+						selectedOption={button1}
+						onChange={async (option) => {
+							setButton1(option.data as string);
+							await logic.serverAPI.callPluginMethod('set_button_config', {
+								button1: option.data,
+								button2: button2
+							});
+						}}
+					/>
+				</PanelSectionRow>
+
+				<PanelSectionRow>
+					<DropdownItem
+						label="Button 2"
+						menuLabel="Select Second Button"
+						rgOptions={BUTTON_OPTIONS}
+						selectedOption={button2}
+						onChange={async (option) => {
+							setButton2(option.data as string);
+							await logic.serverAPI.callPluginMethod('set_button_config', {
+								button1: button1,
+								button2: option.data
+							});
+						}}
+					/>
+				</PanelSectionRow>
+
+				<PanelSectionRow>
+					<div style={{
+						padding: '8px',
+						backgroundColor: logic.inputRegistered ? '#1a3a1a' : '#3a1a1a',
+						borderRadius: '4px',
+						fontSize: '12px',
+						textAlign: 'center',
+						fontFamily: 'monospace'
+					}}>
+						Input: {logic.inputRegistered ? "OK" : "FAILED"}
+						<br />
+						Button: <strong>{buttonState}</strong>
+					</div>
+				</PanelSectionRow>
+
+				{enabled && modelReady && (
 					<PanelSectionRow>
 						<div style={{
 							padding: '10px',
@@ -250,7 +309,7 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 							textAlign: 'center',
 							fontWeight: 'bold'
 						}}>
-							{recording ? '🎤 Recording...' : '⏸ Ready'}
+							{recording ? 'Recording...' : 'Ready'}
 						</div>
 					</PanelSectionRow>
 				)}
@@ -259,7 +318,7 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 					<ButtonItem
 						layout="below"
 						onClick={() => logic.testRecording()}
-						disabled={!enabled}
+						disabled={!enabled || !modelReady || modelLoading}
 					>
 						{recording ? 'Stop Test Recording' : 'Start Test Recording'}
 					</ButtonItem>
@@ -271,8 +330,9 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 					<div style={{ fontSize: '13px', lineHeight: '1.6' }}>
 						<strong>Push-to-Talk:</strong>
 						<ul style={{ marginLeft: '15px', marginTop: '5px', marginBottom: '10px' }}>
-							<li>Hold <strong>Steam + {getButtonLabel(selectedButton)}</strong> to record</li>
+							<li>Hold <strong>{button1}+{button2}</strong> together to record</li>
 							<li>Release to transcribe and type into active window</li>
+							<li>Change button combo above if needed</li>
 						</ul>
 
 						<strong>Tips:</strong>
@@ -291,15 +351,25 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 
 export default definePlugin((serverApi: ServerAPI) => {
 	let logic = new DectationLogic(serverApi);
-	let input_register = window.SteamClient.Input.RegisterForControllerStateChanges(logic.handleButtonInput);
+	let input_register: { unregister: () => void } | null = null;
+
+	// Use RegisterForControllerInputMessages (RegisterForControllerStateChanges doesn't exist)
+	try {
+		input_register = (window as any).SteamClient.Input.RegisterForControllerInputMessages(logic.handleButtonInput);
+		logic.inputRegistered = true;
+		console.log("[Decktation] RegisterForControllerInputMessages succeeded");
+	} catch (e: any) {
+		console.error("[Decktation] RegisterForControllerInputMessages failed:", e);
+	}
 
 	return {
 		title: <div className={quickAccessMenuClasses.Title}>Decktation</div>,
 		content: <DectationPanel logic={logic} />,
 		icon: <FaMicrophone />,
 		onDismount() {
-			// Cleanup
-			input_register.unregister();
+			if (input_register) {
+				input_register.unregister();
+			}
 			if (logic.recording) {
 				serverApi.callPluginMethod('stop_recording', {});
 			}
