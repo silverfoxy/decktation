@@ -27,9 +27,17 @@ lib_path = os.path.join(plugin_path, "lib")
 if os.path.exists(lib_path):
     sys.path.insert(0, lib_path)
     logger.info(f"Added lib path: {lib_path}")
+else:
+    logger.error(f"Lib path does not exist: {lib_path}")
 
 # Add our service to Python path
 sys.path.insert(0, plugin_path)
+
+# Debug: Log Python environment
+logger.info(f"Python executable: {sys.executable}")
+logger.info(f"Python version: {sys.version}")
+logger.info(f"sys.path (first 5): {sys.path[:5]}")
+logger.info(f"Current working directory: {os.getcwd()}")
 
 # Import our voice chat service
 WoWVoiceChat = None
@@ -43,6 +51,7 @@ except ImportError as e:
 # File paths for subprocess communication
 STATE_FILE = "/tmp/decktation_l5"
 PID_FILE = "/tmp/decktation_listener.pid"
+BUTTON_CONFIG_FILE = "/tmp/decktation_button_config.json"
 
 
 class Plugin:
@@ -80,9 +89,9 @@ class Plugin:
                 logger.error(f"Controller listener script not found: {listener_script}")
                 return False
 
-            # Start the listener as a subprocess
+            # Start the listener as a subprocess using Python 3.11 from nix
             Plugin.listener_process = subprocess.Popen(
-                ["python3", listener_script],
+                ["/nix/store/dwix9cc815h6vxvdvl8zc6pvznq6whdh-python3-3.11.14/bin/python", listener_script],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True
@@ -224,30 +233,42 @@ class Plugin:
     async def get_button_config(self):
         """Get current button configuration"""
         try:
-            config_file = f"{plugin_path}/button_config.json"
-            if os.path.exists(config_file):
+            if os.path.exists(BUTTON_CONFIG_FILE):
                 import json
-                with open(config_file, 'r') as f:
+                with open(BUTTON_CONFIG_FILE, 'r') as f:
                     config = json.load(f)
                     return {"success": True, "config": config}
             else:
                 # Default: L1+R1
-                return {"success": True, "config": {"button1": "L1", "button2": "R1"}}
+                return {"success": True, "config": {"buttons": ["L1", "R1"]}}
         except Exception as e:
             logger.error(f"Error getting button config: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
 
-    async def set_button_config(self, button1: str, button2: str):
+    async def set_button_config(self, buttons: list):
         """Set button configuration and restart listener"""
         try:
-            config_file = f"{plugin_path}/button_config.json"
             import json
-            config = {"button1": button1, "button2": button2}
 
-            with open(config_file, 'w') as f:
+            # Validate buttons list
+            if not isinstance(buttons, list) or len(buttons) == 0:
+                return {"success": False, "error": "buttons must be a non-empty list"}
+
+            # Remove duplicates while preserving order
+            seen = set()
+            unique_buttons = []
+            for btn in buttons:
+                if btn not in seen:
+                    seen.add(btn)
+                    unique_buttons.append(btn)
+
+            config = {"buttons": unique_buttons}
+
+            with open(BUTTON_CONFIG_FILE, 'w') as f:
                 json.dump(config, f)
 
-            logger.info(f"Button config updated: {button1}+{button2}")
+            combo_str = "+".join(unique_buttons)
+            logger.info(f"Button config updated: {combo_str}")
 
             # Restart controller listener if enabled
             if Plugin.controller_enabled:

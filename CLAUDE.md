@@ -29,11 +29,11 @@ python test_context_benefit.py # Test context improvement
 
 The system has five main components:
 
-1. **Frontend Plugin** (`src/index.tsx`) - React/TypeScript Decky Loader plugin UI. Provides toggle to enable dictation, button configuration dropdowns, status display, and manual test button. Note: Steam's frontend input APIs only work when Steam UI is active, so controller input is handled by the backend.
+1. **Frontend Plugin** (`src/index.tsx`) - React/TypeScript Decky Loader plugin UI. Provides toggle to enable dictation, dynamic button configuration (1-5 buttons), status display, and manual test button. Hybrid UI shows dropdowns for each button with add/remove controls. Note: Steam's frontend input APIs only work when Steam UI is active, so controller input is handled by the backend.
 
-2. **Backend Plugin** (`main.py`) - Python Decky plugin backend. Uses static methods and class variables (Decky quirk). Spawns the controller listener subprocess and polls for button state. Provides RPC methods for button configuration (`get_button_config`, `set_button_config`).
+2. **Backend Plugin** (`main.py`) - Python Decky plugin backend. Uses static methods and class variables (Decky quirk). Spawns the controller listener subprocess and polls for button state. Provides RPC methods for button configuration (`get_button_config`, `set_button_config`) using array format.
 
-3. **Controller Listener** (`controller_listener.py`) - Separate Python process using evdev to detect configurable button combo on the Xbox 360 pad device. Reads configuration from `button_config.json` (default: L1+R1). Writes button state to `/tmp/decktation_l5`. Required because Steam intercepts some controller inputs and Decky has evdev import issues.
+3. **Controller Listener** (`controller_listener.py`) - Separate Python process using evdev to detect configurable button combo on the Xbox 360 pad device. Reads configuration from `button_config.json` (array of 1-5 buttons). Writes button state to `/tmp/decktation_l5`. All buttons in the combo must be pressed simultaneously to activate. Required because Steam intercepts some controller inputs and Decky has evdev import issues.
 
 4. **Voice Service** (`wow_voice_chat.py`) - Core audio processing. Records audio via sounddevice, transcribes with faster-whisper (base model, int8, CPU), parses chat channel prefixes, types output via ydotool.
 
@@ -41,11 +41,11 @@ The system has five main components:
 
 ### Data Flow
 ```
-User selects buttons in UI → set_button_config RPC → button_config.json
+User adds/removes buttons in UI → set_button_config RPC → button_config.json
     ↓
-Button Combo (evdev) → controller_listener.py reads config
+Button Combo (1-5 buttons, evdev) → controller_listener.py reads config
     ↓
-Button state → /tmp/decktation_l5
+All buttons pressed? → Button state → /tmp/decktation_l5
     ↓
 main.py polls file → WoWVoiceChat.start_recording()
     ↓
@@ -73,8 +73,8 @@ Voice input like "party, hello everyone" or "raid: pull boss" is parsed to extra
 
 - Whisper model: `WhisperModel("base", device="cpu", compute_type="int8")`
 - Context file: `wow_context.json` (auto-generated from WoW SavedVariables)
-- Button config: `button_config.json` (default: `{"button1": "L1", "button2": "R1"}`)
-- Push-to-talk: Configurable two-button combo via UI (default: L1+R1)
+- Button config: `button_config.json` (default: `{"buttons": ["L1", "R1"]}`)
+- Push-to-talk: Configurable 1-5 button combo via UI (default: L1+R1)
 - Available buttons: L1, R1, L2, R2, L5, R5, A, B, X, Y
 - Logs: `/tmp/decktation.log`
 

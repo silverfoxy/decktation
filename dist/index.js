@@ -200,8 +200,7 @@
       const [modelReady, setModelReady] = React.useState(false);
       const [modelLoading, setModelLoading] = React.useState(false);
       const [buttonState, setButtonState] = React.useState("None");
-      const [button1, setButton1] = React.useState("L1");
-      const [button2, setButton2] = React.useState("R1");
+      const [buttons, setButtons] = React.useState(["L1", "R1"]);
       React.useEffect(() => {
           setEnabled(logic.enabled);
           setRecording(logic.recording);
@@ -212,9 +211,8 @@
           logic.serverAPI.callPluginMethod('get_button_config', {}).then((result) => {
               if (result.success && result.result) {
                   const config = result.result.config;
-                  if (config) {
-                      setButton1(config.button1 || "L1");
-                      setButton2(config.button2 || "R1");
+                  if (config && config.buttons) {
+                      setButtons(config.buttons);
                   }
               }
           });
@@ -279,27 +277,53 @@
                           border: '1px solid #444'
                       } },
                       "Hold ",
-                      React__default["default"].createElement("strong", null,
-                          button1,
-                          "+",
-                          button2),
+                      React__default["default"].createElement("strong", null, buttons.join('+')),
                       " to record")),
-              React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                  React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: "Button 1", menuLabel: "Select First Button", rgOptions: BUTTON_OPTIONS, selectedOption: button1, onChange: async (option) => {
-                          setButton1(option.data);
-                          await logic.serverAPI.callPluginMethod('set_button_config', {
-                              button1: option.data,
-                              button2: button2
-                          });
-                      } })),
-              React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                  React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: "Button 2", menuLabel: "Select Second Button", rgOptions: BUTTON_OPTIONS, selectedOption: button2, onChange: async (option) => {
-                          setButton2(option.data);
-                          await logic.serverAPI.callPluginMethod('set_button_config', {
-                              button1: button1,
-                              button2: option.data
-                          });
-                      } })),
+              buttons.map((button, index) => (React__default["default"].createElement("div", { key: index },
+                  React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                      React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: `Button ${index + 1}`, menuLabel: `Select Button ${index + 1}`, rgOptions: BUTTON_OPTIONS, selectedOption: button, onChange: async (option) => {
+                              const newButtons = [...buttons];
+                              newButtons[index] = option.data;
+                              setButtons(newButtons);
+                              await logic.serverAPI.callPluginMethod('set_button_config', {
+                                  buttons: newButtons
+                              });
+                          } })),
+                  buttons.length > 1 && (React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                      React__default["default"].createElement("div", { onClick: async () => {
+                              const newButtons = buttons.filter((_, i) => i !== index);
+                              setButtons(newButtons);
+                              await logic.serverAPI.callPluginMethod('set_button_config', {
+                                  buttons: newButtons
+                              });
+                          }, style: {
+                              width: '100%',
+                              padding: '6px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              backgroundColor: '#c53030',
+                              color: 'white',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                              fontWeight: 'bold',
+                              userSelect: 'none'
+                          } },
+                          "Remove Button ",
+                          index + 1)))))),
+              buttons.length < 5 && (React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                  React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: async () => {
+                          // Find first button not in current list
+                          const availableButton = BUTTON_OPTIONS.find(opt => !buttons.includes(opt.data));
+                          if (availableButton) {
+                              const newButtons = [...buttons, availableButton.data];
+                              setButtons(newButtons);
+                              await logic.serverAPI.callPluginMethod('set_button_config', {
+                                  buttons: newButtons
+                              });
+                          }
+                      } }, "+ Add Button"))),
               React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                   React__default["default"].createElement("div", { style: {
                           padding: '8px',
@@ -331,13 +355,12 @@
                       React__default["default"].createElement("ul", { style: { marginLeft: '15px', marginTop: '5px', marginBottom: '10px' } },
                           React__default["default"].createElement("li", null,
                               "Hold ",
-                              React__default["default"].createElement("strong", null,
-                                  button1,
-                                  "+",
-                                  button2),
-                              " together to record"),
+                              React__default["default"].createElement("strong", null, buttons.join('+')),
+                              " ",
+                              buttons.length > 1 ? 'together' : '',
+                              " to record"),
                           React__default["default"].createElement("li", null, "Release to transcribe and type into active window"),
-                          React__default["default"].createElement("li", null, "Change button combo above if needed")),
+                          React__default["default"].createElement("li", null, "Configure button combo above (1-5 buttons)")),
                       React__default["default"].createElement("strong", null, "Tips:"),
                       React__default["default"].createElement("ul", { style: { marginLeft: '15px', marginTop: '5px' } },
                           React__default["default"].createElement("li", null, "Make sure your game/app is the active window"),

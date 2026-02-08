@@ -148,8 +148,7 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 	const [modelReady, setModelReady] = useState<boolean>(false);
 	const [modelLoading, setModelLoading] = useState<boolean>(false);
 	const [buttonState, setButtonState] = useState<string>("None");
-	const [button1, setButton1] = useState<string>("L1");
-	const [button2, setButton2] = useState<string>("R1");
+	const [buttons, setButtons] = useState<string[]>(["L1", "R1"]);
 
 	useEffect(() => {
 		setEnabled(logic.enabled);
@@ -162,9 +161,8 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 		logic.serverAPI.callPluginMethod('get_button_config', {}).then((result) => {
 			if (result.success && result.result) {
 				const config = result.result.config;
-				if (config) {
-					setButton1(config.button1 || "L1");
-					setButton2(config.button2 || "R1");
+				if (config && config.buttons) {
+					setButtons(config.buttons);
 				}
 			}
 		});
@@ -249,41 +247,82 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 						textAlign: 'center',
 						border: '1px solid #444'
 					}}>
-						Hold <strong>{button1}+{button2}</strong> to record
+						Hold <strong>{buttons.join('+')}</strong> to record
 					</div>
 				</PanelSectionRow>
 
-				<PanelSectionRow>
-					<DropdownItem
-						label="Button 1"
-						menuLabel="Select First Button"
-						rgOptions={BUTTON_OPTIONS}
-						selectedOption={button1}
-						onChange={async (option) => {
-							setButton1(option.data as string);
-							await logic.serverAPI.callPluginMethod('set_button_config', {
-								button1: option.data,
-								button2: button2
-							});
-						}}
-					/>
-				</PanelSectionRow>
+				{buttons.map((button, index) => (
+					<div key={index}>
+						<PanelSectionRow>
+							<DropdownItem
+								label={`Button ${index + 1}`}
+								menuLabel={`Select Button ${index + 1}`}
+								rgOptions={BUTTON_OPTIONS}
+								selectedOption={button}
+								onChange={async (option) => {
+									const newButtons = [...buttons];
+									newButtons[index] = option.data as string;
+									setButtons(newButtons);
+									await logic.serverAPI.callPluginMethod('set_button_config', {
+										buttons: newButtons
+									});
+								}}
+							/>
+						</PanelSectionRow>
+						{buttons.length > 1 && (
+							<PanelSectionRow>
+								<div
+									onClick={async () => {
+										const newButtons = buttons.filter((_, i) => i !== index);
+										setButtons(newButtons);
+										await logic.serverAPI.callPluginMethod('set_button_config', {
+											buttons: newButtons
+										});
+									}}
+									style={{
+										width: '100%',
+										padding: '6px',
+										display: 'flex',
+										alignItems: 'center',
+										justifyContent: 'center',
+										backgroundColor: '#c53030',
+										color: 'white',
+										borderRadius: '4px',
+										cursor: 'pointer',
+										fontSize: '14px',
+										fontWeight: 'bold',
+										userSelect: 'none'
+									}}
+								>
+									Remove Button {index + 1}
+								</div>
+							</PanelSectionRow>
+						)}
+					</div>
+				))}
 
-				<PanelSectionRow>
-					<DropdownItem
-						label="Button 2"
-						menuLabel="Select Second Button"
-						rgOptions={BUTTON_OPTIONS}
-						selectedOption={button2}
-						onChange={async (option) => {
-							setButton2(option.data as string);
-							await logic.serverAPI.callPluginMethod('set_button_config', {
-								button1: button1,
-								button2: option.data
-							});
-						}}
-					/>
-				</PanelSectionRow>
+				{buttons.length < 5 && (
+					<PanelSectionRow>
+						<ButtonItem
+							layout="below"
+							onClick={async () => {
+								// Find first button not in current list
+								const availableButton = BUTTON_OPTIONS.find(
+									opt => !buttons.includes(opt.data as string)
+								);
+								if (availableButton) {
+									const newButtons = [...buttons, availableButton.data as string];
+									setButtons(newButtons);
+									await logic.serverAPI.callPluginMethod('set_button_config', {
+										buttons: newButtons
+									});
+								}
+							}}
+						>
+							+ Add Button
+						</ButtonItem>
+					</PanelSectionRow>
+				)}
 
 				<PanelSectionRow>
 					<div style={{
@@ -330,9 +369,9 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 					<div style={{ fontSize: '13px', lineHeight: '1.6' }}>
 						<strong>Push-to-Talk:</strong>
 						<ul style={{ marginLeft: '15px', marginTop: '5px', marginBottom: '10px' }}>
-							<li>Hold <strong>{button1}+{button2}</strong> together to record</li>
+							<li>Hold <strong>{buttons.join('+')}</strong> {buttons.length > 1 ? 'together' : ''} to record</li>
 							<li>Release to transcribe and type into active window</li>
-							<li>Change button combo above if needed</li>
+							<li>Configure button combo above (1-5 buttons)</li>
 						</ul>
 
 						<strong>Tips:</strong>
