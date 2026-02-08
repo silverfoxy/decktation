@@ -386,3 +386,15 @@ class Plugin:
         except Exception as e:
             logger.error(f"Error loading model: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
+
+    async def get_last_transcription(self):
+        """Get the last transcription result for UI display"""
+        try:
+            if Plugin.voice_service is None:
+                return {"success": False, "error": "Service not initialized"}
+
+            result = Plugin.voice_service.get_last_transcription()
+            return {"success": True, "transcription": result}
+        except Exception as e:
+            logger.error(f"Error getting last transcription: {traceback.format_exc()}")
+            return {"success": False, "error": str(e)}

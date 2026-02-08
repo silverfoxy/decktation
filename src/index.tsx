@@ -114,15 +114,27 @@ class DectationLogic {
 		}
 	}
 
-	testRecording = async () => {
-		if (!this.recording) {
-			this.recording = true;
-			await this.serverAPI.callPluginMethod('start_recording', {});
-			this.notify("Decktation", 1500, "Recording started (manual test)");
-		} else {
-			this.recording = false;
-			await this.serverAPI.callPluginMethod('stop_recording', {});
-			this.notify("Decktation", 1500, "Recording stopped (manual test)");
+	testRecording = async (onComplete?: (text: string, time: string) => void) => {
+		this.notify("Decktation", 1000, "Recording for 3 seconds...");
+		await this.serverAPI.callPluginMethod('start_recording', {});
+
+		// Wait 3 seconds
+		await new Promise(resolve => setTimeout(resolve, 3000));
+
+		await this.serverAPI.callPluginMethod('stop_recording', {});
+		this.notify("Decktation", 1500, "Transcribing...");
+
+		// Wait a bit for transcription to complete, then fetch result
+		await new Promise(resolve => setTimeout(resolve, 1000));
+
+		if (onComplete) {
+			const transcriptionResult = await this.serverAPI.callPluginMethod('get_last_transcription', {});
+			if (transcriptionResult.success && transcriptionResult.result) {
+				const data = transcriptionResult.result.transcription;
+				const text = data.text || "";
+				const time = data.timestamp ? new Date(data.timestamp * 1000).toLocaleTimeString() : "";
+				onComplete(text, time);
+			}
 		}
 	}
 }
@@ -150,6 +162,8 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 	const [buttonState, setButtonState] = useState<string>("None");
 	const [buttons, setButtons] = useState<string[]>(["L1", "R1"]);
 	const [showNotifications, setShowNotifications] = useState<boolean>(true);
+	const [lastTranscription, setLastTranscription] = useState<string>("");
+	const [lastTranscriptionTime, setLastTranscriptionTime] = useState<string>("");
 	const prevRecordingRef = React.useRef<boolean>(false);
 
 	useEffect(() => {
@@ -272,12 +286,13 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 
 				<PanelSectionRow>
 					<div style={{
-						padding: '8px',
-						backgroundColor: '#1a1a1a',
-						borderRadius: '4px',
+						padding: '10px',
+						backgroundColor: '#2a2a2a',
+						borderRadius: '6px',
 						fontSize: '13px',
 						textAlign: 'center',
-						border: '1px solid #444'
+						border: '1px solid #444',
+						marginBottom: '8px'
 					}}>
 						Hold <strong>{buttons.join('+')}</strong> to record
 					</div>
@@ -304,31 +319,32 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 						</PanelSectionRow>
 						{buttons.length > 1 && (
 							<PanelSectionRow>
-								<div
-									onClick={async () => {
-										const newButtons = buttons.filter((_, i) => i !== index);
-										setButtons(newButtons);
-										await logic.serverAPI.callPluginMethod('set_button_config', {
-											buttons: newButtons,
-											showNotifications: showNotifications
-										});
-									}}
-									style={{
-										width: '100%',
-										padding: '6px',
-										display: 'flex',
-										alignItems: 'center',
-										justifyContent: 'center',
-										backgroundColor: '#c53030',
-										color: 'white',
-										borderRadius: '4px',
-										cursor: 'pointer',
-										fontSize: '14px',
-										fontWeight: 'bold',
-										userSelect: 'none'
-									}}
-								>
-									Remove Button {index + 1}
+								<div style={{ marginTop: '4px' }}>
+									<div
+										onClick={async () => {
+											const newButtons = buttons.filter((_, i) => i !== index);
+											setButtons(newButtons);
+											await logic.serverAPI.callPluginMethod('set_button_config', {
+												buttons: newButtons,
+												showNotifications: showNotifications
+											});
+										}}
+										style={{
+											padding: '8px',
+											display: 'flex',
+											alignItems: 'center',
+											justifyContent: 'center',
+											backgroundColor: '#c53030',
+											color: 'white',
+											borderRadius: '4px',
+											cursor: 'pointer',
+											fontSize: '14px',
+											fontWeight: 'bold',
+											userSelect: 'none'
+										}}
+									>
+										🗑️ Remove Button {index + 1}
+									</div>
 								</div>
 							</PanelSectionRow>
 						)}
@@ -337,25 +353,27 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 
 				{buttons.length < 5 && (
 					<PanelSectionRow>
-						<ButtonItem
-							layout="below"
-							onClick={async () => {
-								// Find first button not in current list
-								const availableButton = BUTTON_OPTIONS.find(
-									opt => !buttons.includes(opt.data as string)
-								);
-								if (availableButton) {
-									const newButtons = [...buttons, availableButton.data as string];
-									setButtons(newButtons);
-									await logic.serverAPI.callPluginMethod('set_button_config', {
-										buttons: newButtons,
-										showNotifications: showNotifications
-									});
-								}
-							}}
-						>
-							+ Add Button
-						</ButtonItem>
+						<div style={{ marginTop: '8px' }}>
+							<ButtonItem
+								layout="below"
+								onClick={async () => {
+									// Find first button not in current list
+									const availableButton = BUTTON_OPTIONS.find(
+										opt => !buttons.includes(opt.data as string)
+									);
+									if (availableButton) {
+										const newButtons = [...buttons, availableButton.data as string];
+										setButtons(newButtons);
+										await logic.serverAPI.callPluginMethod('set_button_config', {
+											buttons: newButtons,
+											showNotifications: showNotifications
+										});
+									}
+								}}
+							>
+								➕ Add Button
+							</ButtonItem>
+						</div>
 					</PanelSectionRow>
 				)}
 
@@ -377,25 +395,75 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 				{enabled && modelReady && (
 					<PanelSectionRow>
 						<div style={{
-							padding: '10px',
-							backgroundColor: recording ? '#4ade80' : '#374151',
+							padding: '12px',
+							backgroundColor: recording ? '#4ade80' : '#3b4252',
 							borderRadius: '8px',
 							textAlign: 'center',
-							fontWeight: 'bold'
+							fontWeight: 'bold',
+							fontSize: '14px',
+							border: recording ? '2px solid #22c55e' : '2px solid #4c566a',
+							transition: 'all 0.3s ease'
 						}}>
-							{recording ? 'Recording...' : 'Ready'}
+							{recording ? '🎤 Recording...' : '✓ Ready'}
 						</div>
 					</PanelSectionRow>
 				)}
 
 				<PanelSectionRow>
-					<ButtonItem
-						layout="below"
-						onClick={() => logic.testRecording()}
-						disabled={!enabled || !modelReady || modelLoading}
-					>
-						{recording ? 'Stop Test Recording' : 'Start Test Recording'}
-					</ButtonItem>
+					<div style={{ marginTop: '8px', marginBottom: '8px' }}>
+						<ButtonItem
+							layout="below"
+							onClick={() => logic.testRecording((text, time) => {
+								setLastTranscription(text);
+								setLastTranscriptionTime(time);
+							})}
+							disabled={!enabled || !modelReady || modelLoading || recording}
+						>
+							🎙️ Test Recording (3 seconds)
+						</ButtonItem>
+					</div>
+				</PanelSectionRow>
+
+				<PanelSectionRow>
+					<div style={{
+						padding: '12px',
+						backgroundColor: '#1a2f1a',
+						borderRadius: '8px',
+						marginTop: '12px',
+						border: '1px solid #2d5a2d'
+					}}>
+						<div style={{
+							fontWeight: 'bold',
+							marginBottom: '8px',
+							color: '#4ade80',
+							fontSize: '14px'
+						}}>
+							Last Transcription:
+						</div>
+						<div style={{
+							backgroundColor: '#0f1f0f',
+							padding: '10px',
+							borderRadius: '6px',
+							fontFamily: 'monospace',
+							fontSize: '13px',
+							wordWrap: 'break-word',
+							minHeight: '40px',
+							lineHeight: '1.4',
+							border: '1px solid #1a3a1a'
+						}}>
+							{lastTranscription || <span style={{ color: '#666', fontStyle: 'italic' }}>No transcription yet</span>}
+						</div>
+						{lastTranscriptionTime && (
+							<div style={{
+								fontSize: '11px',
+								marginTop: '8px',
+								color: '#888',
+								textAlign: 'right'
+							}}>
+								{lastTranscriptionTime}
+							</div>
+						)}
+					</div>
 				</PanelSectionRow>
 			</PanelSection>
 

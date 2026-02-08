@@ -34,6 +34,10 @@ class WoWVoiceChat:
         self.model_loading = False
         self.model_load_error = None
 
+        # Last transcription result (for UI display)
+        self.last_transcription = None
+        self.last_transcription_time = None
+
         if not lazy_load:
             self._load_model()
 
@@ -82,6 +86,13 @@ class WoWVoiceChat:
     def is_model_ready(self):
         """Check if model is loaded and ready"""
         return self.model is not None
+
+    def get_last_transcription(self):
+        """Get the last transcription result"""
+        return {
+            "text": self.last_transcription or "",
+            "timestamp": self.last_transcription_time or 0
+        }
 
     def load_context(self):
         """Load WoW context from addon-generated file"""
@@ -432,6 +443,10 @@ class WoWVoiceChat:
                 print("Transcribing...")
                 text = self.transcribe_audio(temp_file)
                 print(f"Transcribed: {text}")
+
+                # Store last transcription result
+                self.last_transcription = text
+                self.last_transcription_time = time.time()
 
                 if text:
                     self.send_to_wow_chat(text)
