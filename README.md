@@ -9,7 +9,6 @@ Voice dictation plugin for Steam Deck using faster-whisper with context-aware tr
 - **Context-aware**: Optional context support for better accuracy with game-specific terms
 - **Fast transcription**: Uses faster-whisper for efficient CPU-based speech recognition
 - **Auto-type**: Automatically types transcribed text into active window via ydotool
-- **Automatic installation**: Dependencies install automatically on first run
 
 ## Installation
 
@@ -32,13 +31,16 @@ This creates a systemd service that runs ydotoold with proper permissions.
 ### Easy Installation
 
 **Option 1: Install from URL (GitHub)**
+
 1. Open Decky Plugin Store
 2. Settings → Install from URL
 3. Enter: `https://github.com/silverfoxy/decktation`
 4. Plugin installs automatically with all dependencies
 
 **Option 2: Manual Installation**
+
 1. Copy the plugin folder to Decky plugins directory:
+
    ```bash
    cp -r decktation ~/.local/share/decky/plugins/
    ```
@@ -50,8 +52,6 @@ This creates a systemd service that runs ydotoold with proper permissions.
    - This takes ~30 seconds (downloads ~200MB)
    - Then shows "Loading Whisper model..."
    - Once ready, you can enable the plugin
-
-**No manual dependency installation needed!**
 
 ## Usage
 
@@ -66,25 +66,23 @@ This creates a systemd service that runs ydotoold with proper permissions.
 The plugin uses a **two-button combo** for push-to-talk. You can configure both buttons from the plugin UI.
 
 Available buttons:
-- **L1, R1** (bumpers) - *Default combo*
+
+- **L1, R1** (bumpers) - _Default combo_
 - **L2, R2** (triggers)
-- **L5, R5** (back grips) - *May not work due to Steam interception*
 - **A, B, X, Y** (face buttons)
 
 **Default: L1+R1** (both bumpers pressed together)
 
-### Why L1+R1?
-
-The L5/R5 back grips are often intercepted by Steam and not accessible via evdev. L1+R1 (bumpers) provides a reliable combo that's easy to press while gaming.
-
 ## Use Cases
 
 ### Gaming
+
 - **In-game chat**: Quickly dictate messages in MMOs, co-op games
 - **Text input**: Type player names, search terms without keyboard
 - **Accessibility**: Voice input for games requiring text
 
 ### General
+
 - **Web browsing**: Fill forms, search, comment
 - **Discord/messaging**: Send messages hands-free
 - **Any text input**: Works in any active window
@@ -96,6 +94,7 @@ For specialized vocabulary (game terms, technical jargon), you can provide conte
 Create: `~/.local/share/decky/plugins/decktation/context.json`
 
 Example:
+
 ```json
 {
   "zone": "Icecrown Citadel",
@@ -106,50 +105,30 @@ Example:
 
 This helps the model correctly recognize domain-specific terms.
 
-## Development
-
-### Building the Plugin
-
-```bash
-# Install dependencies
-pnpm install
-
-# Build
-pnpm run build
-
-# Watch mode
-pnpm run watch
-```
-
-### Testing
-
-Use the "Start Test Recording" button in the plugin UI to test without using controller buttons.
-
 ## Troubleshooting
 
 ### Plugin not showing up
+
 - Check Decky Loader logs: `/tmp/decky-*.log`
 - Ensure all Python dependencies are installed
 - Restart Decky Loader
 
 ### Recording not working
+
 - Ensure the plugin is enabled
 - Check that Steam Deck mic is working (test in another app)
 - Verify ydotoold is running: `pgrep ydotoold`
 - Check logs: `/tmp/decktation.log`
 
 ### Button combo not detected
+
 - Try a different button combination in the plugin UI
 - Avoid L5/R5 as Steam may intercept these buttons
 - Check `/tmp/decktation.log` for controller listener errors
 - Verify controller listener is running: `pgrep -f controller_listener`
 
-### Transcription inaccurate
-- Speak clearly and not too fast
-- Add context file for specialized vocabulary
-- Try the `tiny` or `small` model for faster processing (edit main.py)
-
 ### Performance on Steam Deck
+
 - Default `base` model is recommended (good balance)
 - For faster: use `tiny` model (edit wow_voice_chat.py line 28)
 - For accuracy: use `small` model (slower, needs more resources)
@@ -170,9 +149,36 @@ Use the "Start Test Recording" button in the plugin UI to test without using con
 - No data sent to external servers
 - Whisper model downloads from HuggingFace (one-time)
 
+## Future Milestones
+
+### Improved Installation Process
+**Goal:** Fully automated installation where possible
+
+- Auto-detect Decky's Python version and use matching dependencies
+- Remove hardcoded Python paths (use `sys.executable`)
+- Create `install.sh` that runs automatically on plugin install
+  - Auto-install Python dependencies to `lib/`
+  - Auto-generate ydotoold setup script if needed
+- Add UI indicators showing setup status
+- One-click install + one optional command for ydotoold
+
+### Per-Game Configuration
+**Goal:** Support different games with different chat systems
+
+- Game profile system with built-in presets (WoW, FFXIV, Generic FPS, Direct Input)
+- Auto-detect running game by process name
+- Configurable per-game settings:
+  - Chat activation key (Enter, T, Y, or none)
+  - Channel prefix parsing (on/off)
+  - Channel mappings (game-specific syntax)
+  - Send key behavior
+- Custom profile editor in UI
+- Works seamlessly with any game, not just WoW
+
 ## Credits
 
 Built with:
+
 - [faster-whisper](https://github.com/guillaumekln/faster-whisper) - Efficient Whisper implementation
 - [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader) - Steam Deck plugin framework
 
