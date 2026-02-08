@@ -5,10 +5,12 @@ Voice dictation plugin for Steam Deck using faster-whisper with context-aware tr
 ## Features
 
 - **Push-to-Talk**: Hold button combo (default: L1+R1) to record
-- **Configurable buttons**: Choose any two-button combination from the Steam Deck controller
+- **Configurable buttons**: Choose 1-5 button combinations from any Steam Deck controller buttons
+- **Test Recording**: Built-in 3-second test with automatic transcription display
 - **Context-aware**: Optional context support for better accuracy with game-specific terms
 - **Fast transcription**: Uses faster-whisper for efficient CPU-based speech recognition
 - **Auto-type**: Automatically types transcribed text into active window via ydotool
+- **Toast notifications**: Optional notifications when recording starts/stops
 
 ## Installation
 
