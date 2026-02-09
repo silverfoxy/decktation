@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.png" alt="Decktation Logo" width="400"/>
+</p>
+
 # Decktation - Push-to-Talk Dictation for Steam Deck
 
 Voice dictation plugin for Steam Deck using faster-whisper with context-aware transcription.
