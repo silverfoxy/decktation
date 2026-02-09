@@ -31,3 +31,13 @@ wow_context.json
 .idea/
 *.swp
 *.swo
+
+# CI/Build artifacts
+*.tar.gz
+*.zip
+decktation-package/
+lib/
+
+# User config
+.setup_status
+button_config.json

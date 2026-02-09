@@ -32,28 +32,52 @@ This creates a systemd service that runs ydotoold with proper permissions.
 
 ### Easy Installation
 
-**Option 1: Install from URL (GitHub)**
+**Option 1: Install from GitHub Release (Recommended)**
+
+1. Download the latest release from [GitHub Releases](https://github.com/silverfoxy/decktation/releases)
+   - Choose `decktation-plugin.zip` or `decktation-plugin.tar.gz`
+2. Extract to Decky plugins directory:
+   ```bash
+   # For zip:
+   unzip decktation-plugin.zip -d ~/.local/share/decky/plugins/decktation
+
+   # For tar.gz:
+   tar -xzf decktation-plugin.tar.gz -C ~/.local/share/decky/plugins/decktation
+   ```
+3. Restart Decky Loader
+4. **Dependencies install automatically on first run!**
+   - The plugin runs `install.sh` to download Python dependencies (~200MB)
+   - This takes ~30 seconds on first use
+   - Then loads the Whisper model
+   - Once ready, you can enable the plugin
+
+**Option 2: Install from Decky Store (if available)**
 
 1. Open Decky Plugin Store
-2. Settings → Install from URL
-3. Enter: `https://github.com/silverfoxy/decktation`
-4. Plugin installs automatically with all dependencies
+2. Search for "Decktation"
+3. Click Install
+4. Dependencies install automatically
 
-**Option 2: Manual Installation**
+**Option 3: Manual Installation (for developers)**
 
-1. Copy the plugin folder to Decky plugins directory:
-
+1. Clone the repository:
    ```bash
-   cp -r decktation ~/.local/share/decky/plugins/
+   git clone https://github.com/silverfoxy/decktation
+   cd decktation
    ```
 
-2. Restart Decky Loader
+2. Build the plugin:
+   ```bash
+   npm install
+   npm run build
+   ```
 
-3. **Dependencies install automatically on first run!**
-   - When you first open the plugin, it will show "Installing dependencies..."
-   - This takes ~30 seconds (downloads ~200MB)
-   - Then shows "Loading Whisper model..."
-   - Once ready, you can enable the plugin
+3. Copy to Decky plugins directory:
+   ```bash
+   cp -r . ~/.local/share/decky/plugins/decktation
+   ```
+
+4. Restart Decky Loader
 
 ## Usage
 
