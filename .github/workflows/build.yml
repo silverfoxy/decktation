@@ -39,6 +39,16 @@ jobs:
         python -m py_compile wow_voice_chat.py
         python -m py_compile controller_listener.py
 
+    - name: Install Python dependencies
+      run: |
+        echo "Using Python version:"
+        python --version
+        python -m pip install --target lib/ \
+          faster-whisper \
+          sounddevice \
+          numpy \
+          evdev-binary
+
     - name: Package plugin (lightweight)
       run: |
         # Create package directory
@@ -47,6 +57,7 @@ jobs:
         # Copy essential files
         cp -r dist decktation/
         cp -r defaults decktation/ 2>/dev/null || true
+        cp -r lib decktation/
         cp main.py decktation/
         cp wow_voice_chat.py decktation/
         cp controller_listener.py decktation/
@@ -59,44 +70,17 @@ jobs:
         cp setup_ydotoold.sh decktation/ 2>/dev/null || true
         cp install_deps.sh decktation/ 2>/dev/null || true
 
-        # Create install.sh for automatic dependency installation
-        cat > decktation/install.sh <<'EOF'
-        #!/bin/bash
-        # Automatically install Python dependencies on plugin install
-        PLUGIN_DIR="$(dirname "$0")"
-        cd "$PLUGIN_DIR"
+        echo "Python 3.11 dependencies bundled in lib/"
 
-        echo "Decktation: Installing Python dependencies..."
-
-        # Detect Python (prefer 3.11 to match Decky)
-        if command -v python3.11 &> /dev/null; then
-            PYTHON="python3.11"
-        else
-            PYTHON="python3"
-        fi
-
-        echo "Using Python: $PYTHON ($($PYTHON --version))"
-
-        # Install dependencies to lib/
-        mkdir -p lib
-        $PYTHON -m pip install --target=lib --upgrade \
-            faster-whisper \
-            sounddevice \
-            numpy \
-            evdev-binary
-
-        echo "Decktation: Dependencies installed successfully"
-        EOF
-        chmod +x decktation/install.sh
-
-        # Create zip archive
-        zip -r decktation.zip decktation/
-
-    - name: Upload build artifacts
+    - name: Upload build artifacts (directory - GitHub will zip it)
       uses: actions/upload-artifact@v4
       with:
         name: decktation
-        path: decktation.zip
+        path: decktation/
+
+    - name: Create release archive
+      if: github.event_name == 'release'
+      run: zip -r decktation.zip decktation/
 
     - name: Upload to release
       if: github.event_name == 'release'
