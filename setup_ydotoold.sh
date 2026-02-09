@@ -4,9 +4,10 @@
 
 set -e
 
-# Find ydotoold
+# Find ydotoold - check bundled first, then system locations
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 YDOTOOLD_PATH=""
-for path in /home/deck/.nix-profile/bin/ydotoold /usr/bin/ydotoold /usr/local/bin/ydotoold; do
+for path in "$SCRIPT_DIR/bin/ydotoold" /home/deck/.nix-profile/bin/ydotoold /usr/bin/ydotoold /usr/local/bin/ydotoold; do
     if [ -f "$path" ]; then
         YDOTOOLD_PATH="$path"
         break

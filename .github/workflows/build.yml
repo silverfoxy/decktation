@@ -49,6 +49,29 @@ jobs:
           numpy \
           evdev-binary
 
+    - name: Install build dependencies for ydotool
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential
+
+    - name: Build ydotool from source
+      run: |
+        git clone https://github.com/ReimuNotMoe/ydotool.git
+        cd ydotool
+        mkdir build && cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+        make
+
+        # Create bin directory and copy binaries
+        mkdir -p ../../bin
+        cp ydotool ydotoold ../../bin/
+
+        # Verify binaries
+        echo "Built ydotool binaries:"
+        ls -lh ../../bin/
+        file ../../bin/ydotool
+        file ../../bin/ydotoold
+
     - name: Package plugin (lightweight)
       run: |
         # Create package directory
@@ -58,6 +81,7 @@ jobs:
         cp -r dist decktation/
         cp -r defaults decktation/ 2>/dev/null || true
         cp -r lib decktation/
+        cp -r bin decktation/
         cp main.py decktation/
         cp wow_voice_chat.py decktation/
         cp controller_listener.py decktation/

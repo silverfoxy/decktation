@@ -295,8 +295,17 @@ class WoWVoiceChat:
         logger.info(f"Sending to {channel}: {text}")
         logger.info(f"Full message: {full_message}")
 
-        # Use full path to ydotool since plugin environment may not have nix in PATH
-        ydotool = "/home/deck/.nix-profile/bin/ydotool"
+        # Find ydotool binary - check bundled first, then fallback to Nix
+        plugin_dir = os.path.dirname(os.path.abspath(__file__))
+        bundled_ydotool = os.path.join(plugin_dir, "bin", "ydotool")
+
+        if os.path.exists(bundled_ydotool):
+            ydotool = bundled_ydotool
+            logger.info("Using bundled ydotool")
+        else:
+            # Fallback to Nix installation
+            ydotool = "/home/deck/.nix-profile/bin/ydotool"
+            logger.info("Using Nix ydotool")
 
         # Set socket path - ydotoold running as root uses /tmp/.ydotool_socket
         env = os.environ.copy()
