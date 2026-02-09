@@ -42,25 +42,25 @@ jobs:
     - name: Package plugin (lightweight)
       run: |
         # Create package directory
-        mkdir -p decktation-package
+        mkdir -p decktation
 
         # Copy essential files
-        cp -r dist decktation-package/
-        cp -r defaults decktation-package/ 2>/dev/null || true
-        cp main.py decktation-package/
-        cp wow_voice_chat.py decktation-package/
-        cp controller_listener.py decktation-package/
-        cp plugin.json decktation-package/
-        cp package.json decktation-package/
-        cp README.md decktation-package/
-        cp LICENSE decktation-package/ 2>/dev/null || true
+        cp -r dist decktation/
+        cp -r defaults decktation/ 2>/dev/null || true
+        cp main.py decktation/
+        cp wow_voice_chat.py decktation/
+        cp controller_listener.py decktation/
+        cp plugin.json decktation/
+        cp package.json decktation/
+        cp README.md decktation/
+        cp LICENSE decktation/ 2>/dev/null || true
 
         # Copy setup scripts
-        cp setup_ydotoold.sh decktation-package/ 2>/dev/null || true
-        cp install_deps.sh decktation-package/ 2>/dev/null || true
+        cp setup_ydotoold.sh decktation/ 2>/dev/null || true
+        cp install_deps.sh decktation/ 2>/dev/null || true
 
         # Create install.sh for automatic dependency installation
-        cat > decktation-package/install.sh <<'EOF'
+        cat > decktation/install.sh <<'EOF'
         #!/bin/bash
         # Automatically install Python dependencies on plugin install
         PLUGIN_DIR="$(dirname "$0")"
@@ -87,28 +87,21 @@ jobs:
 
         echo "Decktation: Dependencies installed successfully"
         EOF
-        chmod +x decktation-package/install.sh
+        chmod +x decktation/install.sh
 
-        # Create archive
-        cd decktation-package
-        tar -czf ../decktation-plugin.tar.gz .
-        cd ..
-        zip -r decktation-plugin.zip decktation-package/
+        # Create zip archive
+        zip -r decktation.zip decktation/
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: decktation-plugin
-        path: |
-          decktation-plugin.tar.gz
-          decktation-plugin.zip
+        name: decktation
+        path: decktation.zip
 
     - name: Upload to release
       if: github.event_name == 'release'
       uses: softprops/action-gh-release@v1
       with:
-        files: |
-          decktation-plugin.tar.gz
-          decktation-plugin.zip
+        files: decktation.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
