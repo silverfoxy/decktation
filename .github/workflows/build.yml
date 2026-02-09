@@ -52,14 +52,14 @@ jobs:
     - name: Install build dependencies for ydotool
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake build-essential
+        sudo apt-get install -y cmake build-essential scdoc
 
     - name: Build ydotool from source
       run: |
         git clone https://github.com/ReimuNotMoe/ydotool.git
         cd ydotool
         mkdir build && cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_MAN=OFF
+        cmake .. -DCMAKE_BUILD_TYPE=Release
         make
 
         # Create bin directory and copy binaries
