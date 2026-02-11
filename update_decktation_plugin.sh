@@ -65,7 +65,6 @@ sudo cp "$SOURCE_DIR/dist/index.js" "$PLUGIN_DIR/dist/"
 
 # Setup scripts
 echo "  → Setup scripts..."
-sudo cp "$SOURCE_DIR/install_deps.sh" "$PLUGIN_DIR/"
 sudo cp "$SOURCE_DIR/setup_ydotoold.sh" "$PLUGIN_DIR/" 2>/dev/null || true
 
 # Metadata
@@ -108,20 +107,8 @@ echo ""
 echo "Setting permissions..."
 sudo chmod +x "$PLUGIN_DIR/main.py"
 sudo chmod +x "$PLUGIN_DIR/controller_listener.py"
-sudo chmod +x "$PLUGIN_DIR/install_deps.sh"
 sudo chmod +x "$PLUGIN_DIR/setup_ydotoold.sh" 2>/dev/null || true
 echo "✓ Permissions set"
-echo ""
-
-# Check dependencies
-echo "Checking dependencies..."
-if [ -d "$PLUGIN_DIR/lib" ] && [ -n "$(ls -A $PLUGIN_DIR/lib)" ]; then
-  echo "  ✓ Python dependencies found in lib/"
-else
-  echo "  ⚠ Python dependencies not found!"
-  echo "    Run this to install:"
-  echo "    cd $PLUGIN_DIR && ./install_deps.sh"
-fi
 echo ""
 
 echo "========================================="
@@ -141,12 +128,3 @@ echo "   - Verify text shows 'Hold L1+R1 to record'"
 echo ""
 echo "3. Check logs if needed:"
 echo "   tail -f /tmp/decktation.log"
-echo ""
-echo "Backup location:"
-echo "  $BACKUP_DIR"
-echo ""
-echo "To restore backup:"
-echo "  rm -rf \"$PLUGIN_DIR\""
-echo "  mv \"$BACKUP_DIR\" \"$PLUGIN_DIR\""
-echo "  systemctl --user restart plugin_loader"
-echo ""
