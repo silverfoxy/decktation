@@ -286,10 +286,9 @@ class Plugin:
             combo_str = "+".join(unique_buttons)
             logger.info(f"Button config updated: {combo_str}, notifications: {showNotifications}")
 
-            # Restart controller listener if enabled
-            if Plugin.controller_enabled:
-                Plugin.stop_controller_listener()
-                Plugin.start_controller_listener()
+            # Always restart controller listener so new config takes effect immediately
+            Plugin.stop_controller_listener()
+            Plugin.start_controller_listener()
 
             return {"success": True}
         except Exception as e:
