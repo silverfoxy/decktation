@@ -60,6 +60,7 @@ class WoWVoiceChat:
             "yell": "/y ",
             "instance": "/i ",
             "whisper": "/w ",
+            "type": "",  # Just type text and press Enter, no WoW chat prefix
         }
 
     def _load_model(self):
@@ -312,11 +313,13 @@ class WoWVoiceChat:
         env["YDOTOOL_SOCKET"] = "/tmp/.ydotool_socket"
 
         try:
-            # Press Enter to open chat (keycode 28 = Enter)
-            result = subprocess.run([ydotool, "key", "28:1", "28:0"], capture_output=True, text=True, env=env)
-            if result.returncode != 0:
-                logger.error(f"ydotool key failed: {result.stderr}")
-            time.sleep(0.1)
+            # For WoW channels, press Enter first to open the chat input box.
+            # For the "type" channel, skip this - just type directly into whatever is focused.
+            if channel != "type":
+                result = subprocess.run([ydotool, "key", "28:1", "28:0"], capture_output=True, text=True, env=env)
+                if result.returncode != 0:
+                    logger.error(f"ydotool key failed: {result.stderr}")
+                time.sleep(0.1)
 
             # Type the full message with channel command
             result = subprocess.run([ydotool, "type", "--", full_message], capture_output=True, text=True, env=env)
