@@ -288,6 +288,10 @@ class WoWVoiceChat:
         # Get the channel command
         channel_cmd = self.channel_commands.get(channel, "/s ")
 
+        # For raw typing, strip trailing punctuation added by Whisper
+        if channel == "type":
+            text = text.rstrip(".!?,;:")
+
         # Build full message
         full_message = f"{channel_cmd}{text}"
 
