@@ -116,7 +116,9 @@ class WoWVoiceChat:
             "Discussing enhancement shaman, restoration druid, protection warrior, holy paladin, arcane mage, shadow priest, affliction warlock. "
             "Running mythic dungeons, heroic raids, doing quests in Azeroth, Orgrimmar, Stormwind, Ironforge. "
             "Fighting bosses like Lich King, Ragnaros, Illidan, pulling trash mobs, need tank healer and DPS. "
-            "Using abilities, cooldowns, buffs, debuffs, interrupts, dispels, cleave and AOE damage."
+            "Using abilities, cooldowns, buffs, debuffs, interrupts, dispels, cleave and AOE damage. "
+            "Chat channel prefixes: say, party, raid, guild, officer, yell, instance, whisper, type. "
+            "Common short phrases: hi, gg, brb, afk, lol, omw, ty, np, wp, gz."
         )
 
         zone = self.context.get("zone", "")
