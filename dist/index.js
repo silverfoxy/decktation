@@ -280,7 +280,7 @@
                       setRecording(isRecording);
                   }
               }
-          }, 1000);
+          }, 200);
           return () => clearInterval(interval);
       }, [logic.enabled, showNotifications]);
       return (React__default["default"].createElement("div", null,

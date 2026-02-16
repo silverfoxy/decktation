@@ -236,7 +236,7 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 					setRecording(isRecording);
 				}
 			}
-		}, 1000);
+		}, 200);
 		return () => clearInterval(interval);
 	}, [logic.enabled, showNotifications]);
 
