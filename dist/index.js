@@ -209,6 +209,8 @@
       const [buttonState, setButtonState] = React.useState("None");
       const [buttons, setButtons] = React.useState(["L1", "R1"]);
       const [showNotifications, setShowNotifications] = React.useState(true);
+      const [activePreset, setActivePreset] = React.useState("wow");
+      const [presets, setPresets] = React.useState([]);
       const [lastTranscription, setLastTranscription] = React.useState("");
       const [lastTranscriptionTime, setLastTranscriptionTime] = React.useState("");
       const prevRecordingRef = React__default["default"].useRef(false);
@@ -218,7 +220,7 @@
           logic.onButtonChange = () => {
               setButtonState(logic.lastButtonState);
           };
-          // Load button configuration and settings
+          // Load button configuration, settings, and active game preset
           logic.serverAPI.callPluginMethod('get_button_config', {}).then(async (result) => {
               if (result.success && result.result) {
                   const config = result.result.config;
@@ -229,6 +231,9 @@
                       if (config.showNotifications !== undefined) {
                           setShowNotifications(config.showNotifications);
                       }
+                      if (config.game) {
+                          setActivePreset(config.game);
+                      }
                       // Restore enabled state
                       if (config.enabled) {
                           setEnabled(true);
@@ -237,6 +242,16 @@
                           await logic.serverAPI.callPluginMethod('load_model', {});
                       }
                   }
+              }
+          });
+          // Load available game presets
+          logic.serverAPI.callPluginMethod('get_presets', {}).then((result) => {
+              if (result.success && result.result) {
+                  const opts = result.result.presets.map((p) => ({
+                      data: p.id,
+                      label: p.name,
+                  }));
+                  setPresets(opts);
               }
           });
           return () => {
@@ -306,6 +321,12 @@
                               showNotifications: e
                           });
                       } })),
+              presets.length > 0 && (React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                  React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: "Game", menuLabel: "Select Game", rgOptions: presets, selectedOption: activePreset, onChange: async (option) => {
+                          const game = option.data;
+                          setActivePreset(game);
+                          await logic.serverAPI.callPluginMethod('set_active_preset', { game });
+                      } }))),
               React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                   React__default["default"].createElement("div", { style: {
                           padding: '10px',

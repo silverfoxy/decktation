@@ -19,11 +19,12 @@ import tempfile
 
 
 class WoWVoiceChat:
-    def __init__(self, context_file="wow_context.json", sample_rate=44100, default_channel="say", lazy_load=False, test_mode=False, test_audio_file=None):
+    def __init__(self, context_file="wow_context.json", sample_rate=44100, default_channel="say", lazy_load=False, test_mode=False, test_audio_file=None, preset=None):
+        self.preset = preset or {}
         self.context_file = Path(context_file)
         self.sample_rate = sample_rate  # Recording sample rate
         self.whisper_sample_rate = 16000  # Whisper expects 16kHz
-        self.default_channel = default_channel
+        self.default_channel = self.preset.get("default_channel", default_channel)
 
         # Test mode: use static audio file instead of recording
         self.test_mode = test_mode
@@ -50,8 +51,8 @@ class WoWVoiceChat:
         # Context cache
         self.context = {}
 
-        # Chat channel mappings
-        self.channel_commands = {
+        # Chat channel mappings - from preset or WoW defaults
+        self.channel_commands = self.preset.get("channels") or {
             "say": "/s ",
             "party": "/p ",
             "raid": "/raid ",
@@ -95,6 +96,12 @@ class WoWVoiceChat:
             "timestamp": self.last_transcription_time or 0
         }
 
+    def set_preset(self, preset: dict):
+        """Update the active game preset without restarting the service"""
+        self.preset = preset
+        self.default_channel = preset.get("default_channel", "say")
+        self.channel_commands = preset.get("channels") or {"say": "", "type": ""}
+
     def load_context(self):
         """Load WoW context from addon-generated file"""
         if self.context_file.exists():
@@ -108,18 +115,24 @@ class WoWVoiceChat:
 
     def build_prompt_from_context(self):
         """Build initial_prompt and hotwords from context"""
-        # Use a comprehensive initial prompt with WoW vocabulary
-        # This is more effective than hotwords for domain-specific terms
-        base_prompt = (
-            "World of Warcraft gameplay discussion. "
-            "Playing as orc warrior, tauren druid, blood elf paladin, undead warlock, troll shaman, or night elf hunter. "
-            "Discussing enhancement shaman, restoration druid, protection warrior, holy paladin, arcane mage, shadow priest, affliction warlock. "
-            "Running mythic dungeons, heroic raids, doing quests in Azeroth, Orgrimmar, Stormwind, Ironforge. "
-            "Fighting bosses like Lich King, Ragnaros, Illidan, pulling trash mobs, need tank healer and DPS. "
-            "Using abilities, cooldowns, buffs, debuffs, interrupts, dispels, cleave and AOE damage. "
-            "Chat channel prefixes: say, party, raid, guild, officer, yell, instance, whisper, type. "
-            "Common short phrases: hi, gg, brb, afk, lol, omw, ty, np, wp, gz."
-        )
+        base_prompt = self.preset.get("whisper_prompt") if self.preset else None
+
+        # Fall back to hardcoded WoW prompt when no preset is provided (direct CLI usage)
+        if base_prompt is None:
+            base_prompt = (
+                "World of Warcraft gameplay discussion. "
+                "Playing as orc warrior, tauren druid, blood elf paladin, undead warlock, troll shaman, or night elf hunter. "
+                "Discussing enhancement shaman, restoration druid, protection warrior, holy paladin, arcane mage, shadow priest, affliction warlock. "
+                "Running mythic dungeons, heroic raids, doing quests in Azeroth, Orgrimmar, Stormwind, Ironforge. "
+                "Fighting bosses like Lich King, Ragnaros, Illidan, pulling trash mobs, need tank healer and DPS. "
+                "Using abilities, cooldowns, buffs, debuffs, interrupts, dispels, cleave and AOE damage. "
+                "Chat channel prefixes: say, party, raid, guild, officer, yell, instance, whisper, type. "
+                "Common short phrases: hi, gg, brb, afk, lol, omw, ty, np, wp, gz."
+            )
+
+        # Only append dynamic game context if this preset uses a context file (e.g. WoW addon)
+        if not self.preset.get("context_file"):
+            return base_prompt or None, None
 
         zone = self.context.get("zone", "")
         subzone = self.context.get("subzone", "")
@@ -318,10 +331,18 @@ class WoWVoiceChat:
         env = os.environ.copy()
         env["YDOTOOL_SOCKET"] = "/tmp/.ydotool_socket"
 
+        # Determine open/send keys from preset.
+        # The "type" channel always skips both (pure typing into focused window).
+        if channel == "type":
+            open_key = None
+            send_key = None
+        else:
+            open_key = self.preset.get("chat_open_key", "enter")
+            send_key = self.preset.get("chat_send_key", "enter")
+
         try:
-            # For WoW channels, press Enter first to open the chat input box.
-            # For the "type" channel, skip this - just type directly into whatever is focused.
-            if channel != "type":
+            # Press key to open chat input box (e.g. Enter for most games)
+            if open_key == "enter":
                 result = subprocess.run([ydotool, "key", "28:1", "28:0"], capture_output=True, text=True, env=env)
                 if result.returncode != 0:
                     logger.error(f"ydotool key failed: {result.stderr}")
@@ -333,10 +354,11 @@ class WoWVoiceChat:
                 logger.error(f"ydotool type failed: {result.stderr}")
             time.sleep(0.1)
 
-            # Press Enter to send
-            result = subprocess.run([ydotool, "key", "28:1", "28:0"], capture_output=True, text=True, env=env)
-            if result.returncode != 0:
-                logger.error(f"ydotool key failed: {result.stderr}")
+            # Press key to send (e.g. Enter for most games)
+            if send_key == "enter":
+                result = subprocess.run([ydotool, "key", "28:1", "28:0"], capture_output=True, text=True, env=env)
+                if result.returncode != 0:
+                    logger.error(f"ydotool key failed: {result.stderr}")
         except Exception as e:
             logger.error(f"ydotool error: {e}")
 

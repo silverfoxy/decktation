@@ -1,0 +1,31 @@
+{
+  "wow": {
+    "name": "World of Warcraft",
+    "chat_open_key": "enter",
+    "chat_send_key": "enter",
+    "default_channel": "say",
+    "channels": {
+      "say": "/s ",
+      "party": "/p ",
+      "raid": "/raid ",
+      "guild": "/g ",
+      "officer": "/o ",
+      "yell": "/y ",
+      "instance": "/i ",
+      "whisper": "/w ",
+      "type": ""
+    },
+    "whisper_prompt": "World of Warcraft gameplay discussion. Playing as orc warrior, tauren druid, blood elf paladin, undead warlock, troll shaman, or night elf hunter. Discussing enhancement shaman, restoration druid, protection warrior, holy paladin, arcane mage, shadow priest, affliction warlock. Running mythic dungeons, heroic raids, doing quests in Azeroth, Orgrimmar, Stormwind, Ironforge. Fighting bosses like Lich King, Ragnaros, Illidan, pulling trash mobs, need tank healer and DPS. Using abilities, cooldowns, buffs, debuffs, interrupts, dispels, cleave and AOE damage. Chat channel prefixes: say, party, raid, guild, officer, yell, instance, whisper, type. Common short phrases: hi, gg, brb, afk, lol, omw, ty, np, wp, gz.",
+    "context_file": "wow_context.json"
+  },
+  "generic": {
+    "name": "Generic",
+    "chat_open_key": null,
+    "chat_send_key": null,
+    "default_channel": "type",
+    "channels": {
+      "type": ""
+    },
+    "whisper_prompt": ""
+  }
+}

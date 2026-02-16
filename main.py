@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import logging
 import traceback
 import threading
@@ -55,6 +56,16 @@ PID_FILE = "/tmp/decktation_listener.pid"
 CONFIG_DIR = os.path.expanduser("~/.config/decktation")
 os.makedirs(CONFIG_DIR, exist_ok=True)
 BUTTON_CONFIG_FILE = os.path.join(CONFIG_DIR, "button_config.json")
+PRESETS_FILE = os.path.join(plugin_path, "game_presets.json")
+
+# Load game presets
+_game_presets = {}
+try:
+    with open(PRESETS_FILE, 'r') as f:
+        _game_presets = json.load(f)
+    logger.info(f"Loaded {len(_game_presets)} game presets: {list(_game_presets.keys())}")
+except Exception as e:
+    logger.error(f"Failed to load game presets: {e}")
 
 
 class Plugin:
@@ -206,6 +217,19 @@ class Plugin:
                 logger.error("WoWVoiceChat not available - dependencies may be missing")
                 return
 
+            # Load active game preset
+            active_game = "wow"
+            try:
+                if os.path.exists(BUTTON_CONFIG_FILE):
+                    with open(BUTTON_CONFIG_FILE, 'r') as f:
+                        saved_config = json.load(f)
+                    active_game = saved_config.get("game", "wow")
+            except Exception as e:
+                logger.error(f"Error reading active game from config: {e}")
+
+            active_preset = _game_presets.get(active_game, _game_presets.get("wow", {}))
+            logger.info(f"Active game preset: {active_game}")
+
             # Initialize the voice service with lazy model loading
             context_file = f"{plugin_path}/wow_context.json"
 
@@ -213,14 +237,14 @@ class Plugin:
                 context_file=context_file,
                 lazy_load=True,
                 test_mode=False,
-                test_audio_file=None
+                test_audio_file=None,
+                preset=active_preset
             )
             logger.info("Voice service initialized (model will load on first use)")
 
             # Restore enabled state from config
             try:
                 if os.path.exists(BUTTON_CONFIG_FILE):
-                    import json
                     with open(BUTTON_CONFIG_FILE, 'r') as f:
                         saved_config = json.load(f)
                     Plugin.controller_enabled = saved_config.get("enabled", False)
@@ -261,7 +285,6 @@ class Plugin:
         logger.info(f"Controller listening {'enabled' if enabled else 'disabled'}")
         # Persist enabled state to config
         try:
-            import json
             config = {"buttons": ["L1", "R1"], "showNotifications": True}
             if os.path.exists(BUTTON_CONFIG_FILE):
                 with open(BUTTON_CONFIG_FILE, 'r') as f:
@@ -277,7 +300,6 @@ class Plugin:
         """Get current button configuration and settings"""
         try:
             if os.path.exists(BUTTON_CONFIG_FILE):
-                import json
                 with open(BUTTON_CONFIG_FILE, 'r') as f:
                     config = json.load(f)
                     # Ensure fields exist for backward compatibility
@@ -285,10 +307,12 @@ class Plugin:
                         config["showNotifications"] = True
                     if "enabled" not in config:
                         config["enabled"] = False
+                    if "game" not in config:
+                        config["game"] = "wow"
                     return {"success": True, "config": config}
             else:
-                # Default: L1+R1, notifications enabled, not enabled
-                return {"success": True, "config": {"buttons": ["L1", "R1"], "showNotifications": True, "enabled": False}}
+                # Default: L1+R1, notifications enabled, not enabled, wow preset
+                return {"success": True, "config": {"buttons": ["L1", "R1"], "showNotifications": True, "enabled": False, "game": "wow"}}
         except Exception as e:
             logger.error(f"Error getting button config: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
@@ -296,8 +320,6 @@ class Plugin:
     async def set_button_config(self, buttons: list, showNotifications: bool = True):
         """Set button configuration and settings, restart listener"""
         try:
-            import json
-
             # Validate buttons list
             if not isinstance(buttons, list) or len(buttons) == 0:
                 return {"success": False, "error": "buttons must be a non-empty list"}
@@ -310,10 +332,17 @@ class Plugin:
                     seen.add(btn)
                     unique_buttons.append(btn)
 
-            config = {
-                "buttons": unique_buttons,
-                "showNotifications": showNotifications
-            }
+            # Preserve existing fields (game, enabled) when updating button config
+            config = {"buttons": ["L1", "R1"], "showNotifications": True, "enabled": False, "game": "wow"}
+            if os.path.exists(BUTTON_CONFIG_FILE):
+                try:
+                    with open(BUTTON_CONFIG_FILE, 'r') as f:
+                        config = json.load(f)
+                except Exception:
+                    pass
+
+            config["buttons"] = unique_buttons
+            config["showNotifications"] = showNotifications
 
             with open(BUTTON_CONFIG_FILE, 'w') as f:
                 json.dump(config, f)
@@ -328,6 +357,56 @@ class Plugin:
             return {"success": True}
         except Exception as e:
             logger.error(f"Error setting button config: {traceback.format_exc()}")
+            return {"success": False, "error": str(e)}
+
+    async def get_presets(self):
+        """Get all available game presets"""
+        try:
+            presets = [{"id": k, "name": v["name"]} for k, v in _game_presets.items()]
+            return {"success": True, "presets": presets}
+        except Exception as e:
+            logger.error(f"Error getting presets: {traceback.format_exc()}")
+            return {"success": False, "error": str(e)}
+
+    async def get_active_preset(self):
+        """Get the currently active game preset id"""
+        try:
+            game = "wow"
+            if os.path.exists(BUTTON_CONFIG_FILE):
+                with open(BUTTON_CONFIG_FILE, 'r') as f:
+                    config = json.load(f)
+                game = config.get("game", "wow")
+            return {"success": True, "game": game}
+        except Exception as e:
+            logger.error(f"Error getting active preset: {traceback.format_exc()}")
+            return {"success": False, "error": str(e)}
+
+    async def set_active_preset(self, game: str):
+        """Switch to a different game preset"""
+        try:
+            if game not in _game_presets:
+                return {"success": False, "error": f"Unknown preset: {game}"}
+
+            # Save to config
+            config = {"buttons": ["L1", "R1"], "showNotifications": True, "enabled": False, "game": "wow"}
+            if os.path.exists(BUTTON_CONFIG_FILE):
+                try:
+                    with open(BUTTON_CONFIG_FILE, 'r') as f:
+                        config = json.load(f)
+                except Exception:
+                    pass
+            config["game"] = game
+            with open(BUTTON_CONFIG_FILE, 'w') as f:
+                json.dump(config, f)
+
+            # Update running voice service
+            if Plugin.voice_service:
+                Plugin.voice_service.set_preset(_game_presets[game])
+
+            logger.info(f"Switched game preset to: {game}")
+            return {"success": True}
+        except Exception as e:
+            logger.error(f"Error setting active preset: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
 
     async def start_recording(self):
@@ -374,7 +453,6 @@ class Plugin:
             logger.info(f"Updating context: {context}")
             context_file = f"{plugin_path}/wow_context.json"
 
-            import json
             with open(context_file, 'w') as f:
                 json.dump(context, f)
 

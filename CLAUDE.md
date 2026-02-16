@@ -19,11 +19,27 @@ Python dependencies are installed via `install_deps.sh` using the venv pip, whic
 ## Testing
 
 ```bash
+# Unit tests (no hardware required)
+.venv/bin/pytest tests/ -v     # Run all unit tests
+
+# One-time venv setup (uses nix Python 3.11)
+/nix/store/dwix9cc815h6vxvdvl8zc6pvznq6whdh-python3-3.11.14/bin/python -m venv .venv
+.venv/bin/pip install pytest
+
+# Manual/integration tests
 python test_voice.py           # Test transcription
 python test_xdotool.py         # Test keyboard simulation
 python test_context_benefit.py # Test context improvement
 ./test_wow_integration.sh      # Full WoW addon integration test
 ```
+
+### Unit test coverage (`tests/`)
+
+| File | What it tests |
+|------|--------------|
+| `test_channel_parsing.py` | `parse_channel_and_text` — all separators, all WoW channels, generic preset |
+| `test_presets.py` | `game_presets.json` structure, constructor preset wiring, `set_preset` live switching |
+| `test_send_behavior.py` | `send_to_wow_chat` key presses — WoW channels (Enter+Enter), type channel (no Enter), Generic preset (no Enter) |
 
 ## Architecture
 

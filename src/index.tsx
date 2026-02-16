@@ -162,6 +162,8 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 	const [buttonState, setButtonState] = useState<string>("None");
 	const [buttons, setButtons] = useState<string[]>(["L1", "R1"]);
 	const [showNotifications, setShowNotifications] = useState<boolean>(true);
+	const [activePreset, setActivePreset] = useState<string>("wow");
+	const [presets, setPresets] = useState<DropdownOption[]>([]);
 	const [lastTranscription, setLastTranscription] = useState<string>("");
 	const [lastTranscriptionTime, setLastTranscriptionTime] = useState<string>("");
 	const prevRecordingRef = React.useRef<boolean>(false);
@@ -173,7 +175,7 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 			setButtonState(logic.lastButtonState);
 		};
 
-		// Load button configuration and settings
+		// Load button configuration, settings, and active game preset
 		logic.serverAPI.callPluginMethod('get_button_config', {}).then(async (result) => {
 			if (result.success && result.result) {
 				const config = result.result.config;
@@ -184,6 +186,9 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 					if (config.showNotifications !== undefined) {
 						setShowNotifications(config.showNotifications);
 					}
+					if (config.game) {
+						setActivePreset(config.game);
+					}
 					// Restore enabled state
 					if (config.enabled) {
 						setEnabled(true);
@@ -192,6 +197,17 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 						await logic.serverAPI.callPluginMethod('load_model', {});
 					}
 				}
+			}
+		});
+
+		// Load available game presets
+		logic.serverAPI.callPluginMethod('get_presets', {}).then((result) => {
+			if (result.success && result.result) {
+				const opts: DropdownOption[] = result.result.presets.map((p: { id: string; name: string }) => ({
+					data: p.id,
+					label: p.name,
+				}));
+				setPresets(opts);
 			}
 		});
 
@@ -290,6 +306,22 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 						}}
 					/>
 				</PanelSectionRow>
+
+				{presets.length > 0 && (
+					<PanelSectionRow>
+						<DropdownItem
+							label="Game"
+							menuLabel="Select Game"
+							rgOptions={presets}
+							selectedOption={activePreset}
+							onChange={async (option) => {
+								const game = option.data as string;
+								setActivePreset(game);
+								await logic.serverAPI.callPluginMethod('set_active_preset', { game });
+							}}
+						/>
+					</PanelSectionRow>
+				)}
 
 				<PanelSectionRow>
 					<div style={{
