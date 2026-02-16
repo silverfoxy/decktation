@@ -147,6 +147,7 @@ class Plugin:
         logger.info("Button state polling started")
         last_state = False
         last_recording_state = False
+        health_check_counter = 0
 
         while Plugin.poll_running:
             try:
@@ -178,6 +179,14 @@ class Plugin:
                     logger.info(f"Recording state changed: {last_recording_state} -> {current_recording}")
                     last_recording_state = current_recording
 
+                # Periodically check if listener process is still alive, restart if dead
+                health_check_counter += 1
+                if health_check_counter >= 20:  # Every ~1 second (20 * 50ms)
+                    health_check_counter = 0
+                    if Plugin.listener_process and Plugin.listener_process.poll() is not None:
+                        logger.warning("Controller listener died, restarting...")
+                        Plugin.start_controller_listener()
+
                 time.sleep(0.05)  # 50ms polling interval
             except Exception as e:
                 logger.error(f"Error polling button state: {e}")
@@ -207,6 +216,18 @@ class Plugin:
                 test_audio_file=None
             )
             logger.info("Voice service initialized (model will load on first use)")
+
+            # Restore enabled state from config
+            try:
+                if os.path.exists(BUTTON_CONFIG_FILE):
+                    import json
+                    with open(BUTTON_CONFIG_FILE, 'r') as f:
+                        saved_config = json.load(f)
+                    Plugin.controller_enabled = saved_config.get("enabled", False)
+                    if Plugin.controller_enabled:
+                        logger.info("Restored enabled state from config")
+            except Exception as e:
+                logger.error(f"Error restoring enabled state: {e}")
 
             # Start the external controller listener
             if Plugin.start_controller_listener():
@@ -238,6 +259,18 @@ class Plugin:
         """Enable or disable controller listening"""
         Plugin.controller_enabled = enabled
         logger.info(f"Controller listening {'enabled' if enabled else 'disabled'}")
+        # Persist enabled state to config
+        try:
+            import json
+            config = {"buttons": ["L1", "R1"], "showNotifications": True}
+            if os.path.exists(BUTTON_CONFIG_FILE):
+                with open(BUTTON_CONFIG_FILE, 'r') as f:
+                    config = json.load(f)
+            config["enabled"] = enabled
+            with open(BUTTON_CONFIG_FILE, 'w') as f:
+                json.dump(config, f)
+        except Exception as e:
+            logger.error(f"Error saving enabled state: {e}")
         return {"success": True}
 
     async def get_button_config(self):
@@ -247,13 +280,15 @@ class Plugin:
                 import json
                 with open(BUTTON_CONFIG_FILE, 'r') as f:
                     config = json.load(f)
-                    # Ensure showNotifications exists for backward compatibility
+                    # Ensure fields exist for backward compatibility
                     if "showNotifications" not in config:
                         config["showNotifications"] = True
+                    if "enabled" not in config:
+                        config["enabled"] = False
                     return {"success": True, "config": config}
             else:
-                # Default: L1+R1, notifications enabled
-                return {"success": True, "config": {"buttons": ["L1", "R1"], "showNotifications": True}}
+                # Default: L1+R1, notifications enabled, not enabled
+                return {"success": True, "config": {"buttons": ["L1", "R1"], "showNotifications": True, "enabled": False}}
         except Exception as e:
             logger.error(f"Error getting button config: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}

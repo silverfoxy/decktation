@@ -174,7 +174,7 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 		};
 
 		// Load button configuration and settings
-		logic.serverAPI.callPluginMethod('get_button_config', {}).then((result) => {
+		logic.serverAPI.callPluginMethod('get_button_config', {}).then(async (result) => {
 			if (result.success && result.result) {
 				const config = result.result.config;
 				if (config) {
@@ -183,6 +183,13 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 					}
 					if (config.showNotifications !== undefined) {
 						setShowNotifications(config.showNotifications);
+					}
+					// Restore enabled state
+					if (config.enabled) {
+						setEnabled(true);
+						logic.enabled = true;
+						setModelLoading(true);
+						await logic.serverAPI.callPluginMethod('load_model', {});
 					}
 				}
 			}
