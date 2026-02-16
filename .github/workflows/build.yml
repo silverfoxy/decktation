@@ -9,6 +9,24 @@ on:
     types: [ created ]
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install pytest
+      run: pip install pytest
+
+    - name: Run unit tests
+      run: pytest tests/ -v
+
   build:
     runs-on: ubuntu-latest
 
