@@ -77,8 +77,12 @@
   }
 
   // THIS FILE IS AUTO GENERATED
-  function FaMicrophone (props) {
+  function FaCircle (props) {
+    return GenIcon({"tag":"svg","attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8z"}}]})(props);
+  }function FaMicrophone (props) {
     return GenIcon({"tag":"svg","attr":{"viewBox":"0 0 352 512"},"child":[{"tag":"path","attr":{"d":"M176 352c53.02 0 96-42.98 96-96V96c0-53.02-42.98-96-96-96S80 42.98 80 96v160c0 53.02 42.98 96 96 96zm160-160h-16c-8.84 0-16 7.16-16 16v48c0 74.8-64.49 134.82-140.79 127.38C96.71 376.89 48 317.11 48 250.3V208c0-8.84-7.16-16-16-16H16c-8.84 0-16 7.16-16 16v40.16c0 89.64 63.97 169.55 152 181.69V464H96c-8.84 0-16 7.16-16 16v16c0 8.84 7.16 16 16 16h160c8.84 0 16-7.16 16-16v-16c0-8.84-7.16-16-16-16h-56v-33.77C285.71 418.47 352 344.9 352 256v-48c0-8.84-7.16-16-16-16z"}}]})(props);
+  }function FaTrash (props) {
+    return GenIcon({"tag":"svg","attr":{"viewBox":"0 0 448 512"},"child":[{"tag":"path","attr":{"d":"M432 32H312l-9.4-18.7A24 24 0 0 0 281.1 0H166.8a23.72 23.72 0 0 0-21.4 13.3L136 32H16A16 16 0 0 0 0 48v32a16 16 0 0 0 16 16h416a16 16 0 0 0 16-16V48a16 16 0 0 0-16-16zM53.2 467a48 48 0 0 0 47.9 45h245.8a48 48 0 0 0 47.9-45L416 128H32z"}}]})(props);
   }
 
   // L5 = bit 15, R5 = bit 16 in ulButtons (same as antiquitte/decky-dictation)
@@ -351,30 +355,28 @@
                                   showNotifications: showNotifications
                               });
                           } })),
-                  buttons.length > 1 && (React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                      React__default["default"].createElement("div", { style: { marginTop: '4px' } },
-                          React__default["default"].createElement("div", { onClick: async () => {
-                                  const newButtons = buttons.filter((_, i) => i !== index);
-                                  setButtons(newButtons);
-                                  await logic.serverAPI.callPluginMethod('set_button_config', {
-                                      buttons: newButtons,
-                                      showNotifications: showNotifications
-                                  });
-                              }, style: {
-                                  padding: '8px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  backgroundColor: '#c53030',
-                                  color: 'white',
-                                  borderRadius: '4px',
-                                  cursor: 'pointer',
-                                  fontSize: '14px',
-                                  fontWeight: 'bold',
-                                  userSelect: 'none'
-                              } },
-                              "\uD83D\uDDD1\uFE0F Remove Button ",
-                              index + 1))))))),
+                  buttons.length > 1 && (React__default["default"].createElement("div", { style: { display: 'flex', justifyContent: 'flex-end', paddingRight: '16px' } },
+                      React__default["default"].createElement("div", { onClick: async () => {
+                              const newButtons = buttons.filter((_, i) => i !== index);
+                              setButtons(newButtons);
+                              await logic.serverAPI.callPluginMethod('set_button_config', {
+                                  buttons: newButtons,
+                                  showNotifications: showNotifications
+                              });
+                          }, style: {
+                              color: '#e05f5f',
+                              cursor: 'pointer',
+                              padding: '5px 8px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              backgroundColor: 'rgba(224, 95, 95, 0.12)',
+                              borderRadius: '4px',
+                              textDecoration: 'none',
+                              userSelect: 'none',
+                          } },
+                          React__default["default"].createElement(FaTrash, { size: 13 }),
+                          React__default["default"].createElement("span", { style: { fontSize: '12px', textDecoration: 'none' } }, "Remove"))))))),
               buttons.length < 5 && (React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                   React__default["default"].createElement("div", { style: { marginTop: '8px' } },
                       React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: async () => {
@@ -419,7 +421,12 @@
                       React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: () => logic.testRecording((text, time) => {
                               setLastTranscription(text);
                               setLastTranscriptionTime(time);
-                          }), disabled: !enabled || !modelReady || modelLoading || recording }, "\uD83C\uDF99\uFE0F Test Recording (3 seconds)"))),
+                          }), disabled: !enabled || !modelReady || modelLoading || recording },
+                          React__default["default"].createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' } },
+                              React__default["default"].createElement("span", { style: { position: 'relative', display: 'inline-flex' } },
+                                  React__default["default"].createElement(FaMicrophone, { size: 14 }),
+                                  React__default["default"].createElement(FaCircle, { size: 6, style: { position: 'absolute', bottom: '-1px', right: '-3px', color: '#e05f5f' } })),
+                              React__default["default"].createElement("span", null, "Test Recording (3s)"))))),
               React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                   React__default["default"].createElement("div", { style: {
                           padding: '12px',

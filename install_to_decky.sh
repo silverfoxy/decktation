@@ -39,6 +39,7 @@ cp "$SOURCE_DIR/main.py" "$PLUGIN_DIR/"
 cp "$SOURCE_DIR/controller_listener.py" "$PLUGIN_DIR/"
 cp "$SOURCE_DIR/wow_voice_chat.py" "$PLUGIN_DIR/"
 cp "$SOURCE_DIR/convert_wow_context.py" "$PLUGIN_DIR/"
+cp "$SOURCE_DIR/game_presets.json" "$PLUGIN_DIR/"
 cp "$SOURCE_DIR/package.json" "$PLUGIN_DIR/"
 cp "$SOURCE_DIR/plugin.json" "$PLUGIN_DIR/"
 

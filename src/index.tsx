@@ -17,7 +17,7 @@ import React, {
 	useState,
 } from "react";
 
-import { FaMicrophone } from "react-icons/fa";
+import { FaMicrophone, FaTrash, FaCircle } from "react-icons/fa";
 
 // L5 = bit 15, R5 = bit 16 in ulButtons (same as antiquitte/decky-dictation)
 const L5_MASK = 1 << 15;
@@ -357,35 +357,33 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 							/>
 						</PanelSectionRow>
 						{buttons.length > 1 && (
-							<PanelSectionRow>
-								<div style={{ marginTop: '4px' }}>
-									<div
-										onClick={async () => {
-											const newButtons = buttons.filter((_, i) => i !== index);
-											setButtons(newButtons);
-											await logic.serverAPI.callPluginMethod('set_button_config', {
-												buttons: newButtons,
-												showNotifications: showNotifications
-											});
-										}}
-										style={{
-											padding: '8px',
-											display: 'flex',
-											alignItems: 'center',
-											justifyContent: 'center',
-											backgroundColor: '#c53030',
-											color: 'white',
-											borderRadius: '4px',
-											cursor: 'pointer',
-											fontSize: '14px',
-											fontWeight: 'bold',
-											userSelect: 'none'
-										}}
-									>
-										🗑️ Remove Button {index + 1}
-									</div>
+							<div style={{ display: 'flex', justifyContent: 'flex-end', paddingRight: '16px' }}>
+								<div
+									onClick={async () => {
+										const newButtons = buttons.filter((_, i) => i !== index);
+										setButtons(newButtons);
+										await logic.serverAPI.callPluginMethod('set_button_config', {
+											buttons: newButtons,
+											showNotifications: showNotifications
+										});
+									}}
+									style={{
+										color: '#e05f5f',
+										cursor: 'pointer',
+										padding: '5px 8px',
+										display: 'flex',
+										alignItems: 'center',
+										gap: '6px',
+										backgroundColor: 'rgba(224, 95, 95, 0.12)',
+										borderRadius: '4px',
+										textDecoration: 'none',
+										userSelect: 'none',
+									}}
+								>
+									<FaTrash size={13} />
+									<span style={{ fontSize: '12px', textDecoration: 'none' }}>Remove</span>
 								</div>
-							</PanelSectionRow>
+							</div>
 						)}
 					</div>
 				))}
@@ -458,7 +456,13 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 							})}
 							disabled={!enabled || !modelReady || modelLoading || recording}
 						>
-							🎙️ Test Recording (3 seconds)
+							<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+								<span style={{ position: 'relative', display: 'inline-flex' }}>
+									<FaMicrophone size={14} />
+									<FaCircle size={6} style={{ position: 'absolute', bottom: '-1px', right: '-3px', color: '#e05f5f' }} />
+								</span>
+								<span>Test Recording (3s)</span>
+							</div>
 						</ButtonItem>
 					</div>
 				</PanelSectionRow>
