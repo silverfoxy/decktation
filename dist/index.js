@@ -87,7 +87,7 @@
 
   // L5 = bit 15, R5 = bit 16 in ulButtons (same as antiquitte/decky-dictation)
   const L5_MASK = 1 << 15;
-  class DectationLogic {
+  class DecktationLogic {
       constructor(serverAPI) {
           this.enabled = false;
           this.recording = false;
@@ -262,7 +262,7 @@
       { data: "X", label: "X Button" },
       { data: "Y", label: "Y Button" },
   ];
-  const DectationPanel = ({ logic }) => {
+  const DecktationPanel = ({ logic }) => {
       const [enabled, setEnabled] = React.useState(false);
       const [recording, setRecording] = React.useState(false);
       const [serviceReady, setServiceReady] = React.useState(false);
@@ -547,7 +547,7 @@
                           React__default["default"].createElement("li", null, "Works great for in-game chat")))))));
   };
   var index = deckyFrontendLib.definePlugin((serverApi) => {
-      let logic = new DectationLogic(serverApi);
+      let logic = new DecktationLogic(serverApi);
       let input_register = null;
       // Use RegisterForControllerInputMessages (RegisterForControllerStateChanges doesn't exist)
       try {
@@ -599,7 +599,7 @@
       }, 200);
       return {
           title: React__default["default"].createElement("div", { className: deckyFrontendLib.quickAccessMenuClasses.Title }, "Decktation"),
-          content: React__default["default"].createElement(DectationPanel, { logic: logic }),
+          content: React__default["default"].createElement(DecktationPanel, { logic: logic }),
           icon: React__default["default"].createElement(FaMicrophone, null),
           onDismount() {
               clearInterval(bgNotifyInterval);

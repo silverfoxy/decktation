@@ -23,7 +23,7 @@ import { FaMicrophone, FaTrash, FaCircle } from "react-icons/fa";
 const L5_MASK = 1 << 15;
 const R5_MASK = 1 << 16;
 
-class DectationLogic {
+class DecktationLogic {
 	serverAPI: ServerAPI;
 	enabled: boolean = false;
 	recording: boolean = false;
@@ -210,7 +210,7 @@ const BUTTON_OPTIONS: DropdownOption[] = [
 	{ data: "Y", label: "Y Button" },
 ];
 
-const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
+const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [enabled, setEnabled] = useState<boolean>(false);
 	const [recording, setRecording] = useState<boolean>(false);
 	const [serviceReady, setServiceReady] = useState<boolean>(false);
@@ -607,7 +607,7 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 
 
 export default definePlugin((serverApi: ServerAPI) => {
-	let logic = new DectationLogic(serverApi);
+	let logic = new DecktationLogic(serverApi);
 	let input_register: { unregister: () => void } | null = null;
 
 	// Use RegisterForControllerInputMessages (RegisterForControllerStateChanges doesn't exist)
@@ -660,7 +660,7 @@ export default definePlugin((serverApi: ServerAPI) => {
 
 	return {
 		title: <div className={quickAccessMenuClasses.Title}>Decktation</div>,
-		content: <DectationPanel logic={logic} />,
+		content: <DecktationPanel logic={logic} />,
 		icon: <FaMicrophone />,
 		onDismount() {
 			clearInterval(bgNotifyInterval);
