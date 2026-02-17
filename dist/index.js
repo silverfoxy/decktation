@@ -98,6 +98,8 @@
           this.l5Held = false;
           this.showNotifications = true;
           this.prevRecordingStartCount = 0;
+          this.prevPendingText = "";
+          this.lastPendingToastId = -1;
           this.notify = async (message, duration = 2000, body = "") => {
               if (!body) {
                   body = message;
@@ -274,9 +276,6 @@
       const [confirmMode, setConfirmMode] = React.useState(false);
       const [lastTranscription, setLastTranscription] = React.useState("");
       const [lastTranscriptionTime, setLastTranscriptionTime] = React.useState("");
-      const prevRecordingRef = React__default["default"].useRef(false);
-      const prevPendingRef = React__default["default"].useRef("");
-      const lastPendingToastIdRef = React__default["default"].useRef(-1);
       React.useEffect(() => {
           setEnabled(logic.enabled);
           setRecording(logic.recording);
@@ -334,23 +333,7 @@
                       setModelReady(result.result.model_ready);
                       setModelLoading(result.result.model_loading);
                       if (logic.enabled) {
-                          const isRecording = result.result.recording;
-                          prevRecordingRef.current = isRecording;
-                          setRecording(isRecording);
-                          const pendingText = result.result.pending_text || "";
-                          const pendingDelay = result.result.pending_delay || 0;
-                          if (pendingText && !prevPendingRef.current && showNotifications) {
-                              const secs = Math.round(pendingDelay);
-                              logic.notify(`Sending in ${secs}s`, (pendingDelay + 0.5) * 1000, `"${pendingText}" — hold PTT to cancel`)
-                                  .then(id => { lastPendingToastIdRef.current = id; });
-                          }
-                          else if (!pendingText && prevPendingRef.current) {
-                              if (lastPendingToastIdRef.current >= 0) {
-                                  logic.dismissNotification(lastPendingToastIdRef.current);
-                                  lastPendingToastIdRef.current = -1;
-                              }
-                          }
-                          prevPendingRef.current = pendingText;
+                          setRecording(result.result.recording);
                       }
                   }
               }
@@ -359,7 +342,7 @@
               }
           }, 100);
           return () => clearInterval(interval);
-      }, [logic.enabled, showNotifications]);
+      }, [logic.enabled]);
       return (React__default["default"].createElement("div", null,
           React__default["default"].createElement(deckyFrontendLib.PanelSection, null,
               !serviceReady && (React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
@@ -584,16 +567,32 @@
       // Background notification polling — runs for the full plugin lifetime regardless
       // of whether the Decky panel is open, so toasts appear while in-game.
       const bgNotifyInterval = setInterval(async () => {
-          if (!logic.enabled || !logic.showNotifications)
+          if (!logic.enabled)
               return;
           try {
               const result = await serverApi.callPluginMethod('get_status', {});
               if (result.success && result.result) {
-                  const startCount = result.result.recording_start_count || 0;
-                  if (startCount > logic.prevRecordingStartCount) {
-                      logic.notify("Recording", 1500, "🎤 Recording...");
+                  if (logic.showNotifications) {
+                      const startCount = result.result.recording_start_count || 0;
+                      if (startCount > logic.prevRecordingStartCount) {
+                          logic.notify("Recording", 1500, "🎤 Recording...");
+                      }
+                      logic.prevRecordingStartCount = startCount;
+                      const pendingText = result.result.pending_text || "";
+                      const pendingDelay = result.result.pending_delay || 0;
+                      if (pendingText && !logic.prevPendingText) {
+                          const secs = Math.round(pendingDelay);
+                          logic.notify(`Sending in ${secs}s`, (pendingDelay + 0.5) * 1000, `"${pendingText}" — hold PTT to cancel`)
+                              .then(id => { logic.lastPendingToastId = id; });
+                      }
+                      else if (!pendingText && logic.prevPendingText) {
+                          if (logic.lastPendingToastId >= 0) {
+                              logic.dismissNotification(logic.lastPendingToastId);
+                              logic.lastPendingToastId = -1;
+                          }
+                      }
+                      logic.prevPendingText = pendingText;
                   }
-                  logic.prevRecordingStartCount = startCount;
               }
           }
           catch (_e) { }
