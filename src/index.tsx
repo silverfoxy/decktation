@@ -32,21 +32,76 @@ class DectationLogic {
 	inputError: string = "";
 	onButtonChange: (() => void) | null = null;
 	l5Held: boolean = false;
+	showNotifications: boolean = true;
+	prevRecordingStartCount: number = 0;
 
 	constructor(serverAPI: ServerAPI) {
 		this.serverAPI = serverAPI;
 	}
 
-	notify = async (message: string, duration: number = 2000, body: string = "") => {
+	notify = async (message: string, duration: number = 2000, body: string = ""): Promise<number> => {
 		if (!body) {
 			body = message;
 		}
-		this.serverAPI.toaster.toast({
+		const toast: any = {
 			title: message,
 			body: body,
 			duration: duration,
-			critical: false
-		});
+			critical: false,
+		};
+		const id: number = (window as any).NotificationStore ? (window as any).NotificationStore.m_nNextTestNotificationID++ : 0;
+		const toastData: any = {
+			nNotificationID: id,
+			bNewIndicator: false,
+			rtCreated: Date.now(),
+			eType: 43,
+			eSource: 1,
+			nToastDurationMS: duration,
+			data: toast,
+			decky: true,
+		};
+		const info: any = {
+			showToast: true,
+			sound: 6,
+			playSound: false,
+			eFeature: 0,
+			toastDurationMS: duration,
+			bCritical: false,
+			fnTray: (_t: any, tray: any) => { tray.unshift({ eType: 31, notifications: [toastData] }); },
+		};
+		try {
+			(window as any).NotificationStore.ProcessNotification(info, toastData, 0);
+		} catch (_e) {
+			// fallback to standard toaster if direct call fails
+			this.serverAPI.toaster.toast({ title: message, body: toast.body, duration: duration, critical: false });
+		}
+		return id;
+	}
+
+	dismissNotification = (id: number) => {
+		// Force-expire the toast by reprocessing it with a 1ms duration
+		try {
+			const toastData: any = {
+				nNotificationID: id,
+				bNewIndicator: false,
+				rtCreated: Date.now(),
+				eType: 43,
+				eSource: 1,
+				nToastDurationMS: 1,
+				data: { title: "", body: "", duration: 1, critical: false },
+				decky: true,
+			};
+			const info: any = {
+				showToast: true,
+				sound: 6,
+				playSound: false,
+				eFeature: 0,
+				toastDurationMS: 1,
+				bCritical: false,
+				fnTray: (_t: any, tray: any) => { tray.unshift({ eType: 31, notifications: [toastData] }); },
+			};
+			(window as any).NotificationStore.ProcessNotification(info, toastData, 0);
+		} catch (_e) {}
 	}
 
 	// Handler for RegisterForControllerStateChanges (antiquitte style)
@@ -164,9 +219,12 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 	const [showNotifications, setShowNotifications] = useState<boolean>(true);
 	const [activePreset, setActivePreset] = useState<string>("wow");
 	const [presets, setPresets] = useState<DropdownOption[]>([]);
+	const [confirmMode, setConfirmMode] = useState<boolean>(false);
 	const [lastTranscription, setLastTranscription] = useState<string>("");
 	const [lastTranscriptionTime, setLastTranscriptionTime] = useState<string>("");
 	const prevRecordingRef = React.useRef<boolean>(false);
+	const prevPendingRef = React.useRef<string>("");
+	const lastPendingToastIdRef = React.useRef<number>(-1);
 
 	useEffect(() => {
 		setEnabled(logic.enabled);
@@ -185,9 +243,13 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 					}
 					if (config.showNotifications !== undefined) {
 						setShowNotifications(config.showNotifications);
+						logic.showNotifications = config.showNotifications;
 					}
 					if (config.game) {
 						setActivePreset(config.game);
+					}
+					if (config.confirmMode !== undefined) {
+						setConfirmMode(config.confirmMode);
 					}
 					// Restore enabled state
 					if (config.enabled) {
@@ -218,25 +280,36 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 
 	useEffect(() => {
 		const interval = setInterval(async () => {
-			const result = await logic.serverAPI.callPluginMethod('get_status', {});
-			if (result.success && result.result) {
-				setServiceReady(result.result.service_ready);
-				setModelReady(result.result.model_ready);
-				setModelLoading(result.result.model_loading);
-				if (logic.enabled) {
-					const isRecording = result.result.recording;
+			try {
+				const result = await logic.serverAPI.callPluginMethod('get_status', {});
+				if (result.success && result.result) {
+					setServiceReady(result.result.service_ready);
+					setModelReady(result.result.model_ready);
+					setModelLoading(result.result.model_loading);
+					if (logic.enabled) {
+						const isRecording = result.result.recording;
+						prevRecordingRef.current = isRecording;
+						setRecording(isRecording);
 
-					// Show notification only when recording starts
-					if (showNotifications && isRecording && !prevRecordingRef.current) {
-						console.log("[Decktation] Showing notification - recording started");
-						logic.notify("Recording", 1500, "🎤 Recording...");
+						const pendingText = result.result.pending_text || "";
+						const pendingDelay: number = result.result.pending_delay || 0;
+						if (pendingText && !prevPendingRef.current && showNotifications) {
+							const secs = Math.round(pendingDelay);
+							logic.notify(`Sending in ${secs}s`, (pendingDelay + 0.5) * 1000, `"${pendingText}" — hold PTT to cancel`)
+								.then(id => { lastPendingToastIdRef.current = id; });
+						} else if (!pendingText && prevPendingRef.current) {
+							if (lastPendingToastIdRef.current >= 0) {
+								logic.dismissNotification(lastPendingToastIdRef.current);
+								lastPendingToastIdRef.current = -1;
+							}
+						}
+						prevPendingRef.current = pendingText;
 					}
-
-					prevRecordingRef.current = isRecording;
-					setRecording(isRecording);
 				}
+			} catch (e) {
+				// Ignore transient WebSocket errors; next tick will retry
 			}
-		}, 200);
+		}, 100);
 		return () => clearInterval(interval);
 	}, [logic.enabled, showNotifications]);
 
@@ -298,11 +371,27 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 						checked={showNotifications}
 						onChange={async (e) => {
 							setShowNotifications(e);
-							// Save setting
+							logic.showNotifications = e;
+							if (!e && confirmMode) {
+								setConfirmMode(false);
+								await logic.serverAPI.callPluginMethod('set_confirm_mode', { enabled: false });
+							}
 							await logic.serverAPI.callPluginMethod('set_button_config', {
 								buttons: buttons,
 								showNotifications: e
 							});
+						}}
+					/>
+				</PanelSectionRow>
+
+				<PanelSectionRow>
+					<ToggleField
+						label="Confirm Before Sending"
+						description="Waits before typing (longer for more words) — hold the buttons again to cancel"
+						checked={confirmMode}
+						onChange={async (e) => {
+							setConfirmMode(e);
+							await logic.serverAPI.callPluginMethod('set_confirm_mode', { enabled: e });
 						}}
 					/>
 				</PanelSectionRow>
@@ -446,8 +535,8 @@ const DectationPanel: VFC<{ logic: DectationLogic }> = ({ logic }) => {
 					</PanelSectionRow>
 				)}
 
-				<PanelSectionRow>
-					<div style={{ marginTop: '8px', marginBottom: '8px' }}>
+	<PanelSectionRow>
+					<div style={{ marginTop: '4px', marginBottom: '8px' }}>
 						<ButtonItem
 							layout="below"
 							onClick={() => logic.testRecording((text, time) => {
@@ -547,11 +636,35 @@ export default definePlugin((serverApi: ServerAPI) => {
 		console.error("[Decktation] RegisterForControllerInputMessages failed:", e);
 	}
 
+	// Seed the recording start count so we don't fire a spurious toast on load
+	serverApi.callPluginMethod('get_status', {}).then((result: any) => {
+		if (result.success && result.result) {
+			logic.prevRecordingStartCount = result.result.recording_start_count || 0;
+		}
+	});
+
+	// Background notification polling — runs for the full plugin lifetime regardless
+	// of whether the Decky panel is open, so toasts appear while in-game.
+	const bgNotifyInterval = setInterval(async () => {
+		if (!logic.enabled || !logic.showNotifications) return;
+		try {
+			const result: any = await serverApi.callPluginMethod('get_status', {});
+			if (result.success && result.result) {
+				const startCount: number = result.result.recording_start_count || 0;
+				if (startCount > logic.prevRecordingStartCount) {
+					logic.notify("Recording", 1500, "🎤 Recording...");
+				}
+				logic.prevRecordingStartCount = startCount;
+			}
+		} catch (_e) {}
+	}, 200);
+
 	return {
 		title: <div className={quickAccessMenuClasses.Title}>Decktation</div>,
 		content: <DectationPanel logic={logic} />,
 		icon: <FaMicrophone />,
 		onDismount() {
+			clearInterval(bgNotifyInterval);
 			if (input_register) {
 				input_register.unregister();
 			}

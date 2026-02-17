@@ -19,12 +19,16 @@ import tempfile
 
 
 class WoWVoiceChat:
-    def __init__(self, context_file="wow_context.json", sample_rate=44100, default_channel="say", lazy_load=False, test_mode=False, test_audio_file=None, preset=None):
+    def __init__(self, context_file="wow_context.json", sample_rate=44100, default_channel="say", lazy_load=False, test_mode=False, test_audio_file=None, preset=None, confirm_delay=0):
         self.preset = preset or {}
         self.context_file = Path(context_file)
         self.sample_rate = sample_rate  # Recording sample rate
         self.whisper_sample_rate = 16000  # Whisper expects 16kHz
         self.default_channel = self.preset.get("default_channel", default_channel)
+        self.confirm_delay = confirm_delay  # seconds to wait before auto-sending (0 = disabled)
+        self.pending_text = None
+        self._pending_timer = None
+        self._pending_lock = threading.Lock()
 
         # Test mode: use static audio file instead of recording
         self.test_mode = test_mode
@@ -101,6 +105,31 @@ class WoWVoiceChat:
         self.preset = preset
         self.default_channel = preset.get("default_channel", "say")
         self.channel_commands = preset.get("channels") or {"say": "", "type": ""}
+
+    def _confirm_delay_for(self, text: str) -> float:
+        """Calculate how long to wait based on text length: 3s base + 0.4s per word, max 6s."""
+        words = len(text.split())
+        return min(3.0 + words * 0.4, 6.0)
+
+    def cancel_pending(self):
+        """Cancel a pending send. Returns True if there was text waiting to be sent."""
+        with self._pending_lock:
+            if self._pending_timer:
+                self._pending_timer.cancel()
+                self._pending_timer = None
+            if self.pending_text:
+                self.pending_text = None
+                return True
+            return False
+
+    def _send_pending(self):
+        """Timer callback: auto-send the pending text after the delay."""
+        with self._pending_lock:
+            text = self.pending_text
+            self.pending_text = None
+            self._pending_timer = None
+        if text:
+            self.send_to_wow_chat(text)
 
     def load_context(self):
         """Load WoW context from addon-generated file"""
@@ -448,7 +477,13 @@ class WoWVoiceChat:
                         text = self.transcribe_audio(self.test_audio_file)
                         print(f"[TEST MODE] Transcribed: {text}")
                         if text:
-                            self.send_to_wow_chat(text)
+                            if self.confirm_delay > 0:
+                                with self._pending_lock:
+                                    self.pending_text = text
+                                    self._pending_timer = threading.Timer(self._confirm_delay_for(text), self._send_pending)
+                                    self._pending_timer.start()
+                            else:
+                                self.send_to_wow_chat(text)
                     except Exception as e:
                         print(f"[TEST MODE] Error: {e}")
                 else:
@@ -489,7 +524,13 @@ class WoWVoiceChat:
                 self.last_transcription_time = time.time()
 
                 if text:
-                    self.send_to_wow_chat(text)
+                    if self.confirm_delay > 0:
+                        with self._pending_lock:
+                            self.pending_text = text
+                            self._pending_timer = threading.Timer(self._confirm_delay_for(text), self._send_pending)
+                            self._pending_timer.start()
+                    else:
+                        self.send_to_wow_chat(text)
             finally:
                 Path(temp_file).unlink(missing_ok=True)
 

@@ -75,6 +75,7 @@ class Plugin:
     poll_thread = None
     poll_running = False
     controller_enabled = False
+    recording_start_count = 0  # Increments each time recording starts
 
     @staticmethod
     def check_ydotoold():
@@ -172,10 +173,15 @@ class Plugin:
 
                     # Detect state change
                     if state and not last_state:
-                        # Button pressed
-                        logger.info("Button combo pressed - starting recording")
-                        if Plugin.voice_service and not Plugin.voice_service.is_recording:
+                        # Button pressed - cancel pending send if one is waiting
+                        if Plugin.voice_service and Plugin.voice_service.pending_text:
+                            cancelled = Plugin.voice_service.cancel_pending()
+                            if cancelled:
+                                logger.info("Pending send cancelled by button press")
+                        elif Plugin.voice_service and not Plugin.voice_service.is_recording:
+                            logger.info("Button combo pressed - starting recording")
                             Plugin.voice_service.start_recording()
+                            Plugin.recording_start_count += 1
                     elif not state and last_state:
                         # Button released
                         logger.info("Button combo released - stopping recording")
@@ -230,6 +236,15 @@ class Plugin:
             active_preset = _game_presets.get(active_game, _game_presets.get("wow", {}))
             logger.info(f"Active game preset: {active_game}")
 
+            confirm_mode = False
+            try:
+                if os.path.exists(BUTTON_CONFIG_FILE):
+                    with open(BUTTON_CONFIG_FILE, 'r') as f:
+                        saved_config = json.load(f)
+                    confirm_mode = saved_config.get("confirmMode", False)
+            except Exception as e:
+                logger.error(f"Error reading confirm mode from config: {e}")
+
             # Initialize the voice service with lazy model loading
             context_file = f"{plugin_path}/wow_context.json"
 
@@ -238,7 +253,8 @@ class Plugin:
                 lazy_load=True,
                 test_mode=False,
                 test_audio_file=None,
-                preset=active_preset
+                preset=active_preset,
+                confirm_delay=2.0 if confirm_mode else 0
             )
             logger.info("Voice service initialized (model will load on first use)")
 
@@ -309,10 +325,12 @@ class Plugin:
                         config["enabled"] = False
                     if "game" not in config:
                         config["game"] = "wow"
+                    if "confirmMode" not in config:
+                        config["confirmMode"] = False
                     return {"success": True, "config": config}
             else:
-                # Default: L1+R1, notifications enabled, not enabled, wow preset
-                return {"success": True, "config": {"buttons": ["L1", "R1"], "showNotifications": True, "enabled": False, "game": "wow"}}
+                # Default: L1+R1, notifications enabled, not enabled, wow preset, no confirm
+                return {"success": True, "config": {"buttons": ["L1", "R1"], "showNotifications": True, "enabled": False, "game": "wow", "confirmMode": False}}
         except Exception as e:
             logger.error(f"Error getting button config: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
@@ -357,6 +375,29 @@ class Plugin:
             return {"success": True}
         except Exception as e:
             logger.error(f"Error setting button config: {traceback.format_exc()}")
+            return {"success": False, "error": str(e)}
+
+    async def set_confirm_mode(self, enabled: bool):
+        """Enable or disable the confirm-before-sending delay"""
+        try:
+            config = {"buttons": ["L1", "R1"], "showNotifications": True, "enabled": False, "game": "wow", "confirmMode": False}
+            if os.path.exists(BUTTON_CONFIG_FILE):
+                try:
+                    with open(BUTTON_CONFIG_FILE, 'r') as f:
+                        config = json.load(f)
+                except Exception:
+                    pass
+            config["confirmMode"] = enabled
+            with open(BUTTON_CONFIG_FILE, 'w') as f:
+                json.dump(config, f)
+
+            if Plugin.voice_service:
+                Plugin.voice_service.confirm_delay = 2.0 if enabled else 0
+
+            logger.info(f"Confirm mode {'enabled' if enabled else 'disabled'}")
+            return {"success": True}
+        except Exception as e:
+            logger.error(f"Error setting confirm mode: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
 
     async def get_presets(self):
@@ -475,7 +516,11 @@ class Plugin:
                 "service_ready": Plugin.voice_service is not None,
                 "model_ready": model_ready,
                 "model_loading": model_loading,
-                "recording": Plugin.voice_service.is_recording if Plugin.voice_service else False
+                "recording": Plugin.voice_service.is_recording if Plugin.voice_service else False,
+                "recording_start_count": Plugin.recording_start_count,
+                "pending_text": Plugin.voice_service.pending_text or "" if Plugin.voice_service else "",
+                "pending_delay": Plugin.voice_service._confirm_delay_for(Plugin.voice_service.pending_text) if Plugin.voice_service and Plugin.voice_service.pending_text else 0,
+                "confirm_mode": Plugin.voice_service.confirm_delay > 0 if Plugin.voice_service else False,
             }
         except Exception as e:
             logger.error(f"Error getting status: {traceback.format_exc()}")

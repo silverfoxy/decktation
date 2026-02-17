@@ -96,16 +96,72 @@
           this.inputError = "";
           this.onButtonChange = null;
           this.l5Held = false;
+          this.showNotifications = true;
+          this.prevRecordingStartCount = 0;
           this.notify = async (message, duration = 2000, body = "") => {
               if (!body) {
                   body = message;
               }
-              this.serverAPI.toaster.toast({
+              const toast = {
                   title: message,
                   body: body,
                   duration: duration,
-                  critical: false
-              });
+                  critical: false,
+              };
+              const id = window.NotificationStore ? window.NotificationStore.m_nNextTestNotificationID++ : 0;
+              const toastData = {
+                  nNotificationID: id,
+                  bNewIndicator: false,
+                  rtCreated: Date.now(),
+                  eType: 43,
+                  eSource: 1,
+                  nToastDurationMS: duration,
+                  data: toast,
+                  decky: true,
+              };
+              const info = {
+                  showToast: true,
+                  sound: 6,
+                  playSound: false,
+                  eFeature: 0,
+                  toastDurationMS: duration,
+                  bCritical: false,
+                  fnTray: (_t, tray) => { tray.unshift({ eType: 31, notifications: [toastData] }); },
+              };
+              try {
+                  window.NotificationStore.ProcessNotification(info, toastData, 0);
+              }
+              catch (_e) {
+                  // fallback to standard toaster if direct call fails
+                  this.serverAPI.toaster.toast({ title: message, body: toast.body, duration: duration, critical: false });
+              }
+              return id;
+          };
+          this.dismissNotification = (id) => {
+              // Force-expire the toast by reprocessing it with a 1ms duration
+              try {
+                  const toastData = {
+                      nNotificationID: id,
+                      bNewIndicator: false,
+                      rtCreated: Date.now(),
+                      eType: 43,
+                      eSource: 1,
+                      nToastDurationMS: 1,
+                      data: { title: "", body: "", duration: 1, critical: false },
+                      decky: true,
+                  };
+                  const info = {
+                      showToast: true,
+                      sound: 6,
+                      playSound: false,
+                      eFeature: 0,
+                      toastDurationMS: 1,
+                      bCritical: false,
+                      fnTray: (_t, tray) => { tray.unshift({ eType: 31, notifications: [toastData] }); },
+                  };
+                  window.NotificationStore.ProcessNotification(info, toastData, 0);
+              }
+              catch (_e) { }
           };
           // Handler for RegisterForControllerStateChanges (antiquitte style)
           this.handleControllerState = (val) => {
@@ -215,9 +271,12 @@
       const [showNotifications, setShowNotifications] = React.useState(true);
       const [activePreset, setActivePreset] = React.useState("wow");
       const [presets, setPresets] = React.useState([]);
+      const [confirmMode, setConfirmMode] = React.useState(false);
       const [lastTranscription, setLastTranscription] = React.useState("");
       const [lastTranscriptionTime, setLastTranscriptionTime] = React.useState("");
       const prevRecordingRef = React__default["default"].useRef(false);
+      const prevPendingRef = React__default["default"].useRef("");
+      const lastPendingToastIdRef = React__default["default"].useRef(-1);
       React.useEffect(() => {
           setEnabled(logic.enabled);
           setRecording(logic.recording);
@@ -234,9 +293,13 @@
                       }
                       if (config.showNotifications !== undefined) {
                           setShowNotifications(config.showNotifications);
+                          logic.showNotifications = config.showNotifications;
                       }
                       if (config.game) {
                           setActivePreset(config.game);
+                      }
+                      if (config.confirmMode !== undefined) {
+                          setConfirmMode(config.confirmMode);
                       }
                       // Restore enabled state
                       if (config.enabled) {
@@ -264,23 +327,37 @@
       }, []);
       React.useEffect(() => {
           const interval = setInterval(async () => {
-              const result = await logic.serverAPI.callPluginMethod('get_status', {});
-              if (result.success && result.result) {
-                  setServiceReady(result.result.service_ready);
-                  setModelReady(result.result.model_ready);
-                  setModelLoading(result.result.model_loading);
-                  if (logic.enabled) {
-                      const isRecording = result.result.recording;
-                      // Show notification only when recording starts
-                      if (showNotifications && isRecording && !prevRecordingRef.current) {
-                          console.log("[Decktation] Showing notification - recording started");
-                          logic.notify("Recording", 1500, "🎤 Recording...");
+              try {
+                  const result = await logic.serverAPI.callPluginMethod('get_status', {});
+                  if (result.success && result.result) {
+                      setServiceReady(result.result.service_ready);
+                      setModelReady(result.result.model_ready);
+                      setModelLoading(result.result.model_loading);
+                      if (logic.enabled) {
+                          const isRecording = result.result.recording;
+                          prevRecordingRef.current = isRecording;
+                          setRecording(isRecording);
+                          const pendingText = result.result.pending_text || "";
+                          const pendingDelay = result.result.pending_delay || 0;
+                          if (pendingText && !prevPendingRef.current && showNotifications) {
+                              const secs = Math.round(pendingDelay);
+                              logic.notify(`Sending in ${secs}s`, (pendingDelay + 0.5) * 1000, `"${pendingText}" — hold PTT to cancel`)
+                                  .then(id => { lastPendingToastIdRef.current = id; });
+                          }
+                          else if (!pendingText && prevPendingRef.current) {
+                              if (lastPendingToastIdRef.current >= 0) {
+                                  logic.dismissNotification(lastPendingToastIdRef.current);
+                                  lastPendingToastIdRef.current = -1;
+                              }
+                          }
+                          prevPendingRef.current = pendingText;
                       }
-                      prevRecordingRef.current = isRecording;
-                      setRecording(isRecording);
                   }
               }
-          }, 200);
+              catch (e) {
+                  // Ignore transient WebSocket errors; next tick will retry
+              }
+          }, 100);
           return () => clearInterval(interval);
       }, [logic.enabled, showNotifications]);
       return (React__default["default"].createElement("div", null,
@@ -319,11 +396,20 @@
               React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                   React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: "Show Notifications", description: "Show toast when recording starts/stops", checked: showNotifications, onChange: async (e) => {
                           setShowNotifications(e);
-                          // Save setting
+                          logic.showNotifications = e;
+                          if (!e && confirmMode) {
+                              setConfirmMode(false);
+                              await logic.serverAPI.callPluginMethod('set_confirm_mode', { enabled: false });
+                          }
                           await logic.serverAPI.callPluginMethod('set_button_config', {
                               buttons: buttons,
                               showNotifications: e
                           });
+                      } })),
+              React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                  React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: "Confirm Before Sending", description: "Waits before typing (longer for more words) \u2014 hold the buttons again to cancel", checked: confirmMode, onChange: async (e) => {
+                          setConfirmMode(e);
+                          await logic.serverAPI.callPluginMethod('set_confirm_mode', { enabled: e });
                       } })),
               presets.length > 0 && (React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                   React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: "Game", menuLabel: "Select Game", rgOptions: presets, selectedOption: activePreset, onChange: async (option) => {
@@ -417,7 +503,7 @@
                           transition: 'all 0.3s ease'
                       } }, recording ? '🎤 Recording...' : '✓ Ready'))),
               React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                  React__default["default"].createElement("div", { style: { marginTop: '8px', marginBottom: '8px' } },
+                  React__default["default"].createElement("div", { style: { marginTop: '4px', marginBottom: '8px' } },
                       React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: () => logic.testRecording((text, time) => {
                               setLastTranscription(text);
                               setLastTranscriptionTime(time);
@@ -489,11 +575,35 @@
       catch (e) {
           console.error("[Decktation] RegisterForControllerInputMessages failed:", e);
       }
+      // Seed the recording start count so we don't fire a spurious toast on load
+      serverApi.callPluginMethod('get_status', {}).then((result) => {
+          if (result.success && result.result) {
+              logic.prevRecordingStartCount = result.result.recording_start_count || 0;
+          }
+      });
+      // Background notification polling — runs for the full plugin lifetime regardless
+      // of whether the Decky panel is open, so toasts appear while in-game.
+      const bgNotifyInterval = setInterval(async () => {
+          if (!logic.enabled || !logic.showNotifications)
+              return;
+          try {
+              const result = await serverApi.callPluginMethod('get_status', {});
+              if (result.success && result.result) {
+                  const startCount = result.result.recording_start_count || 0;
+                  if (startCount > logic.prevRecordingStartCount) {
+                      logic.notify("Recording", 1500, "🎤 Recording...");
+                  }
+                  logic.prevRecordingStartCount = startCount;
+              }
+          }
+          catch (_e) { }
+      }, 200);
       return {
           title: React__default["default"].createElement("div", { className: deckyFrontendLib.quickAccessMenuClasses.Title }, "Decktation"),
           content: React__default["default"].createElement(DectationPanel, { logic: logic }),
           icon: React__default["default"].createElement(FaMicrophone, null),
           onDismount() {
+              clearInterval(bgNotifyInterval);
               if (input_register) {
                   input_register.unregister();
               }
