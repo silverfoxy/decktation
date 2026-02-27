@@ -3,6 +3,8 @@ name: Build Decktation Plugin
 on:
   push:
     branches: [ master, main ]
+    tags:
+      - 'v*'  # Trigger on version tags like v1.0.0, v0.2.0, etc.
   pull_request:
     branches: [ master, main ]
   release:
@@ -121,13 +123,16 @@ jobs:
         path: decktation/
 
     - name: Create release archive
-      if: github.event_name == 'release'
+      if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/')
       run: zip -r decktation.zip decktation/
 
     - name: Upload to release
-      if: github.event_name == 'release'
+      if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
         files: decktation.zip
+        draft: false
+        prerelease: false
+        generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
