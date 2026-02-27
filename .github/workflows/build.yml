@@ -2,7 +2,7 @@ name: Build Decktation Plugin
 
 on:
   push:
-    branches: [ master, main ]
+    branches: [ '**' ]  # Run on all branches
     tags:
       - 'v*'  # Trigger on version tags like v1.0.0, v0.2.0, etc.
   pull_request:
