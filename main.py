@@ -104,9 +104,9 @@ class Plugin:
                 logger.error(f"Controller listener script not found: {listener_script}")
                 return False
 
-            # Start the listener as a subprocess using Python 3.11 from nix
+            # Start the listener as a subprocess using Decky's Python
             Plugin.listener_process = subprocess.Popen(
-                ["/nix/store/dwix9cc815h6vxvdvl8zc6pvznq6whdh-python3-3.11.14/bin/python", listener_script],
+                [sys.executable, listener_script],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True

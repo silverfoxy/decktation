@@ -10,8 +10,9 @@ import sys
 import time
 import json
 
-# Add lib path for evdev
-lib_path = "/home/deck/homebrew/plugins/decktation/lib"
+# Add lib path for evdev (relative to this script's location)
+script_dir = os.path.dirname(os.path.abspath(__file__))
+lib_path = os.path.join(script_dir, "lib")
 if os.path.exists(lib_path):
     sys.path.insert(0, lib_path)
 
