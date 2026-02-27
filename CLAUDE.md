@@ -12,9 +12,12 @@ Decktation is a push-to-talk dictation plugin for Steam Deck that enables voice-
 npm install           # Install Node dependencies
 npm run build         # Compile TypeScript to dist/index.js
 npm run watch         # Watch mode for development
+./build_ydotool.sh    # Build ydotool from source (one-time)
 ```
 
 Python dependencies are installed via `install_deps.sh` using the venv pip, which installs faster-whisper, sounddevice, numpy, and evdev-binary to the `lib/` folder.
+
+The `build_ydotool.sh` script compiles ydotool from source and places binaries in the `bin/` folder, making the plugin fully self-contained without requiring system-wide ydotool installation.
 
 ## Testing
 
@@ -22,9 +25,14 @@ Python dependencies are installed via `install_deps.sh` using the venv pip, whic
 # Unit tests (no hardware required)
 .venv/bin/pytest tests/ -v     # Run all unit tests
 
-# One-time venv setup (uses nix Python 3.11)
-/nix/store/dwix9cc815h6vxvdvl8zc6pvznq6whdh-python3-3.11.14/bin/python -m venv .venv
+# One-time venv setup (uses system Python 3.11)
+python3 -m venv .venv
 .venv/bin/pip install pytest
+
+# Self-contained dependency testing
+./test_self_contained.sh       # Quick check - all deps bundled?
+./test_without_nix.sh          # Test with nix hidden (local)
+./test_in_docker.sh            # Test in clean container (requires Docker)
 
 # Manual/integration tests
 python test_voice.py           # Test transcription
@@ -32,6 +40,8 @@ python test_xdotool.py         # Test keyboard simulation
 python test_context_benefit.py # Test context improvement
 ./test_wow_integration.sh      # Full WoW addon integration test
 ```
+
+See `doc/TESTING_SELF_CONTAINED.md` for detailed testing guide.
 
 ### Unit test coverage (`tests/`)
 

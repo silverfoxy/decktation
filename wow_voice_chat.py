@@ -344,17 +344,33 @@ class WoWVoiceChat:
         logger.info(f"Sending to {channel}: {text}")
         logger.info(f"Full message: {full_message}")
 
-        # Find ydotool binary - check bundled first, then fallback to Nix
+        # Find ydotool binary - check bundled first, then fallback to system paths
         plugin_dir = os.path.dirname(os.path.abspath(__file__))
         bundled_ydotool = os.path.join(plugin_dir, "bin", "ydotool")
 
-        if os.path.exists(bundled_ydotool):
-            ydotool = bundled_ydotool
-            logger.info("Using bundled ydotool")
-        else:
-            # Fallback to Nix installation
-            ydotool = "/home/deck/.nix-profile/bin/ydotool"
-            logger.info("Using Nix ydotool")
+        # Try locations in priority order: bundled, system, user install
+        ydotool_paths = [
+            bundled_ydotool,
+            "/usr/bin/ydotool",
+            "/usr/local/bin/ydotool",
+        ]
+
+        ydotool = None
+        for path in ydotool_paths:
+            if os.path.exists(path):
+                ydotool = path
+                logger.info(f"Using ydotool from: {path}")
+                break
+
+        if not ydotool:
+            # Last resort: try to find it in PATH
+            import shutil
+            ydotool = shutil.which("ydotool")
+            if ydotool:
+                logger.info(f"Using ydotool from PATH: {ydotool}")
+            else:
+                logger.error("ydotool not found! Install it or run build_ydotool.sh")
+                return
 
         # Set socket path - ydotoold running as root uses /tmp/.ydotool_socket
         env = os.environ.copy()

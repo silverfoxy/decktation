@@ -58,6 +58,15 @@ if [ -d "$SOURCE_DIR/WowAddon" ]; then
     cp -r "$SOURCE_DIR/WowAddon" "$PLUGIN_DIR/"
 fi
 
+# Copy bundled ydotool binaries if they exist
+if [ -d "$SOURCE_DIR/bin" ]; then
+    echo "Copying bundled ydotool binaries..."
+    cp -r "$SOURCE_DIR/bin" "$PLUGIN_DIR/"
+else
+    echo "Warning: No bundled ydotool binaries found in bin/"
+    echo "Run ./build_ydotool.sh to build them, or they will be downloaded from system"
+fi
+
 echo "✓ Files copied"
 echo ""
 

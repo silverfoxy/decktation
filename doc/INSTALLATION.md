@@ -14,7 +14,9 @@ Decky Loader must be installed on your Steam Deck. If you don't have it:
 
 ### 2. ydotool Setup
 
-Decktation uses ydotool to simulate keyboard input. You need to set this up **once** before installing the plugin.
+Decktation uses ydotool to simulate keyboard input. **As of the latest version, ydotool is bundled with the plugin** - no separate installation needed!
+
+For manual/development installations, you can optionally build ydotool:
 
 #### Automated Setup (Recommended)
 
@@ -26,7 +28,8 @@ sudo ./setup_ydotoold.sh
 ```
 
 This script:
-- Installs ydotool via pacman if not present
+- Checks for bundled ydotool binaries
+- Offers to build ydotool from source if not found
 - Creates a systemd service for ydotoold
 - Sets proper permissions for /tmp/.ydotool_socket
 - Enables the service to start on boot
@@ -41,33 +44,24 @@ pgrep ydotoold
 systemctl --user status ydotoold
 ```
 
-#### Manual Setup (Alternative)
+#### Manual Build (Alternative)
 
-If the automated setup doesn't work:
+If you want to build ydotool separately:
 
 ```bash
-# Install ydotool
-sudo pacman -S ydotool
+# Build ydotool from source
+cd ~/Documents/personal/decktation
+./build_ydotool.sh
 
-# Start ydotoold manually
-ydotoold &
-
-# Or create a systemd service
-mkdir -p ~/.config/systemd/user
-cat > ~/.config/systemd/user/ydotoold.service << 'EOF'
-[Unit]
-Description=ydotool daemon
-
-[Service]
-ExecStart=/usr/bin/ydotoold
-Restart=always
-
-[Install]
-WantedBy=default.target
-EOF
-
-systemctl --user enable --now ydotoold
+# Then set up the service
+sudo ./setup_ydotoold.sh
 ```
+
+The build script will:
+- Clone ydotool from GitHub
+- Compile it with cmake
+- Place binaries in the `bin/` folder
+- These will be bundled when you install the plugin
 
 ## Installation Methods
 

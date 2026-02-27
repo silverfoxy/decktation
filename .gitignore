@@ -37,6 +37,7 @@ wow_context.json
 *.zip
 decktation-package/
 lib/
+bin/  # ydotool binaries built by build_ydotool.sh
 
 # User config
 .setup_status
