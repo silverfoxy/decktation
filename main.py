@@ -104,9 +104,19 @@ class Plugin:
                 logger.error(f"Controller listener script not found: {listener_script}")
                 return False
 
-            # Start the listener as a subprocess using Decky's Python
+            # Start the listener as a subprocess using system Python
+            # Note: sys.executable is the PyInstaller frozen Decky binary, not a Python interpreter
+            python_bin = "/usr/bin/python3"
+            if not os.path.exists(python_bin):
+                # Fallback to finding python3 in PATH
+                import shutil
+                python_bin = shutil.which("python3")
+                if not python_bin:
+                    logger.error("No python3 found in system")
+                    return False
+
             Plugin.listener_process = subprocess.Popen(
-                [sys.executable, listener_script],
+                [python_bin, listener_script],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True
