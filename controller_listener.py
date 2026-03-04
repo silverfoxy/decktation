@@ -10,11 +10,10 @@ import sys
 import time
 import json
 
-# Add lib path for evdev (relative to this script's location)
-script_dir = os.path.dirname(os.path.abspath(__file__))
-lib_path = os.path.join(script_dir, "lib")
-if os.path.exists(lib_path):
-    sys.path.insert(0, lib_path)
+# Controller listener uses system evdev (not bundled lib/)
+# The bundled lib/ is compiled for Decky's Python 3.11, but this script
+# runs with system Python which may be a different version.
+# System evdev is installed via python-evdev package.
 
 import evdev
 from evdev import ecodes

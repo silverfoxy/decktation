@@ -250,13 +250,12 @@
       }
   }
   // Available button options
+  // Note: L5/R5 back grips are intercepted by Steam and not available via evdev
   const BUTTON_OPTIONS = [
       { data: "L1", label: "L1 (Left Bumper)" },
       { data: "R1", label: "R1 (Right Bumper)" },
       { data: "L2", label: "L2 (Left Trigger)" },
       { data: "R2", label: "R2 (Right Trigger)" },
-      { data: "L5", label: "L5 (Left Back Grip)" },
-      { data: "R5", label: "R5 (Right Back Grip)" },
       { data: "A", label: "A Button" },
       { data: "B", label: "B Button" },
       { data: "X", label: "X Button" },

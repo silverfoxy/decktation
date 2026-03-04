@@ -1,5 +1,6 @@
 {
   "name": "Decktation",
+  "version": "0.2.3",
   "author": "silverfoxy",
   "flags": ["debug"],
   "publish": {
