@@ -104,9 +104,12 @@ jobs:
         cp -r defaults decktation/ 2>/dev/null || true
         cp -r lib decktation/
         cp -r bin decktation/
+        cp -r WowAddon decktation/ 2>/dev/null || true
         cp main.py decktation/
         cp wow_voice_chat.py decktation/
         cp controller_listener.py decktation/
+        cp convert_wow_context.py decktation/
+        cp game_presets.json decktation/
         cp plugin.json decktation/
         cp package.json decktation/
         cp README.md decktation/

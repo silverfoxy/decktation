@@ -8,6 +8,7 @@ Verifies that:
 """
 
 import pytest
+import os
 from unittest.mock import patch, call, MagicMock
 from wow_voice_chat import WoWVoiceChat
 
@@ -15,6 +16,14 @@ from wow_voice_chat import WoWVoiceChat
 # Linux keycode for Enter used by ydotool
 ENTER_PRESS = "28:1"
 ENTER_RELEASE = "28:0"
+
+
+# Mock helper for ydotool path checks
+def mock_path_exists(path):
+    """Mock os.path.exists to return True for ydotool paths."""
+    if "ydotool" in str(path):
+        return True
+    return os.path.exists.__wrapped__(path) if hasattr(os.path.exists, '__wrapped__') else False
 
 
 WOW_PRESET = {
@@ -56,8 +65,9 @@ def get_type_calls(mock_run):
 # ---------------------------------------------------------------------------
 
 class TestWoWSendBehavior:
+    @patch("os.path.exists", side_effect=mock_path_exists)
     @patch("subprocess.run")
-    def test_say_presses_enter_to_open(self, mock_run):
+    def test_say_presses_enter_to_open(self, mock_run, mock_exists):
         mock_run.return_value = MagicMock(returncode=0)
         svc = make_service(WOW_PRESET)
         svc.send_to_wow_chat("hello world", channel="say")
@@ -65,8 +75,9 @@ class TestWoWSendBehavior:
         key_calls = get_key_calls(mock_run)
         assert len(key_calls) == 2, "Expected 2 Enter keypresses: open + send"
 
+    @patch("os.path.exists", side_effect=mock_path_exists)
     @patch("subprocess.run")
-    def test_say_types_channel_prefix(self, mock_run):
+    def test_say_types_channel_prefix(self, mock_run, mock_exists):
         mock_run.return_value = MagicMock(returncode=0)
         svc = make_service(WOW_PRESET)
         svc.send_to_wow_chat("hello world", channel="say")
@@ -76,8 +87,9 @@ class TestWoWSendBehavior:
         typed_text = type_calls[0].args[0][-1]  # last arg to ydotool type is the text
         assert typed_text == "/s hello world"
 
+    @patch("os.path.exists", side_effect=mock_path_exists)
     @patch("subprocess.run")
-    def test_party_types_party_prefix(self, mock_run):
+    def test_party_types_party_prefix(self, mock_run, mock_exists):
         mock_run.return_value = MagicMock(returncode=0)
         svc = make_service(WOW_PRESET)
         svc.send_to_wow_chat("incoming", channel="party")
@@ -85,8 +97,9 @@ class TestWoWSendBehavior:
         type_calls = get_type_calls(mock_run)
         assert type_calls[0].args[0][-1] == "/p incoming"
 
+    @patch("os.path.exists", side_effect=mock_path_exists)
     @patch("subprocess.run")
-    def test_order_is_open_then_type_then_send(self, mock_run):
+    def test_order_is_open_then_type_then_send(self, mock_run, mock_exists):
         """Enter (open), type message, Enter (send) — in that order."""
         mock_run.return_value = MagicMock(returncode=0)
         svc = make_service(WOW_PRESET)
@@ -109,8 +122,9 @@ class TestWoWSendBehavior:
 # ---------------------------------------------------------------------------
 
 class TestWoWTypeChannel:
+    @patch("os.path.exists", side_effect=mock_path_exists)
     @patch("subprocess.run")
-    def test_type_channel_no_enter_presses(self, mock_run):
+    def test_type_channel_no_enter_presses(self, mock_run, mock_exists):
         mock_run.return_value = MagicMock(returncode=0)
         svc = make_service(WOW_PRESET)
         svc.send_to_wow_chat("hello", channel="type")
@@ -118,8 +132,9 @@ class TestWoWTypeChannel:
         key_calls = get_key_calls(mock_run)
         assert len(key_calls) == 0, "type channel must not press Enter"
 
+    @patch("os.path.exists", side_effect=mock_path_exists)
     @patch("subprocess.run")
-    def test_type_channel_no_prefix_in_text(self, mock_run):
+    def test_type_channel_no_prefix_in_text(self, mock_run, mock_exists):
         mock_run.return_value = MagicMock(returncode=0)
         svc = make_service(WOW_PRESET)
         svc.send_to_wow_chat("hello world", channel="type")
@@ -128,8 +143,9 @@ class TestWoWTypeChannel:
         typed = type_calls[0].args[0][-1]
         assert typed == "hello world"
 
+    @patch("os.path.exists", side_effect=mock_path_exists)
     @patch("subprocess.run")
-    def test_type_channel_strips_trailing_punctuation(self, mock_run):
+    def test_type_channel_strips_trailing_punctuation(self, mock_run, mock_exists):
         mock_run.return_value = MagicMock(returncode=0)
         svc = make_service(WOW_PRESET)
         svc.send_to_wow_chat("hello world.", channel="type")
@@ -138,8 +154,9 @@ class TestWoWTypeChannel:
         typed = type_calls[0].args[0][-1]
         assert typed == "hello world"
 
+    @patch("os.path.exists", side_effect=mock_path_exists)
     @patch("subprocess.run")
-    def test_type_via_parsed_prefix(self, mock_run):
+    def test_type_via_parsed_prefix(self, mock_run, mock_exists):
         """'type hello' in WoW preset should route to type channel."""
         mock_run.return_value = MagicMock(returncode=0)
         svc = make_service(WOW_PRESET)
@@ -154,8 +171,9 @@ class TestWoWTypeChannel:
 # ---------------------------------------------------------------------------
 
 class TestGenericSendBehavior:
+    @patch("os.path.exists", side_effect=mock_path_exists)
     @patch("subprocess.run")
-    def test_no_enter_to_open(self, mock_run):
+    def test_no_enter_to_open(self, mock_run, mock_exists):
         mock_run.return_value = MagicMock(returncode=0)
         svc = make_service(GENERIC_PRESET)
         svc.send_to_wow_chat("search for something", channel="type")
@@ -163,8 +181,9 @@ class TestGenericSendBehavior:
         key_calls = get_key_calls(mock_run)
         assert len(key_calls) == 0, "Generic preset must never press Enter"
 
+    @patch("os.path.exists", side_effect=mock_path_exists)
     @patch("subprocess.run")
-    def test_only_types_text(self, mock_run):
+    def test_only_types_text(self, mock_run, mock_exists):
         mock_run.return_value = MagicMock(returncode=0)
         svc = make_service(GENERIC_PRESET)
         svc.send_to_wow_chat("hello world", channel="type")
@@ -173,8 +192,9 @@ class TestGenericSendBehavior:
         assert len(calls) == 1, "Only one subprocess call: the type command"
         assert "type" in calls[0].args[0]
 
+    @patch("os.path.exists", side_effect=mock_path_exists)
     @patch("subprocess.run")
-    def test_plain_text_no_prefix(self, mock_run):
+    def test_plain_text_no_prefix(self, mock_run, mock_exists):
         mock_run.return_value = MagicMock(returncode=0)
         svc = make_service(GENERIC_PRESET)
         svc.send_to_wow_chat("hello world")  # default channel = type
@@ -189,14 +209,16 @@ class TestGenericSendBehavior:
 # ---------------------------------------------------------------------------
 
 class TestEmptyText:
+    @patch("os.path.exists", side_effect=mock_path_exists)
     @patch("subprocess.run")
-    def test_empty_text_no_subprocess_calls(self, mock_run):
+    def test_empty_text_no_subprocess_calls(self, mock_run, mock_exists):
         svc = make_service(WOW_PRESET)
         svc.send_to_wow_chat("")
         mock_run.assert_not_called()
 
+    @patch("os.path.exists", side_effect=mock_path_exists)
     @patch("subprocess.run")
-    def test_none_channel_parsed_from_text(self, mock_run):
+    def test_none_channel_parsed_from_text(self, mock_run, mock_exists):
         mock_run.return_value = MagicMock(returncode=0)
         svc = make_service(WOW_PRESET)
         svc.send_to_wow_chat("party let's go")  # channel parsed from text
