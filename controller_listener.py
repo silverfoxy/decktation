@@ -68,11 +68,22 @@ def load_button_config():
     return ["L1", "R1"]
 
 def find_gamepad():
-    """Find Xbox 360 pad device (Steam Deck gamepad)"""
+    """Find gamepad device with actual gamepad buttons (not keyboard interface)"""
     for path in evdev.list_devices():
         try:
             device = evdev.InputDevice(path)
-            if "X-Box 360" in device.name or "Xbox 360" in device.name:
+            name_lower = device.name.lower()
+
+            # Check if device has gamepad capabilities (BTN_SOUTH, BTN_NORTH, etc.)
+            caps = device.capabilities()
+            has_gamepad_buttons = False
+            if 1 in caps:  # EV_KEY
+                key_codes = caps[1]
+                # Check for gamepad buttons (304-307 are SOUTH/EAST/NORTH/WEST - A/B/X/Y)
+                has_gamepad_buttons = any(code in key_codes for code in [304, 305, 307, 308, 310, 311])
+
+            # Only match devices that have actual gamepad buttons
+            if has_gamepad_buttons and any(keyword in name_lower for keyword in ["x-box 360", "xbox 360", "gamepad"]):
                 return device
         except:
             pass
