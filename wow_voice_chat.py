@@ -55,8 +55,16 @@ class WoWVoiceChat:
         # Context cache
         self.context = {}
 
-        # Chat channel mappings - from preset or WoW defaults
-        self.channel_commands = self.preset.get("channels") or {
+        # Load language config for channel detection
+        self._load_language_config()
+
+        # Chat channel mappings - from preset or loaded config
+        self.channel_commands = self.preset.get("channels") or self.default_channel_commands
+
+    def _load_language_config(self):
+        """Load language configuration for multi-language channel detection"""
+        # Default fallback configuration
+        self.default_channel_commands = {
             "say": "/s ",
             "party": "/p ",
             "raid": "/raid ",
@@ -65,8 +73,49 @@ class WoWVoiceChat:
             "yell": "/y ",
             "instance": "/i ",
             "whisper": "/w ",
-            "type": "",  # Just type text and press Enter, no WoW chat prefix
+            "type": "",
         }
+
+        self.channel_triggers = {}  # Maps trigger word -> channel name
+
+        # Try to load language config file
+        config_file = Path(__file__).parent / "channel_languages.json"
+        if not config_file.exists():
+            # Fallback: build English-only triggers
+            for channel in self.default_channel_commands.keys():
+                self.channel_triggers[channel] = channel
+            return
+
+        try:
+            with open(config_file) as f:
+                config = json.load(f)
+
+            # Load channel commands
+            self.default_channel_commands = config.get("channel_commands", self.default_channel_commands)
+
+            # Build trigger lookup from all enabled languages
+            enabled_languages = config.get("enabled_languages", ["en"])
+            languages = config.get("languages", {})
+
+            for lang_code in enabled_languages:
+                if lang_code not in languages:
+                    continue
+
+                lang_data = languages[lang_code]
+                channels = lang_data.get("channels", {})
+
+                # For each channel, map all its triggers to the channel name
+                for channel_name, triggers in channels.items():
+                    for trigger in triggers:
+                        # Store lowercase for case-insensitive matching
+                        self.channel_triggers[trigger.lower()] = channel_name
+
+            print(f"Loaded {len(enabled_languages)} languages with {len(self.channel_triggers)} channel triggers")
+        except Exception as e:
+            print(f"Warning: Could not load language config: {e}")
+            # Use default English-only triggers
+            for channel in self.default_channel_commands.keys():
+                self.channel_triggers[channel] = channel
 
     def _load_model(self):
         """Load the Whisper model (can be called lazily)"""
@@ -255,13 +304,12 @@ class WoWVoiceChat:
         print(f"Context: {initial_prompt}")
         print(f"Hotwords: {hotwords}")
 
-        # Transcribe
+        # Transcribe (auto-detect language)
         segments, info = self.model.transcribe(
             audio_file,
             beam_size=5,
             initial_prompt=initial_prompt,
-            hotwords=hotwords,
-            language="en"
+            hotwords=hotwords
         )
 
         # Collect text
@@ -273,30 +321,34 @@ class WoWVoiceChat:
 
     def parse_channel_and_text(self, text):
         """
-        Parse channel prefix from text
+        Parse channel prefix from text using multi-language triggers
         Supports formats like:
         - "party let's go" -> (party, "let's go")
+        - "groupe allons-y" -> (party, "allons-y")
         - "party: pull boss" -> (party, "pull boss")
         - "Party, I need mana" -> (party, "I need mana")
         - "hello world" -> (default_channel, "hello world")
         """
         text = text.strip()
+        text_lower = text.lower()
 
-        # Check for channel prefix at start (case-insensitive)
-        for channel_name in self.channel_commands.keys():
+        # Check for channel trigger at start (case-insensitive)
+        for trigger, channel_name in self.channel_triggers.items():
             # Match various separators: "party:", "party,", "party ", "party."
             prefixes = [
-                f"{channel_name}:",
-                f"{channel_name},",
-                f"{channel_name}.",
-                f"{channel_name} ",
+                f"{trigger}:",
+                f"{trigger},",
+                f"{trigger}.",
+                f"{trigger} ",
             ]
 
             for prefix in prefixes:
-                if text.lower().startswith(prefix):
-                    # Extract the message after the prefix
-                    message = text[len(prefix):].strip()
-                    return channel_name, message
+                if text_lower.startswith(prefix):
+                    # Only use this channel if it exists in the current preset
+                    if channel_name in self.channel_commands:
+                        # Extract the message after the prefix
+                        message = text[len(prefix):].strip()
+                        return channel_name, message
 
         # No channel prefix found, use default
         return self.default_channel, text
