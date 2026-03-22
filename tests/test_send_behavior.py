@@ -226,3 +226,84 @@ class TestEmptyText:
         type_calls = get_type_calls(mock_run)
         typed = type_calls[0].args[0][-1]
         assert typed == "/p let's go"
+
+
+# ---------------------------------------------------------------------------
+# Manual send mode - opens chat and types, but doesn't send
+# ---------------------------------------------------------------------------
+
+class TestManualSendMode:
+    @patch("os.path.exists", side_effect=mock_path_exists)
+    @patch("subprocess.run")
+    def test_manual_send_presses_enter_to_open(self, mock_run, mock_exists):
+        """Manual send should still press Enter to open chat."""
+        mock_run.return_value = MagicMock(returncode=0)
+        svc = make_service(WOW_PRESET)
+        svc.manual_send = True
+        svc.send_to_wow_chat("hello world", channel="say")
+
+        key_calls = get_key_calls(mock_run)
+        # Should have 1 Enter press (open) but not the second (send)
+        assert len(key_calls) == 1, "Expected 1 Enter keypress: open only"
+
+    @patch("os.path.exists", side_effect=mock_path_exists)
+    @patch("subprocess.run")
+    def test_manual_send_types_message(self, mock_run, mock_exists):
+        """Manual send should type the message normally."""
+        mock_run.return_value = MagicMock(returncode=0)
+        svc = make_service(WOW_PRESET)
+        svc.manual_send = True
+        svc.send_to_wow_chat("hello world", channel="say")
+
+        type_calls = get_type_calls(mock_run)
+        assert len(type_calls) == 1
+        typed_text = type_calls[0].args[0][-1]
+        assert typed_text == "/s hello world"
+
+    @patch("os.path.exists", side_effect=mock_path_exists)
+    @patch("subprocess.run")
+    def test_manual_send_order_is_open_then_type(self, mock_run, mock_exists):
+        """Manual send: Enter (open), type message, NO Enter (send)."""
+        mock_run.return_value = MagicMock(returncode=0)
+        svc = make_service(WOW_PRESET)
+        svc.manual_send = True
+        svc.send_to_wow_chat("pull boss", channel="say")
+
+        calls = mock_run.call_args_list
+        actions = []
+        for c in calls:
+            cmd = c.args[0]
+            if "key" in cmd:
+                actions.append("enter")
+            elif "type" in cmd:
+                actions.append("type")
+
+        assert actions == ["enter", "type"], "Should be: open, type (no send)"
+
+    @patch("os.path.exists", side_effect=mock_path_exists)
+    @patch("subprocess.run")
+    def test_manual_send_works_with_all_channels(self, mock_run, mock_exists):
+        """Manual send should work for party, raid, etc."""
+        mock_run.return_value = MagicMock(returncode=0)
+        svc = make_service(WOW_PRESET)
+        svc.manual_send = True
+        svc.send_to_wow_chat("incoming", channel="party")
+
+        key_calls = get_key_calls(mock_run)
+        assert len(key_calls) == 1, "Party channel should also skip send Enter"
+
+        type_calls = get_type_calls(mock_run)
+        typed = type_calls[0].args[0][-1]
+        assert typed == "/p incoming"
+
+    @patch("os.path.exists", side_effect=mock_path_exists)
+    @patch("subprocess.run")
+    def test_manual_send_with_type_channel(self, mock_run, mock_exists):
+        """Manual send + type channel = no Enter presses at all."""
+        mock_run.return_value = MagicMock(returncode=0)
+        svc = make_service(WOW_PRESET)
+        svc.manual_send = True
+        svc.send_to_wow_chat("hello", channel="type")
+
+        key_calls = get_key_calls(mock_run)
+        assert len(key_calls) == 0, "type channel never presses Enter, even with manual_send"

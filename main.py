@@ -247,13 +247,15 @@ class Plugin:
             logger.info(f"Active game preset: {active_game}")
 
             confirm_mode = False
+            manual_send = False
             try:
                 if os.path.exists(BUTTON_CONFIG_FILE):
                     with open(BUTTON_CONFIG_FILE, 'r') as f:
                         saved_config = json.load(f)
                     confirm_mode = saved_config.get("confirmMode", False)
+                    manual_send = saved_config.get("manualSend", False)
             except Exception as e:
-                logger.error(f"Error reading confirm mode from config: {e}")
+                logger.error(f"Error reading confirm/manual send mode from config: {e}")
 
             # Initialize the voice service with lazy model loading
             context_file = f"{plugin_path}/wow_context.json"
@@ -264,7 +266,8 @@ class Plugin:
                 test_mode=False,
                 test_audio_file=None,
                 preset=active_preset,
-                confirm_delay=2.0 if confirm_mode else 0
+                confirm_delay=2.0 if confirm_mode else 0,
+                manual_send=manual_send
             )
             logger.info("Voice service initialized (model will load on first use)")
 
@@ -337,10 +340,12 @@ class Plugin:
                         config["game"] = "wow"
                     if "confirmMode" not in config:
                         config["confirmMode"] = False
+                    if "manualSend" not in config:
+                        config["manualSend"] = False
                     return {"success": True, "config": config}
             else:
-                # Default: L1+R1, notifications enabled, not enabled, wow preset, no confirm
-                return {"success": True, "config": {"buttons": ["L1", "R1"], "showNotifications": True, "enabled": False, "game": "wow", "confirmMode": False}}
+                # Default: L1+R1, notifications enabled, not enabled, wow preset, no confirm, auto send
+                return {"success": True, "config": {"buttons": ["L1", "R1"], "showNotifications": True, "enabled": False, "game": "wow", "confirmMode": False, "manualSend": False}}
         except Exception as e:
             logger.error(f"Error getting button config: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
@@ -390,7 +395,7 @@ class Plugin:
     async def set_confirm_mode(self, enabled: bool):
         """Enable or disable the confirm-before-sending delay"""
         try:
-            config = {"buttons": ["L1", "R1"], "showNotifications": True, "enabled": False, "game": "wow", "confirmMode": False}
+            config = {"buttons": ["L1", "R1"], "showNotifications": True, "enabled": False, "game": "wow", "confirmMode": False, "manualSend": False}
             if os.path.exists(BUTTON_CONFIG_FILE):
                 try:
                     with open(BUTTON_CONFIG_FILE, 'r') as f:
@@ -408,6 +413,29 @@ class Plugin:
             return {"success": True}
         except Exception as e:
             logger.error(f"Error setting confirm mode: {traceback.format_exc()}")
+            return {"success": False, "error": str(e)}
+
+    async def set_manual_send(self, enabled: bool):
+        """Enable or disable manual send mode (skip final Enter press)"""
+        try:
+            config = {"buttons": ["L1", "R1"], "showNotifications": True, "enabled": False, "game": "wow", "confirmMode": False, "manualSend": False}
+            if os.path.exists(BUTTON_CONFIG_FILE):
+                try:
+                    with open(BUTTON_CONFIG_FILE, 'r') as f:
+                        config = json.load(f)
+                except Exception:
+                    pass
+            config["manualSend"] = enabled
+            with open(BUTTON_CONFIG_FILE, 'w') as f:
+                json.dump(config, f)
+
+            if Plugin.voice_service:
+                Plugin.voice_service.manual_send = enabled
+
+            logger.info(f"Manual send mode {'enabled' if enabled else 'disabled'}")
+            return {"success": True}
+        except Exception as e:
+            logger.error(f"Error setting manual send mode: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
 
     async def get_presets(self):

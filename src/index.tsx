@@ -221,6 +221,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [activePreset, setActivePreset] = useState<string>("wow");
 	const [presets, setPresets] = useState<DropdownOption[]>([]);
 	const [confirmMode, setConfirmMode] = useState<boolean>(false);
+	const [manualSend, setManualSend] = useState<boolean>(false);
 	const [lastTranscription, setLastTranscription] = useState<string>("");
 	const [lastTranscriptionTime, setLastTranscriptionTime] = useState<string>("");
 
@@ -248,6 +249,9 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					}
 					if (config.confirmMode !== undefined) {
 						setConfirmMode(config.confirmMode);
+					}
+					if (config.manualSend !== undefined) {
+						setManualSend(config.manualSend);
 					}
 					// Restore enabled state
 					if (config.enabled) {
@@ -374,6 +378,18 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 						onChange={async (e) => {
 							setConfirmMode(e);
 							await logic.serverAPI.callPluginMethod('set_confirm_mode', { enabled: e });
+						}}
+					/>
+				</PanelSectionRow>
+
+				<PanelSectionRow>
+					<ToggleField
+						label="Manual Send"
+						description="Type text into chat but let you press Enter to send"
+						checked={manualSend}
+						onChange={async (e) => {
+							setManualSend(e);
+							await logic.serverAPI.callPluginMethod('set_manual_send', { enabled: e });
 						}}
 					/>
 				</PanelSectionRow>

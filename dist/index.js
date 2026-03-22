@@ -273,6 +273,7 @@
       const [activePreset, setActivePreset] = React.useState("wow");
       const [presets, setPresets] = React.useState([]);
       const [confirmMode, setConfirmMode] = React.useState(false);
+      const [manualSend, setManualSend] = React.useState(false);
       const [lastTranscription, setLastTranscription] = React.useState("");
       const [lastTranscriptionTime, setLastTranscriptionTime] = React.useState("");
       React.useEffect(() => {
@@ -298,6 +299,9 @@
                       }
                       if (config.confirmMode !== undefined) {
                           setConfirmMode(config.confirmMode);
+                      }
+                      if (config.manualSend !== undefined) {
+                          setManualSend(config.manualSend);
                       }
                       // Restore enabled state
                       if (config.enabled) {
@@ -392,6 +396,11 @@
                   React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: "Confirm Before Sending", description: "Waits before typing (longer for more words) \u2014 hold the buttons again to cancel", checked: confirmMode, onChange: async (e) => {
                           setConfirmMode(e);
                           await logic.serverAPI.callPluginMethod('set_confirm_mode', { enabled: e });
+                      } })),
+              React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                  React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: "Manual Send", description: "Type text into chat but let you press Enter to send", checked: manualSend, onChange: async (e) => {
+                          setManualSend(e);
+                          await logic.serverAPI.callPluginMethod('set_manual_send', { enabled: e });
                       } })),
               presets.length > 0 && (React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                   React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: "Game", menuLabel: "Select Game", rgOptions: presets, selectedOption: activePreset, onChange: async (option) => {

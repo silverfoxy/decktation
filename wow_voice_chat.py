@@ -19,13 +19,14 @@ import tempfile
 
 
 class WoWVoiceChat:
-    def __init__(self, context_file="wow_context.json", sample_rate=44100, default_channel="say", lazy_load=False, test_mode=False, test_audio_file=None, preset=None, confirm_delay=0):
+    def __init__(self, context_file="wow_context.json", sample_rate=44100, default_channel="say", lazy_load=False, test_mode=False, test_audio_file=None, preset=None, confirm_delay=0, manual_send=False):
         self.preset = preset or {}
         self.context_file = Path(context_file)
         self.sample_rate = sample_rate  # Recording sample rate
         self.whisper_sample_rate = 16000  # Whisper expects 16kHz
         self.default_channel = self.preset.get("default_channel", default_channel)
         self.confirm_delay = confirm_delay  # seconds to wait before auto-sending (0 = disabled)
+        self.manual_send = manual_send  # if True, skip final Enter press (user sends manually)
         self.pending_text = None
         self._pending_timer = None
         self._pending_lock = threading.Lock()
@@ -384,6 +385,9 @@ class WoWVoiceChat:
         else:
             open_key = self.preset.get("chat_open_key", "enter")
             send_key = self.preset.get("chat_send_key", "enter")
+            # If manual_send is enabled, skip the final Enter press
+            if self.manual_send:
+                send_key = None
 
         try:
             # Press key to open chat input box (e.g. Enter for most games)
