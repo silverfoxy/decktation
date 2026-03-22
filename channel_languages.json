@@ -1,0 +1,45 @@
+{
+  "languages": {
+    "en": {
+      "name": "English",
+      "channels": {
+        "party": ["party"],
+        "raid": ["raid"],
+        "guild": ["guild"],
+        "officer": ["officer"],
+        "say": ["say"],
+        "yell": ["yell"],
+        "instance": ["instance"],
+        "whisper": ["whisper"],
+        "type": ["type"]
+      }
+    },
+    "fr": {
+      "name": "Français",
+      "channels": {
+        "party": ["groupe", "party", "partie"],
+        "raid": ["raid"],
+        "guild": ["guilde"],
+        "officer": ["officier"],
+        "say": ["dis", "dire", "dites"],
+        "yell": ["crie", "crier", "criez"],
+        "instance": ["instance"],
+        "whisper": ["chuchote", "chuchoter", "chuchotez"],
+        "type": ["tape", "taper", "tapez"]
+      }
+    }
+  },
+  "channel_commands": {
+    "party": "/p ",
+    "raid": "/raid ",
+    "guild": "/g ",
+    "officer": "/o ",
+    "say": "/s ",
+    "yell": "/y ",
+    "instance": "/i ",
+    "whisper": "/w ",
+    "type": ""
+  },
+  "enabled_languages": ["en", "fr"],
+  "default_channel": "say"
+}
