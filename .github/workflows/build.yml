@@ -136,10 +136,13 @@ jobs:
         cp controller_listener.py decktation/
         cp convert_wow_context.py decktation/
         cp game_presets.json decktation/
+        cp channel_languages.json decktation/
         cp plugin.json decktation/
         cp package.json decktation/
         cp README.md decktation/
+        cp LANGUAGE_CONFIG.md decktation/ 2>/dev/null || true
         cp LICENSE decktation/ 2>/dev/null || true
+        cp test_channels.py decktation/ 2>/dev/null || true
 
         # Copy setup scripts
         cp setup_ydotoold.sh decktation/ 2>/dev/null || true
