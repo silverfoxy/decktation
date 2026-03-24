@@ -11,7 +11,8 @@
         "yell": ["yell"],
         "instance": ["instance"],
         "whisper": ["whisper"],
-        "type": ["type"]
+        "type": ["type"],
+        "alert": ["alert"]
       }
     },
     "fr": {
@@ -25,7 +26,8 @@
         "yell": ["crie", "crier", "criez"],
         "instance": ["instance"],
         "whisper": ["chuchote", "chuchoter", "chuchotez"],
-        "type": ["tape", "taper", "tapez"]
+        "type": ["tape", "taper", "tapez"],
+        "alert": ["alerte", "alert"]
       }
     }
   },
@@ -38,7 +40,8 @@
     "yell": "/y ",
     "instance": "/i ",
     "whisper": "/w ",
-    "type": ""
+    "type": "",
+    "alert": "/rw "
   },
   "enabled_languages": ["en", "fr"],
   "default_channel": "say"

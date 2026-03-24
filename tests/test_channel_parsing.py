@@ -24,6 +24,7 @@ WOW_PRESET = {
         "instance": "/i ",
         "whisper": "/w ",
         "type": "",
+        "alert": "/rw ",
     },
     "whisper_prompt": "World of Warcraft gameplay.",
     "context_file": "wow_context.json",
@@ -102,6 +103,7 @@ class TestWoWChannels:
         ("instance", "instance"),
         ("whisper", "whisper"),
         ("type", "type"),
+        ("alert", "alert"),
     ])
     def test_channel_prefix_recognized(self, wow_svc, prefix, expected_channel):
         ch, text = wow_svc.parse_channel_and_text(f"{prefix} hello")
