@@ -83,7 +83,7 @@ def find_gamepad():
                 has_gamepad_buttons = any(code in key_codes for code in [304, 305, 307, 308, 310, 311])
 
             # Only match devices that have actual gamepad buttons
-            if has_gamepad_buttons and any(keyword in name_lower for keyword in ["x-box 360", "xbox 360", "gamepad"]):
+            if has_gamepad_buttons and any(keyword in name_lower for keyword in ["x-box 360", "xbox 360", "gamepad", "steam deck controller", "valve"]):
                 return device
         except:
             pass
