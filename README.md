@@ -71,6 +71,36 @@ Separators supported: space, colon, comma, or period after the channel name. Cas
 
 Available WoW channels: `say`, `party`, `raid`, `guild`, `officer`, `yell`, `instance`, `whisper`, `type`
 
+### Adding Custom Channels
+
+You can add channels beyond the built-in ones (e.g. WoW's numbered channels `/1`, `/2`) by editing two config files.
+
+**Step 1 — add the channel command to `game_presets.json`** under the preset's `channels` map:
+
+```json
+"channels": {
+  "say": "/s ",
+  "party": "/p ",
+  "one": "/1 ",
+  "two": "/2 "
+}
+```
+
+**Step 2 — add the spoken trigger words to `channel_languages.json`** under each language's `channels` map:
+
+```json
+"en": {
+  "channels": {
+    "one": ["one", "channel one"],
+    "two": ["two", "channel two"]
+  }
+}
+```
+
+After saving both files, saying `"one hello"` or `"channel one hello"` will send `/1 hello`.
+
+You can add as many trigger words per channel as you like (e.g., aliases in multiple languages). The key in `channel_languages.json` must match the key in `game_presets.json`.
+
 ### Adding More Presets
 
 Edit `game_presets.json` to add new games — no code changes needed. Each preset specifies:
