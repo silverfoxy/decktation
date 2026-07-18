@@ -9,6 +9,7 @@ import {
 	ButtonItem,
 	DropdownItem,
 	DropdownOption,
+	Focusable,
 } from "decky-frontend-lib";
 
 import React, {
@@ -575,7 +576,14 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 				</PanelSectionRow>
 
 				<PanelSectionRow>
-					<div style={{
+					<Focusable
+						tabIndex={0}
+						role="textbox"
+						aria-label="Last transcription"
+						aria-readonly="true"
+						onActivate={() => {}}
+						focusWithinClassName="gpfocuswithin"
+						style={{
 						padding: '12px',
 						backgroundColor: '#1a2f1a',
 						borderRadius: '8px',
@@ -613,13 +621,20 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 								{lastTranscriptionTime}
 							</div>
 						)}
-					</div>
+					</Focusable>
 				</PanelSectionRow>
 			</PanelSection>
 
 			<PanelSection title="How to use:">
 				<PanelSectionRow>
-					<div style={{ fontSize: '13px', lineHeight: '1.6' }}>
+					<Focusable
+						tabIndex={0}
+						role="region"
+						aria-label="How to use Decktation"
+						onActivate={() => {}}
+						focusWithinClassName="gpfocuswithin"
+						style={{ fontSize: '13px', lineHeight: '1.6' }}
+					>
 						<strong>Push-to-Talk:</strong>
 						<ul style={{ marginLeft: '15px', marginTop: '5px', marginBottom: '10px' }}>
 							<li>Hold <strong>{buttons.join('+')}</strong> {buttons.length > 1 ? 'together' : ''} to record</li>
@@ -633,7 +648,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 							<li>Speak clearly for best results</li>
 							<li>Works great for in-game chat</li>
 						</ul>
-					</div>
+					</Focusable>
 				</PanelSectionRow>
 			</PanelSection>
 		</div>

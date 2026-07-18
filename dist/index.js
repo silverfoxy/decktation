@@ -523,7 +523,7 @@
                                   React__default["default"].createElement(FaCircle, { size: 6, style: { position: 'absolute', bottom: '-1px', right: '-3px', color: '#e05f5f' } })),
                               React__default["default"].createElement("span", null, "Test Recording (3s)"))))),
               React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                  React__default["default"].createElement("div", { style: {
+                  React__default["default"].createElement(deckyFrontendLib.Focusable, { tabIndex: 0, role: "textbox", "aria-label": "Last transcription", "aria-readonly": "true", onActivate: () => { }, focusWithinClassName: "gpfocuswithin", style: {
                           padding: '12px',
                           backgroundColor: '#1a2f1a',
                           borderRadius: '8px',
@@ -555,7 +555,7 @@
                           } }, lastTranscriptionTime))))),
           React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: "How to use:" },
               React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                  React__default["default"].createElement("div", { style: { fontSize: '13px', lineHeight: '1.6' } },
+                  React__default["default"].createElement(deckyFrontendLib.Focusable, { tabIndex: 0, role: "region", "aria-label": "How to use Decktation", onActivate: () => { }, focusWithinClassName: "gpfocuswithin", style: { fontSize: '13px', lineHeight: '1.6' } },
                       React__default["default"].createElement("strong", null, "Push-to-Talk:"),
                       React__default["default"].createElement("ul", { style: { marginLeft: '15px', marginTop: '5px', marginBottom: '10px' } },
                           React__default["default"].createElement("li", null,
