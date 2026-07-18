@@ -91,7 +91,7 @@ Voice input like "party, hello everyone" or "raid: pull boss" is parsed to extra
 - Context file: `wow_context.json` (auto-generated from WoW SavedVariables)
 - Button config: `button_config.json` (default: `{"buttons": ["L1", "R1"]}`)
 - Push-to-talk: Configurable 1-5 button combo via UI (default: L1+R1)
-- Available buttons: L1, R1, L2, R2, L5, R5, A, B, X, Y
+- Available buttons: L1, R1, L2, R2, L4, R4, L5, R5, A, B, X, Y
 - Logs: `/tmp/decktation.log`
 
 ## Platform Notes
@@ -100,7 +100,7 @@ Voice input like "party, hello everyone" or "raid: pull boss" is parsed to extra
 - Uses **ydotool** for keyboard simulation (requires ydotoold service running)
 - Setup ydotoold: `sudo /path/to/setup_ydotoold.sh` (creates systemd service with proper socket permissions)
 - Steam Deck controller appears as "Microsoft X-Box 360 pad 0" to evdev
-- L5/R5 back grips are intercepted by Steam and not exposed via evdev
+- L4/R4/L5/R5 back grips are read from the Steam Deck vendor raw HID interface; standard buttons continue to use evdev
 - WoW runs via Proton; addon SavedVariables at `~/.steam/steam/steamapps/compatdata/*/pfx/drive_c/Program Files (x86)/World of Warcraft/_retail_/WTF/Account/<ACCOUNT>/SavedVariables/`
 - Plugin installs to `~/homebrew/plugins/decktation/`
 

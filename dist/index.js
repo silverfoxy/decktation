@@ -85,6 +85,25 @@
     return GenIcon({"tag":"svg","attr":{"viewBox":"0 0 448 512"},"child":[{"tag":"path","attr":{"d":"M432 32H312l-9.4-18.7A24 24 0 0 0 281.1 0H166.8a23.72 23.72 0 0 0-21.4 13.3L136 32H16A16 16 0 0 0 0 48v32a16 16 0 0 0 16 16h416a16 16 0 0 0 16-16V48a16 16 0 0 0-16-16zM53.2 467a48 48 0 0 0 47.9 45h245.8a48 48 0 0 0 47.9-45L416 128H32z"}}]})(props);
   }
 
+  // Button IDs emitted by SteamClient.Input.RegisterForControllerInputMessages.
+  // These match Steam's ControllerInputGamepadButton enum. The lower rear pair is
+  // reported from the controller's perspective, so 33 is physical L5 and 32 R5.
+  const CONTROLLER_BUTTON_NAMES = {
+      0: "A",
+      1: "B",
+      2: "X",
+      3: "Y",
+      26: "L2",
+      27: "R2",
+      28: "L2",
+      29: "R2",
+      30: "L1",
+      31: "R1",
+      32: "R5",
+      33: "L5",
+      44: "L4",
+      45: "R4",
+  };
   // L5 = bit 15, R5 = bit 16 in ulButtons (same as antiquitte/decky-dictation)
   const L5_MASK = 1 << 15;
   class DecktationLogic {
@@ -200,31 +219,27 @@
                   this.notify("Decktation", 1500, "Transcribing...");
               }
           };
-          // Fallback handler for RegisterForControllerInputMessages
-          this.handleButtonInput = (controllerIndex, gamepadButton, isButtonPressed) => {
-              // L5 = 44 in this API
-              const buttonName = gamepadButton === 44 ? "L5" : `btn${gamepadButton}`;
+          this.updateButtonPreview = (gamepadButton, isButtonPressed) => {
+              const buttonName = CONTROLLER_BUTTON_NAMES[gamepadButton] || `Button ${gamepadButton}`;
               this.lastButtonState = isButtonPressed ? buttonName : "None";
               if (this.onButtonChange)
                   this.onButtonChange();
-              if (!this.enabled) {
+          };
+          // Steam has shipped both a positional callback and a batched message callback.
+          // Support both so the preview keeps working across Steam client versions.
+          this.handleButtonInput = (...args) => {
+              if (Array.isArray(args[0])) {
+                  for (const message of args[0]) {
+                      if (message && typeof message.nA === "number") {
+                          this.updateButtonPreview(message.nA, Boolean(message.bS));
+                      }
+                  }
                   return;
               }
-              if (gamepadButton === 44) { // L5
-                  if (isButtonPressed && !this.recording) {
-                      this.recording = true;
-                      deckyFrontendLib.Router.DisableHomeAndQuickAccessButtons();
-                      setTimeout(() => {
-                          deckyFrontendLib.Router.EnableHomeAndQuickAccessButtons();
-                      }, 1000);
-                      this.serverAPI.callPluginMethod('start_recording', {});
-                      this.notify("Decktation", 1500, "Recording...");
-                  }
-                  else if (!isButtonPressed && this.recording) {
-                      this.recording = false;
-                      this.serverAPI.callPluginMethod('stop_recording', {});
-                      this.notify("Decktation", 1500, "Transcribing...");
-                  }
+              const gamepadButton = args[1];
+              const isButtonPressed = args[2];
+              if (typeof gamepadButton === "number") {
+                  this.updateButtonPreview(gamepadButton, Boolean(isButtonPressed));
               }
           };
           this.testRecording = async (onComplete) => {
@@ -250,12 +265,15 @@
       }
   }
   // Available button options
-  // Note: L5/R5 back grips are intercepted by Steam and not available via evdev
   const BUTTON_OPTIONS = [
       { data: "L1", label: "L1 (Left Bumper)" },
       { data: "R1", label: "R1 (Right Bumper)" },
       { data: "L2", label: "L2 (Left Trigger)" },
       { data: "R2", label: "R2 (Right Trigger)" },
+      { data: "L4", label: "L4 (Left Upper Grip)" },
+      { data: "R4", label: "R4 (Right Upper Grip)" },
+      { data: "L5", label: "L5 (Left Lower Grip)" },
+      { data: "R5", label: "R5 (Right Lower Grip)" },
       { data: "A", label: "A Button" },
       { data: "B", label: "B Button" },
       { data: "X", label: "X Button" },

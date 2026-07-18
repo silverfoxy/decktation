@@ -118,7 +118,7 @@ Available buttons:
 
 - **L1, R1** (bumpers) — _Default combo_
 - **L2, R2** (triggers)
-- **L5, R5** (back grips) — note: intercepted by Steam in some modes
+- **L4, R4, L5, R5** (Steam Deck back grips, detected through raw HID)
 - **A, B, X, Y** (face buttons)
 
 ## Use Cases
@@ -158,7 +158,7 @@ See `doc/TESTING_GUIDE.md` for setup instructions.
 ### Button combo not detected
 
 - Try a different button combination in the plugin UI
-- Avoid L5/R5 as Steam may intercept these buttons
+- Rear grip buttons are supported on Steam Deck hardware through raw HID
 - Check `/tmp/decktation.log` for controller listener errors
 - Verify controller listener is running: `pgrep -f controller_listener`
 

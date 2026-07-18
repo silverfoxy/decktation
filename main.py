@@ -51,6 +51,7 @@ except ImportError as e:
 
 # File paths for subprocess communication
 STATE_FILE = "/tmp/decktation_l5"
+PREVIEW_FILE = "/tmp/decktation_button_preview"
 PID_FILE = "/tmp/decktation_listener.pid"
 # Config in user home directory for persistence and write access
 CONFIG_DIR = os.path.expanduser("~/.config/decktation")
@@ -76,6 +77,15 @@ class Plugin:
     poll_running = False
     controller_enabled = False
     recording_start_count = 0  # Increments each time recording starts
+
+    @staticmethod
+    def _log_listener_output(process):
+        """Continuously forward listener output into the Decky plugin log."""
+        try:
+            for line in process.stdout:
+                logger.info(f"Controller listener: {line.rstrip()}")
+        except Exception as e:
+            logger.warning(f"Stopped reading controller listener output: {e}")
 
     @staticmethod
     def check_ydotoold():
@@ -123,13 +133,21 @@ class Plugin:
             )
             logger.info(f"Started controller listener (PID {Plugin.listener_process.pid})")
 
+            threading.Thread(
+                target=Plugin._log_listener_output,
+                args=(Plugin.listener_process,),
+                daemon=True,
+            ).start()
+
             # Give it a moment to start
             time.sleep(0.5)
 
             # Check if it's still running
             if Plugin.listener_process.poll() is not None:
-                output = Plugin.listener_process.stdout.read()
-                logger.error(f"Controller listener exited immediately: {output}")
+                logger.error(
+                    f"Controller listener exited immediately with code "
+                    f"{Plugin.listener_process.returncode}"
+                )
                 return False
 
             return True
@@ -157,7 +175,7 @@ class Plugin:
                 Plugin.listener_process = None
 
             # Clean up files
-            for f in [STATE_FILE, PID_FILE]:
+            for f in [STATE_FILE, PREVIEW_FILE, PID_FILE]:
                 if os.path.exists(f):
                     os.remove(f)
         except Exception as e:
@@ -549,6 +567,14 @@ class Plugin:
                 model_ready = Plugin.voice_service.is_model_ready()
                 model_loading = Plugin.voice_service.model_loading
 
+            detected_button = "None"
+            try:
+                if os.path.exists(PREVIEW_FILE):
+                    with open(PREVIEW_FILE, "r") as f:
+                        detected_button = f.read().strip() or "None"
+            except Exception:
+                pass
+
             return {
                 "success": True,
                 "service_ready": Plugin.voice_service is not None,
@@ -556,6 +582,7 @@ class Plugin:
                 "model_loading": model_loading,
                 "recording": Plugin.voice_service.is_recording if Plugin.voice_service else False,
                 "recording_start_count": Plugin.recording_start_count,
+                "detected_button": detected_button,
                 "pending_text": Plugin.voice_service.pending_text or "" if Plugin.voice_service else "",
                 "pending_delay": Plugin.voice_service._confirm_delay_for(Plugin.voice_service.pending_text) if Plugin.voice_service and Plugin.voice_service.pending_text else 0,
                 "confirm_mode": Plugin.voice_service.confirm_delay > 0 if Plugin.voice_service else False,
