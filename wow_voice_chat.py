@@ -334,7 +334,10 @@ class WoWVoiceChat:
         text_lower = text.lower()
 
         # Check for channel trigger at start (case-insensitive)
-        for trigger, channel_name in self.channel_triggers.items():
+        # Check longer phrases first so "guild one" wins over "guild".
+        for trigger, channel_name in sorted(
+            self.channel_triggers.items(), key=lambda item: len(item[0]), reverse=True
+        ):
             # Match various separators: "party:", "party,", "party ", "party."
             prefixes = [
                 f"{trigger}:",

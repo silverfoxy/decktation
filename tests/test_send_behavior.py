@@ -45,6 +45,25 @@ GENERIC_PRESET = {
     "whisper_prompt": "",
 }
 
+GUILDWARS2_PRESET = {
+    "name": "Guild Wars 2",
+    "chat_open_key": "enter",
+    "chat_send_key": "enter",
+    "default_channel": "say",
+    "channels": {
+        "say": "/s ",
+        "map": "/m ",
+        "party": "/p ",
+        "squad": "/d ",
+        "team": "/t ",
+        "guild": "/g ",
+        "guild_one": "/g1 ",
+        "whisper": "/w ",
+        "type": "",
+    },
+    "whisper_prompt": "Guild Wars 2 gameplay.",
+}
+
 
 def make_service(preset):
     return WoWVoiceChat(preset=preset, lazy_load=True)
@@ -115,6 +134,54 @@ class TestWoWSendBehavior:
                 actions.append("type")
 
         assert actions == ["enter", "type", "enter"]
+
+
+# ---------------------------------------------------------------------------
+# Guild Wars 2 preset
+# ---------------------------------------------------------------------------
+
+class TestGuildWars2SendBehavior:
+    @pytest.mark.parametrize(
+        ("channel", "command"),
+        [
+            ("say", "/s "),
+            ("map", "/m "),
+            ("party", "/p "),
+            ("squad", "/d "),
+            ("team", "/t "),
+            ("guild", "/g "),
+            ("whisper", "/w "),
+        ],
+    )
+    @patch("os.path.exists", side_effect=mock_path_exists)
+    @patch("subprocess.run")
+    def test_channel_opens_types_and_sends(self, mock_run, mock_exists, channel, command):
+        mock_run.return_value = MagicMock(returncode=0)
+        svc = make_service(GUILDWARS2_PRESET)
+        svc.send_to_wow_chat("hello", channel=channel)
+
+        calls = mock_run.call_args_list
+        actions = ["enter" if "key" in c.args[0] else "type" for c in calls]
+        assert actions == ["enter", "type", "enter"]
+        assert get_type_calls(mock_run)[0].args[0][-1] == f"{command}hello"
+
+    @patch("os.path.exists", side_effect=mock_path_exists)
+    @patch("subprocess.run")
+    def test_spoken_squad_prefix_uses_squad_chat(self, mock_run, mock_exists):
+        mock_run.return_value = MagicMock(returncode=0)
+        svc = make_service(GUILDWARS2_PRESET)
+        svc.send_to_wow_chat("squad stack on tag")
+
+        assert get_type_calls(mock_run)[0].args[0][-1] == "/d stack on tag"
+
+    @patch("os.path.exists", side_effect=mock_path_exists)
+    @patch("subprocess.run")
+    def test_long_guild_number_prefix_wins_over_guild(self, mock_run, mock_exists):
+        mock_run.return_value = MagicMock(returncode=0)
+        svc = make_service(GUILDWARS2_PRESET)
+        svc.send_to_wow_chat("guild one hello everyone")
+
+        assert get_type_calls(mock_run)[0].args[0][-1] == "/g1 hello everyone"
 
 
 # ---------------------------------------------------------------------------

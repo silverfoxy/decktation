@@ -10,7 +10,7 @@ Voice dictation plugin for Steam Deck using faster-whisper with context-aware tr
 
 - **Push-to-Talk**: Hold button combo (default: L1+R1) to record
 - **Configurable buttons**: Choose 1-5 button combinations from any Steam Deck controller buttons
-- **Game presets**: Switch between game profiles with different chat systems (WoW, Generic)
+- **Game presets**: Switch between game profiles with different chat systems (WoW, Guild Wars 2, Generic)
 - **Channel-aware**: Speak channel prefixes like "party pull boss" and it routes to the right chat channel
 - **Test Recording**: Built-in 3-second test with automatic transcription display
 - **Context-aware**: Optional WoW addon integration for better accuracy with zone, boss, and party context
@@ -48,11 +48,12 @@ All dependencies are pre-bundled in the release.
 
 ## Game Presets
 
-Decktation ships with two presets configured in `game_presets.json`:
+Decktation ships with three presets configured in `game_presets.json`:
 
 | Preset | Behavior |
 |--------|----------|
 | **World of Warcraft** | Presses Enter to open chat, types channel prefix + message, presses Enter to send |
+| **Guild Wars 2** | Presses Enter to focus chat, types the Guild Wars 2 channel command + message, presses Enter to send |
 | **Generic** | Types text directly into whatever window is focused — no Enter presses |
 
 ### WoW Channel Prefixes
@@ -70,6 +71,21 @@ In WoW mode, start your message with a channel name to route it to the right cha
 Separators supported: space, colon, comma, or period after the channel name. Case-insensitive.
 
 Available WoW channels: `say`, `party`, `raid`, `guild`, `officer`, `yell`, `instance`, `whisper`, `type`
+
+### Guild Wars 2 Channel Prefixes
+
+Guild Wars 2 mode uses the same voice-first flow. For example:
+
+```
+"map meta starts in five"       →  /m meta starts in five
+"party stack on me"             →  /p stack on me
+"squad: ready check"            →  /d ready check
+"team push mid"                 →  /t push mid
+"guild one hello everyone"      →  /g1 hello everyone
+"whisper Player Name hello"     →  /w Player Name hello
+```
+
+Available Guild Wars 2 channels: `say`, `map`, `party`, `squad`, `raid` (an alias for squad), `team`, `guild`, `guild one` through `guild six`, `whisper`, `type`.
 
 ### Adding Custom Channels
 

@@ -19,6 +19,7 @@ import threading
 
 import evdev
 from evdev import ecodes
+from deck_hid import STEAM_DECK_BUTTON_BITS, raw_button_states
 
 STATE_FILE = "/tmp/decktation_l5"
 PREVIEW_FILE = "/tmp/decktation_button_preview"
@@ -38,14 +39,10 @@ BUTTON_CODES = {
     "Y": 308,    # BTN_WEST
 }
 
-# Steam Deck vendor HID report locations. These buttons are not exposed by the
-# virtual Xbox evdev device, so they are read from the physical Valve device.
-RAW_BUTTON_BITS = {
-    "L4": (13, 1),
-    "R4": (13, 2),
-    "L5": (9, 7),
-    "R5": (10, 0),
-}
+# All selectable built-in controls are read from the physical Steam Deck HID
+# report.  The virtual Xbox device remains available as a preview/fallback
+# source, but is no longer required for the configured PTT combination.
+RAW_BUTTON_BITS = STEAM_DECK_BUTTON_BITS
 
 STEAM_DECK_HID_ID = "0003:000028DE:00001205"
 
@@ -136,15 +133,6 @@ def find_steam_deck_hidraw():
             continue
     return None
 
-def raw_button_states(report):
-    """Decode the four rear grip buttons from a Steam Deck HID report."""
-    if len(report) < 14:
-        return None
-    return {
-        name: bool(report[byte] & (1 << bit))
-        for name, (byte, bit) in RAW_BUTTON_BITS.items()
-    }
-
 def main():
     # Write PID file
     with open(PID_FILE, 'w') as f:
@@ -186,7 +174,7 @@ def main():
     combo_str = "+".join([btn["name"] for btn in button_info])
     print(f"Button combo: {combo_str}", flush=True)
     for btn in button_info:
-        btn_type = "rear grip (raw HID)" if btn["is_raw"] else ("trigger" if btn["is_trigger"] else "button")
+        btn_type = "raw HID trigger" if btn["is_trigger"] else ("raw HID button" if btn["is_raw"] else "button")
         code = RAW_BUTTON_BITS.get(btn["name"], btn["code"])
         print(f"  {btn['name']}: {btn_type}/{code}", flush=True)
 
@@ -270,7 +258,7 @@ def main():
                 print("Steam Deck raw HID interface not found; retrying...", flush=True)
                 time.sleep(2)
                 continue
-            print(f"Listening for rear grips on: {path}", flush=True)
+            print(f"Listening for raw Steam Deck controls on: {path}", flush=True)
             try:
                 # The DeckShock reference implementation opens this vendor HID
                 # interface read/write. Some hid-steam versions do not deliver
@@ -279,6 +267,8 @@ def main():
                     received_report = False
                     while True:
                         report = device.read(64)
+                        if not report:
+                            raise OSError("empty HID report")
                         if not received_report:
                             print(
                                 f"Received first raw HID report ({len(report)} bytes)",
@@ -287,7 +277,8 @@ def main():
                             received_report = True
                         states = raw_button_states(report)
                         if states is None:
-                            raise OSError("short or empty HID report")
+                            # The interface can also emit battery/status packets.
+                            continue
                         with state_lock:
                             for name, pressed in states.items():
                                 if pressed != previous_states[name]:

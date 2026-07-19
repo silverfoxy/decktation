@@ -19,6 +19,30 @@
     "whisper_prompt": "World of Warcraft gameplay discussion. Playing as orc warrior, tauren druid, blood elf paladin, undead warlock, troll shaman, or night elf hunter. Discussing enhancement shaman, restoration druid, protection warrior, holy paladin, arcane mage, shadow priest, affliction warlock. Running mythic dungeons, heroic raids, doing quests in Azeroth, Orgrimmar, Stormwind, Ironforge. Fighting bosses like Lich King, Ragnaros, Illidan, pulling trash mobs, need tank healer and DPS. Using abilities, cooldowns, buffs, debuffs, interrupts, dispels, cleave and AOE damage. Chat channel prefixes: say, party, raid, guild, officer, yell, instance, whisper, type, alert. Common short phrases: hi, gg, brb, afk, lol, omw, ty, np, wp, gz.",
     "context_file": "wow_context.json"
   },
+  "guildwars2": {
+    "name": "Guild Wars 2",
+    "chat_open_key": "enter",
+    "chat_send_key": "enter",
+    "default_channel": "say",
+    "channels": {
+      "say": "/s ",
+      "map": "/m ",
+      "party": "/p ",
+      "squad": "/d ",
+      "raid": "/d ",
+      "team": "/t ",
+      "guild": "/g ",
+      "guild_one": "/g1 ",
+      "guild_two": "/g2 ",
+      "guild_three": "/g3 ",
+      "guild_four": "/g4 ",
+      "guild_five": "/g5 ",
+      "guild_six": "/g6 ",
+      "whisper": "/w ",
+      "type": ""
+    },
+    "whisper_prompt": "Guild Wars 2 gameplay discussion. Playing professions such as guardian, warrior, revenant, ranger, thief, engineer, mesmer, elementalist, and necromancer. Discussing raids, strike missions, fractals, dungeons, world bosses, meta events, structured PvP, World versus World, commanders, squads, parties, subgroups, boons, conditions, breakbars, crowd control, waypoints, and mastery points. Locations include Tyria, Lion's Arch, Divinity's Reach, Hoelbrak, Rata Sum, the Black Citadel, the Grove, Heart of Maguuma, Crystal Desert, Cantha, and Janthir. Chat channel prefixes: say, map, party, squad, raid, team, guild, guild one, guild two, guild three, guild four, guild five, guild six, whisper, type. Common short phrases: hi, gg, brb, afk, lol, omw, ty, np, wp, ready, stack, spread, dodge, break bar, waypoint, commander, tag, and LFG."
+  },
   "generic": {
     "name": "Generic",
     "chat_open_key": null,

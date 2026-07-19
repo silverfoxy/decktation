@@ -33,9 +33,10 @@ class TestPresetsFile:
 
     def test_required_presets_present(self, presets):
         assert "wow" in presets
+        assert "guildwars2" in presets
         assert "generic" in presets
 
-    @pytest.mark.parametrize("preset_id", ["wow", "generic"])
+    @pytest.mark.parametrize("preset_id", ["wow", "guildwars2", "generic"])
     def test_required_keys(self, presets, preset_id):
         missing = self.REQUIRED_KEYS - presets[preset_id].keys()
         assert not missing, f"Preset '{preset_id}' missing keys: {missing}"
@@ -48,10 +49,30 @@ class TestPresetsFile:
         generic = presets["generic"]
         assert generic["default_channel"] in generic["channels"]
 
+    def test_guildwars2_default_channel_in_channels(self, presets):
+        guildwars2 = presets["guildwars2"]
+        assert guildwars2["default_channel"] in guildwars2["channels"]
+
     def test_wow_has_enter_keys(self, presets):
         wow = presets["wow"]
         assert wow["chat_open_key"] == "enter"
         assert wow["chat_send_key"] == "enter"
+
+    def test_guildwars2_has_enter_keys(self, presets):
+        guildwars2 = presets["guildwars2"]
+        assert guildwars2["chat_open_key"] == "enter"
+        assert guildwars2["chat_send_key"] == "enter"
+
+    def test_guildwars2_chat_commands(self, presets):
+        channels = presets["guildwars2"]["channels"]
+        assert channels["say"] == "/s "
+        assert channels["map"] == "/m "
+        assert channels["party"] == "/p "
+        assert channels["squad"] == "/d "
+        assert channels["team"] == "/t "
+        assert channels["guild"] == "/g "
+        assert channels["guild_six"] == "/g6 "
+        assert channels["whisper"] == "/w "
 
     def test_generic_has_null_keys(self, presets):
         generic = presets["generic"]

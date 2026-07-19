@@ -49,6 +49,7 @@ sudo chown -R deck:deck "$PLUGIN_DIR" 2>/dev/null || true
 echo "  → Core Python files..."
 sudo cp "$SOURCE_DIR/main.py" "$PLUGIN_DIR/"
 sudo cp "$SOURCE_DIR/controller_listener.py" "$PLUGIN_DIR/"
+sudo cp "$SOURCE_DIR/deck_hid.py" "$PLUGIN_DIR/"
 sudo cp "$SOURCE_DIR/wow_voice_chat.py" "$PLUGIN_DIR/"
 sudo cp "$SOURCE_DIR/convert_wow_context.py" "$PLUGIN_DIR/"
 sudo cp -R "$SOURCE_DIR/lib/" "$PLUGIN_DIR/"
