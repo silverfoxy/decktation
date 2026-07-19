@@ -16,18 +16,14 @@ function writeJson(path, value) {
 function versions() {
   const packageJson = readJson("package.json");
   const pluginJson = readJson("plugin.json");
-  const packageLock = readJson("package-lock.json");
 
   return {
     packageJson,
     pluginJson,
-    packageLock,
     version: packageJson.version,
     values: {
       "package.json": packageJson.version,
       "plugin.json": pluginJson.version,
-      "package-lock.json": packageLock.version,
-      "package-lock.json root package": packageLock.packages?.[""]?.version,
     },
   };
 }
@@ -84,11 +80,8 @@ if (command === "print") {
     const state = versions();
     state.packageJson.version = argument;
     state.pluginJson.version = argument;
-    state.packageLock.version = argument;
-    state.packageLock.packages[""].version = argument;
     writeJson("package.json", state.packageJson);
     writeJson("plugin.json", state.pluginJson);
-    writeJson("package-lock.json", state.packageLock);
     console.log(`Updated release manifests to ${argument}.`);
   }
 } else {

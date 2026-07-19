@@ -5,7 +5,7 @@
 
     var React__default = /*#__PURE__*/_interopDefaultLegacy(React);
 
-    var _manifest = {"name":"Decktation","version":"0.3.5","author":"silverfoxy","flags":["_root"],"api_version":1,"publish":{"tags":["voice","dictation","speech-to-text","input","chat","gaming","accessibility"],"description":"Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using faster-whisper.","image":"https://raw.githubusercontent.com/silverfoxy/decktation/master/logo.png"}};
+    var _manifest = {"name":"Decktation","version":"0.3.6","author":"silverfoxy","flags":["_root"],"api_version":1,"publish":{"tags":["voice","dictation","speech-to-text","input","chat","gaming","accessibility"],"description":"Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using faster-whisper.","image":"https://raw.githubusercontent.com/silverfoxy/decktation/master/logo.png"}};
 
     const manifest = _manifest;
     const API_VERSION = 2;

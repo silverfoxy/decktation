@@ -27,15 +27,20 @@ Once published to the Decky Plugin Store:
 4. Click Install
 5. Wait for installation to complete
 
-### Method 2: Install from URL (GitHub)
+### Method 2: Import a Release ZIP
 
-1. Open Quick Access Menu (... button)
-2. Navigate to Decky settings
-3. Select "Install from URL"
-4. Enter: `https://github.com/silverfoxy/decktation`
-5. Wait for installation to complete
+1. Download `decktation.zip` from the latest
+   [GitHub Release](https://github.com/silverfoxy/decktation/releases/latest).
+2. Open Quick Access Menu (... button) and navigate to Decky settings.
+3. Enable developer options if **Install Plugin from ZIP** is not visible.
+4. Select **Install Plugin from ZIP** and choose the downloaded archive.
+5. Wait for Decky to import and reload Decktation.
 
-### Method 3: Manual Installation
+This is the recommended installation method until Decktation is available in
+the Decky Plugin Store. Do not extract the archive or copy files into Decky's
+plugin directory manually.
+
+### Method 3: Install a Local Development Build
 
 #### From Source (Development)
 
@@ -48,27 +53,8 @@ cd decktation
 # Build the same artifact used by the Decky marketplace
 decky plugin build -b -o build-output -s directory .
 
-# Install build-output/decktation.zip through Decky's developer settings
-
-# Restart Decky Loader
-# Switch to Game Mode, open Quick Access, you should see Decktation
-```
-
-#### From Release Archive
-
-```bash
-# Download the latest release
-cd ~/Downloads
-wget https://github.com/silverfoxy/decktation/releases/latest/download/decktation.zip
-
-# Extract
-unzip decktation.zip
-
-# Copy to Decky plugins directory
-mkdir -p ~/.local/share/decky/plugins
-cp -r decktation ~/.local/share/decky/plugins/
-
-# Restart Decky Loader
+# In Decky settings, select Install Plugin from ZIP and choose:
+# build-output/decktation.zip
 ```
 
 ## First Time Setup

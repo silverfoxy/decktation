@@ -65,7 +65,7 @@ requirements can change.
 Once the blockers above are complete:
 
 1. Run `make version-set VERSION=X.Y.Z`, then commit the synchronized
-   `package.json`, `plugin.json`, and `package-lock.json` changes.
+   `package.json` and `plugin.json` changes.
 2. Run `make release-tag`; it refuses to tag a dirty tree or mismatched
    manifests. Push the printed `vX.Y.Z` tag after reviewing it.
 3. Push the exact public repository commit to submit.

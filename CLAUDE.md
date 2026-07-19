@@ -9,7 +9,7 @@ Decktation is a push-to-talk dictation plugin for Steam Deck that enables voice-
 ## Build Commands
 
 ```bash
-npm install           # Install Node dependencies
+npm install           # Install Node dependencies (package-lock.json is ignored)
 npm run build         # Compile TypeScript to dist/index.js
 npm run watch         # Watch mode for development
 ```

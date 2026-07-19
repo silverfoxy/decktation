@@ -22,13 +22,11 @@ Voice dictation plugin for Steam Deck using faster-whisper with context-aware tr
 
 1. Download `decktation.zip` from [GitHub Releases](https://github.com/silverfoxy/decktation/releases)
 
-2. Extract and install:
-   ```bash
-   unzip decktation.zip
-   sudo cp -r decktation /home/deck/homebrew/plugins/
-   ```
+2. Open **Decky Settings**, enable developer options if necessary, and select
+   **Install Plugin from ZIP**.
 
-3. Restart Decky or reload plugins from Decky settings
+3. Choose the downloaded `decktation.zip`. Decky imports the archive and
+   reloads the plugin automatically.
 
 All dependencies and the private keyboard helper are pre-bundled in the
 release. No system packages or one-time `sudo` setup are required.
@@ -194,7 +192,7 @@ See `doc/TESTING_GUIDE.md` for setup instructions.
 ## Development
 
 ```bash
-npm install           # Install Node dependencies
+npm install           # Install Node dependencies (package-lock.json is ignored)
 npm run build         # Compile TypeScript to dist/index.js
 npm run watch         # Watch mode for development
 

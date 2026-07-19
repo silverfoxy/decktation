@@ -1,5 +1,7 @@
 # Node modules
 node_modules/
+.pnpm-store/
+package-lock.json
 
 # Build artifacts (keep dist/index.js but ignore other build files)
 *.log
