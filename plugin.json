@@ -1,11 +1,21 @@
 {
   "name": "Decktation",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "author": "silverfoxy",
-  "flags": ["_root"],
+  "flags": [
+    "_root"
+  ],
   "api_version": 1,
   "publish": {
-    "tags": ["voice", "dictation", "speech-to-text", "input", "chat", "gaming", "accessibility"],
+    "tags": [
+      "voice",
+      "dictation",
+      "speech-to-text",
+      "input",
+      "chat",
+      "gaming",
+      "accessibility"
+    ],
     "description": "Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using faster-whisper.",
     "image": "https://raw.githubusercontent.com/silverfoxy/decktation/master/logo.png"
   }
