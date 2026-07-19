@@ -5,10 +5,29 @@ import replace from '@rollup/plugin-replace';
 import typescript from '@rollup/plugin-typescript';
 import importAssets from 'rollup-plugin-import-assets';
 import { defineConfig } from 'rollup';
+import { readFileSync } from 'fs';
+
+const pluginManifest = JSON.parse(readFileSync('./plugin.json', 'utf8'));
+
+// @decky/api imports this virtual module. The current official Decky Rollup
+// plugin provides it automatically; keep the existing build stack for now
+// while supplying the same manifest contract.
+const deckyManifest = {
+  name: 'decky-manifest',
+  resolveId(id) {
+    return id === '@decky/manifest' ? '\0decky-manifest' : null;
+  },
+  load(id) {
+    return id === '\0decky-manifest'
+      ? `export default ${JSON.stringify(pluginManifest)};`
+      : null;
+  },
+};
 
 export default defineConfig({
   input: './src/index.tsx',
   plugins: [
+    deckyManifest,
     commonjs(),
     nodeResolve(),
     typescript(),

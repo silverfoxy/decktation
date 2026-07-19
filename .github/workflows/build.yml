@@ -2,171 +2,71 @@ name: Build Decktation Plugin
 
 on:
   push:
-    branches: [ '**' ]  # Run on all branches
-    tags:
-      - 'v*'  # Trigger on version tags like v1.0.0, v0.2.0, etc.
+    branches: ['**']
+    tags: ['v*']
   pull_request:
-    branches: [ master, main ]
+    branches: [master, main]
   release:
-    types: [ created ]
+    types: [created]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-
-    - name: Install pytest
-      run: pip install pytest
-
-    - name: Run unit tests
-      run: pytest tests/ -v
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: node scripts/release-version.mjs check
+      - run: pip install pytest
+      - run: pytest tests/ -v
+      - run: python -m py_compile main.py wow_voice_chat.py controller_listener.py deck_hid.py
 
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Required to create releases and upload assets
-
+      contents: write
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Update version from tag
-      if: startsWith(github.ref, 'refs/tags/')
-      run: |
-        # Extract version from git tag (remove 'v' prefix)
-        TAG_VERSION=${GITHUB_REF#refs/tags/v}
-        echo "Tag version: $TAG_VERSION"
+      - name: Verify tag matches package version
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release'
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || github.ref_name }}
+        run: |
+          node scripts/release-version.mjs check "$RELEASE_TAG"
 
-        # Update package.json
-        sed -i "s/\"version\": \".*\"/\"version\": \"$TAG_VERSION\"/" package.json
+      - name: Download Decky CLI
+        run: |
+          curl -fL -o /tmp/decky-cli \
+            https://github.com/SteamDeckHomebrew/cli/releases/download/0.0.7/decky-linux-x86_64
+          chmod +x /tmp/decky-cli
 
-        # Update plugin.json
-        if grep -q "\"version\"" plugin.json; then
-          sed -i "s/\"version\": \".*\"/\"version\": \"$TAG_VERSION\"/" plugin.json
-        else
-          # Add version field after name if it doesn't exist
-          sed -i "s/\"name\": \"Decktation\",/\"name\": \"Decktation\",\n  \"version\": \"$TAG_VERSION\",/" plugin.json
-        fi
+      - name: Build marketplace artifact
+        run: sudo /tmp/decky-cli plugin build -b -t /tmp/decktation-decky-build -o build-output -s directory .
 
-        echo "✓ Updated version to $TAG_VERSION in package.json and plugin.json"
+      - name: Validate artifact
+        run: |
+          unzip -t build-output/decktation.zip
+          unzip -l build-output/decktation.zip | grep -q 'decktation/bin/ydotoold'
+          unzip -l build-output/decktation.zip | grep -q 'decktation/bin/python/faster_whisper'
+          unzip -l build-output/decktation.zip | grep -q 'decktation/bin/lib/libportaudio.so.2'
+          unzip -l build-output/decktation.zip | grep -q 'decktation/game_presets.json'
+          unzip -l build-output/decktation.zip | grep -q 'decktation/channel_languages.json'
+          unzip -l build-output/decktation.zip | grep -q 'cpython-311'
+          ! unzip -l build-output/decktation.zip | grep -q 'cpython-313'
+          ! unzip -l build-output/decktation.zip | grep -q 'decktation/bin/python/av/'
 
-        # Show the changes
-        echo "package.json version:"
-        grep "\"version\"" package.json
-        echo "plugin.json version:"
-        grep "\"version\"" plugin.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: decktation
+          path: build-output/decktation.zip
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-
-    - name: Install npm dependencies
-      run: npm ci
-
-    - name: Build TypeScript
-      run: npm run build
-
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-
-    - name: Check Python syntax
-      run: |
-        python -m py_compile main.py
-        python -m py_compile wow_voice_chat.py
-        python -m py_compile controller_listener.py
-
-    - name: Install Python dependencies
-      run: |
-        echo "Using Python version:"
-        python --version
-        python -m pip install --target lib/ \
-          faster-whisper \
-          sounddevice \
-          numpy \
-          evdev-binary
-
-    - name: Install build dependencies for ydotool
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y cmake build-essential scdoc
-
-    - name: Build ydotool from source
-      run: |
-        git clone https://github.com/ReimuNotMoe/ydotool.git
-        cd ydotool
-        mkdir build && cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release
-        make
-
-        # Create bin directory and copy binaries
-        mkdir -p ../../bin
-        cp ydotool ydotoold ../../bin/
-
-        # Verify binaries
-        echo "Built ydotool binaries:"
-        ls -lh ../../bin/
-        file ../../bin/ydotool
-        file ../../bin/ydotoold
-
-    - name: Package plugin (lightweight)
-      run: |
-        # Create package directory
-        mkdir -p decktation
-
-        # Copy essential files
-        cp -r dist decktation/
-        cp -r defaults decktation/ 2>/dev/null || true
-        cp -r lib decktation/
-        cp -r bin decktation/
-        cp -r WowAddon decktation/ 2>/dev/null || true
-        cp main.py decktation/
-        cp wow_voice_chat.py decktation/
-        cp controller_listener.py decktation/
-        cp convert_wow_context.py decktation/
-        cp game_presets.json decktation/
-        cp channel_languages.json decktation/
-        cp plugin.json decktation/
-        cp package.json decktation/
-        cp README.md decktation/
-        cp LANGUAGE_CONFIG.md decktation/ 2>/dev/null || true
-        cp LICENSE decktation/ 2>/dev/null || true
-        cp test_channels.py decktation/ 2>/dev/null || true
-
-        # Copy setup scripts
-        cp setup_ydotoold.sh decktation/ 2>/dev/null || true
-        cp install_deps.sh decktation/ 2>/dev/null || true
-
-        echo "Python 3.11 dependencies bundled in lib/"
-
-    - name: Upload build artifacts (directory - GitHub will zip it)
-      uses: actions/upload-artifact@v4
-      with:
-        name: decktation
-        path: decktation/
-
-    - name: Create release archive
-      if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/')
-      run: zip -r decktation.zip decktation/
-
-    - name: Upload to release
-      if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/')
-      uses: softprops/action-gh-release@v1
-      with:
-        files: decktation.zip
-        draft: false
-        prerelease: false
-        generate_release_notes: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload release archive
+        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build-output/decktation.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true

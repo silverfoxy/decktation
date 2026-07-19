@@ -2,7 +2,6 @@ import {
 	definePlugin,
 	PanelSection,
 	PanelSectionRow,
-	ServerAPI,
 	quickAccessMenuClasses,
 	Router,
 	ToggleField,
@@ -12,6 +11,8 @@ import {
 	Focusable,
 } from "decky-frontend-lib";
 
+import { callable, toaster } from "@decky/api";
+
 import React, {
 	VFC,
 	useEffect,
@@ -19,6 +20,24 @@ import React, {
 } from "react";
 
 import { FaMicrophone, FaTrash, FaCircle } from "react-icons/fa";
+
+type RpcResponse = { success: boolean; error?: string; [key: string]: any };
+
+const getStatus = callable<[], RpcResponse>("get_status");
+const getButtonConfig = callable<[], RpcResponse>("get_button_config");
+const getPresets = callable<[], RpcResponse>("get_presets");
+const setEnabled = callable<[enabled: boolean], RpcResponse>("set_enabled");
+const loadModel = callable<[], RpcResponse>("load_model");
+const startRecording = callable<[], RpcResponse>("start_recording");
+const stopRecording = callable<[send?: boolean], RpcResponse>("stop_recording");
+const getLastTranscription = callable<[], RpcResponse>("get_last_transcription");
+const setConfirmMode = callable<[enabled: boolean], RpcResponse>("set_confirm_mode");
+const setManualSend = callable<[enabled: boolean], RpcResponse>("set_manual_send");
+const setActivePreset = callable<[game: string], RpcResponse>("set_active_preset");
+const setButtonConfig = callable<
+	[buttons: string[], showNotifications: boolean],
+	RpcResponse
+>("set_button_config");
 
 // Button IDs emitted by SteamClient.Input.RegisterForControllerInputMessages.
 // These match Steam's ControllerInputGamepadButton enum. The lower rear pair is
@@ -45,7 +64,6 @@ const L5_MASK = 1 << 15;
 const R5_MASK = 1 << 16;
 
 class DecktationLogic {
-	serverAPI: ServerAPI;
 	enabled: boolean = false;
 	recording: boolean = false;
 	lastButtonState: string = "None";
@@ -57,10 +75,6 @@ class DecktationLogic {
 	prevRecordingStartCount: number = 0;
 	prevPendingText: string = "";
 	lastPendingToastId: number = -1;
-
-	constructor(serverAPI: ServerAPI) {
-		this.serverAPI = serverAPI;
-	}
 
 	notify = async (message: string, duration: number = 2000, body: string = ""): Promise<number> => {
 		if (!body) {
@@ -96,7 +110,7 @@ class DecktationLogic {
 			(window as any).NotificationStore.ProcessNotification(info, toastData, 0);
 		} catch (_e) {
 			// fallback to standard toaster if direct call fails
-			this.serverAPI.toaster.toast({ title: message, body: toast.body, duration: duration, critical: false });
+			toaster.toast({ title: message, body: toast.body, duration: duration, critical: false });
 		}
 		return id;
 	}
@@ -154,12 +168,12 @@ class DecktationLogic {
 			setTimeout(() => {
 				(Router as any).EnableHomeAndQuickAccessButtons();
 			}, 1000);
-			this.serverAPI.callPluginMethod('start_recording', {});
+			startRecording();
 			this.notify("Decktation", 1500, "Recording...");
 		} else if (!l5Pressed && this.l5Held) {
 			this.l5Held = false;
 			this.recording = false;
-			this.serverAPI.callPluginMethod('stop_recording', {});
+			stopRecording();
 			this.notify("Decktation", 1500, "Transcribing...");
 		}
 	}
@@ -191,21 +205,22 @@ class DecktationLogic {
 
 	testRecording = async (onComplete?: (text: string, time: string) => void) => {
 		this.notify("Decktation", 1000, "Recording for 3 seconds...");
-		await this.serverAPI.callPluginMethod('start_recording', {});
+		await startRecording();
 
 		// Wait 3 seconds
 		await new Promise(resolve => setTimeout(resolve, 3000));
 
-		await this.serverAPI.callPluginMethod('stop_recording', {});
+		// Test recordings display their result in the panel but must never type
+		// into the active application. Change the UI state at exactly 3 seconds,
+		// then wait only for transcription to finish.
+		const transcription = stopRecording(false);
 		this.notify("Decktation", 1500, "Transcribing...");
-
-		// Wait a bit for transcription to complete, then fetch result
-		await new Promise(resolve => setTimeout(resolve, 1000));
+		await transcription;
 
 		if (onComplete) {
-			const transcriptionResult = await this.serverAPI.callPluginMethod('get_last_transcription', {});
-			if (transcriptionResult.success && transcriptionResult.result) {
-				const data = transcriptionResult.result.transcription;
+			const transcriptionResult = await getLastTranscription();
+			if (transcriptionResult.success && transcriptionResult.transcription) {
+				const data = transcriptionResult.transcription;
 				const text = data.text || "";
 				const time = data.timestamp ? new Date(data.timestamp * 1000).toLocaleTimeString() : "";
 				onComplete(text, time);
@@ -236,6 +251,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [serviceReady, setServiceReady] = useState<boolean>(false);
 	const [modelReady, setModelReady] = useState<boolean>(false);
 	const [modelLoading, setModelLoading] = useState<boolean>(false);
+	const [inputReady, setInputReady] = useState<boolean>(true);
 	const [buttonState, setButtonState] = useState<string>("None");
 	const [buttons, setButtons] = useState<string[]>(["L1", "R1"]);
 	const [showNotifications, setShowNotifications] = useState<boolean>(true);
@@ -245,6 +261,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [manualSend, setManualSend] = useState<boolean>(false);
 	const [lastTranscription, setLastTranscription] = useState<string>("");
 	const [lastTranscriptionTime, setLastTranscriptionTime] = useState<string>("");
+	const [rpcError, setRpcError] = useState<string>("");
 
 	useEffect(() => {
 		setEnabled(logic.enabled);
@@ -254,9 +271,9 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 		};
 
 		// Load button configuration, settings, and active game preset
-		logic.serverAPI.callPluginMethod('get_button_config', {}).then(async (result) => {
-			if (result.success && result.result) {
-				const config = result.result.config;
+		getButtonConfig().then((result) => {
+			if (result.success) {
+				const config = result.config;
 				if (config) {
 					if (config.buttons) {
 						setButtons(config.buttons);
@@ -279,22 +296,22 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 						setEnabled(true);
 						logic.enabled = true;
 						setModelLoading(true);
-						await logic.serverAPI.callPluginMethod('load_model', {});
+						void loadModel();
 					}
 				}
 			}
-		});
+		}).catch((error) => setRpcError(String(error)));
 
 		// Load available game presets
-		logic.serverAPI.callPluginMethod('get_presets', {}).then((result) => {
-			if (result.success && result.result) {
-				const opts: DropdownOption[] = result.result.presets.map((p: { id: string; name: string }) => ({
+		getPresets().then((result) => {
+			if (result.success) {
+				const opts: DropdownOption[] = result.presets.map((p: { id: string; name: string }) => ({
 					data: p.id,
 					label: p.name,
 				}));
 				setPresets(opts);
 			}
-		});
+		}).catch((error) => setRpcError(String(error)));
 
 		return () => {
 			logic.onButtonChange = null;
@@ -302,22 +319,34 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	}, []);
 
 	useEffect(() => {
-		const interval = setInterval(async () => {
+		let cancelled = false;
+		let timeout: ReturnType<typeof setTimeout> | undefined;
+		const poll = async () => {
 			try {
-				const result = await logic.serverAPI.callPluginMethod('get_status', {});
-				if (result.success && result.result) {
-					setServiceReady(result.result.service_ready);
-					setModelReady(result.result.model_ready);
-					setModelLoading(result.result.model_loading);
+				const result = await getStatus();
+				if (result.success) {
+					setRpcError("");
+					setServiceReady(result.service_ready);
+					setModelReady(result.model_ready);
+					setModelLoading(result.model_loading);
+					setInputReady(result.input_ready !== false);
 					if (logic.enabled) {
-						setRecording(result.result.recording);
+						setRecording(result.recording);
 					}
+				} else {
+					setRpcError(result.error || "Backend status request failed");
 				}
-			} catch (e) {
-				// Ignore transient WebSocket errors; next tick will retry
+			} catch (error) {
+				setRpcError(String(error));
+			} finally {
+				if (!cancelled) timeout = setTimeout(poll, 1000);
 			}
-		}, 100);
-		return () => clearInterval(interval);
+		};
+		void poll();
+		return () => {
+			cancelled = true;
+			if (timeout) clearTimeout(timeout);
+		};
 	}, [logic.enabled]);
 
 	return (
@@ -332,11 +361,11 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 							textAlign: 'center',
 							fontWeight: 'bold'
 						}}>
-							Initializing service...
+							{rpcError ? `Backend connection failed: ${rpcError}` : "Initializing service..."}
 						</div>
 					</PanelSectionRow>
 				)}
-				{serviceReady && modelLoading && (
+			{serviceReady && modelLoading && (
 					<PanelSectionRow>
 						<div style={{
 							padding: '10px',
@@ -348,7 +377,20 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 							Loading Whisper model...
 						</div>
 					</PanelSectionRow>
-				)}
+			)}
+			{serviceReady && !inputReady && (
+				<PanelSectionRow>
+					<div style={{
+						padding: '10px',
+						backgroundColor: '#8b2d2d',
+						borderRadius: '8px',
+						textAlign: 'center',
+						fontWeight: 'bold'
+					}}>
+						Keyboard helper unavailable. Reload the plugin or reinstall Decktation.
+					</div>
+				</PanelSectionRow>
+			)}
 				<PanelSectionRow>
 					<ToggleField
 						label="Enable Dictation"
@@ -357,13 +399,13 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 						onChange={async (e) => {
 							setEnabled(e);
 							logic.enabled = e;
-							await logic.serverAPI.callPluginMethod('set_enabled', { enabled: e });
+							await setEnabled(e);
 							if (e && !modelReady) {
 								setModelLoading(true);
-								await logic.serverAPI.callPluginMethod('load_model', {});
+								await loadModel();
 							}
 							if (!e && logic.recording) {
-								logic.serverAPI.callPluginMethod('stop_recording', {});
+								void stopRecording();
 								logic.recording = false;
 								setRecording(false);
 							}
@@ -381,12 +423,9 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 							logic.showNotifications = e;
 							if (!e && confirmMode) {
 								setConfirmMode(false);
-								await logic.serverAPI.callPluginMethod('set_confirm_mode', { enabled: false });
+								await setConfirmMode(false);
 							}
-							await logic.serverAPI.callPluginMethod('set_button_config', {
-								buttons: buttons,
-								showNotifications: e
-							});
+							await setButtonConfig(buttons, e);
 						}}
 					/>
 				</PanelSectionRow>
@@ -398,7 +437,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 						checked={confirmMode}
 						onChange={async (e) => {
 							setConfirmMode(e);
-							await logic.serverAPI.callPluginMethod('set_confirm_mode', { enabled: e });
+							await setConfirmMode(e);
 						}}
 					/>
 				</PanelSectionRow>
@@ -410,7 +449,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 						checked={manualSend}
 						onChange={async (e) => {
 							setManualSend(e);
-							await logic.serverAPI.callPluginMethod('set_manual_send', { enabled: e });
+							await setManualSend(e);
 						}}
 					/>
 				</PanelSectionRow>
@@ -425,7 +464,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 							onChange={async (option) => {
 								const game = option.data as string;
 								setActivePreset(game);
-								await logic.serverAPI.callPluginMethod('set_active_preset', { game });
+								await setActivePreset(game);
 							}}
 						/>
 					</PanelSectionRow>
@@ -457,10 +496,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 									const newButtons = [...buttons];
 									newButtons[index] = option.data as string;
 									setButtons(newButtons);
-									await logic.serverAPI.callPluginMethod('set_button_config', {
-										buttons: newButtons,
-										showNotifications: showNotifications
-									});
+									await setButtonConfig(newButtons, showNotifications);
 								}}
 							/>
 						</PanelSectionRow>
@@ -470,10 +506,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 									onClick={async () => {
 										const newButtons = buttons.filter((_, i) => i !== index);
 										setButtons(newButtons);
-										await logic.serverAPI.callPluginMethod('set_button_config', {
-											buttons: newButtons,
-											showNotifications: showNotifications
-										});
+										await setButtonConfig(newButtons, showNotifications);
 									}}
 									style={{
 										color: '#e05f5f',
@@ -509,10 +542,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 									if (availableButton) {
 										const newButtons = [...buttons, availableButton.data as string];
 										setButtons(newButtons);
-										await logic.serverAPI.callPluginMethod('set_button_config', {
-											buttons: newButtons,
-											showNotifications: showNotifications
-										});
+										await setButtonConfig(newButtons, showNotifications);
 									}
 								}}
 							>
@@ -656,8 +686,8 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 };
 
 
-export default definePlugin((serverApi: ServerAPI) => {
-	let logic = new DecktationLogic(serverApi);
+export default definePlugin(() => {
+	let logic = new DecktationLogic();
 	let input_register: { unregister: () => void } | null = null;
 
 	// Use RegisterForControllerInputMessages (RegisterForControllerStateChanges doesn't exist)
@@ -670,28 +700,30 @@ export default definePlugin((serverApi: ServerAPI) => {
 	}
 
 	// Seed the recording start count so we don't fire a spurious toast on load
-	serverApi.callPluginMethod('get_status', {}).then((result: any) => {
-		if (result.success && result.result) {
-			logic.prevRecordingStartCount = result.result.recording_start_count || 0;
+	getStatus().then((result) => {
+		if (result.success) {
+			logic.prevRecordingStartCount = result.recording_start_count || 0;
 		}
 	});
 
 	// Background notification polling — runs for the full plugin lifetime regardless
 	// of whether the Decky panel is open, so toasts appear while in-game.
+	let notifyPollInFlight = false;
 	const bgNotifyInterval = setInterval(async () => {
-		if (!logic.enabled) return;
+		if (!logic.enabled || notifyPollInFlight) return;
+		notifyPollInFlight = true;
 		try {
-			const result: any = await serverApi.callPluginMethod('get_status', {});
-			if (result.success && result.result) {
+			const result = await getStatus();
+			if (result.success) {
 				if (logic.showNotifications) {
-					const startCount: number = result.result.recording_start_count || 0;
+					const startCount: number = result.recording_start_count || 0;
 					if (startCount > logic.prevRecordingStartCount) {
 						logic.notify("Recording", 1500, "🎤 Recording...");
 					}
 					logic.prevRecordingStartCount = startCount;
 
-					const pendingText: string = result.result.pending_text || "";
-					const pendingDelay: number = result.result.pending_delay || 0;
+					const pendingText: string = result.pending_text || "";
+					const pendingDelay: number = result.pending_delay || 0;
 					if (pendingText && !logic.prevPendingText) {
 						const secs = Math.round(pendingDelay);
 						logic.notify(`Sending in ${secs}s`, (pendingDelay + 0.5) * 1000, `"${pendingText}" — hold PTT to cancel`)
@@ -705,8 +737,11 @@ export default definePlugin((serverApi: ServerAPI) => {
 					logic.prevPendingText = pendingText;
 				}
 			}
-		} catch (_e) {}
-	}, 200);
+		} catch (_e) {
+		} finally {
+			notifyPollInFlight = false;
+		}
+	}, 1000);
 
 	return {
 		title: <div className={quickAccessMenuClasses.Title}>Decktation</div>,
@@ -718,7 +753,7 @@ export default definePlugin((serverApi: ServerAPI) => {
 				input_register.unregister();
 			}
 			if (logic.recording) {
-				serverApi.callPluginMethod('stop_recording', {});
+				void stopRecording();
 			}
 		},
 		alwaysRender: true

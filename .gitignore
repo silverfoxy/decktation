@@ -1,6 +1,5 @@
 # Node modules
 node_modules/
-pnpm-lock.yaml
 
 # Build artifacts (keep dist/index.js but ignore other build files)
 *.log

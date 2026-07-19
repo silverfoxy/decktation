@@ -15,7 +15,6 @@ from faster_whisper import WhisperModel
 import sounddevice as sd
 import numpy as np
 import wave
-import tempfile
 
 
 class WoWVoiceChat:
@@ -81,6 +80,9 @@ class WoWVoiceChat:
 
         # Try to load language config file
         config_file = Path(__file__).parent / "channel_languages.json"
+        if not config_file.exists():
+            # Decky's builder flattens defaults/ into the installed plugin root.
+            config_file = Path(__file__).parent / "defaults" / "channel_languages.json"
         if not config_file.exists():
             # Fallback: build English-only triggers
             for channel in self.default_channel_commands.keys():
@@ -274,16 +276,8 @@ class WoWVoiceChat:
 
     def save_audio_to_wav(self, audio_data, filename):
         """Save audio data to WAV file, resampling to 16kHz for Whisper"""
-        # Flatten audio data if needed (may be 2D from callback)
-        audio_data = audio_data.flatten()
-
-        # Resample from recording rate to Whisper rate (16kHz)
-        if self.sample_rate != self.whisper_sample_rate:
-            # Simple linear interpolation resampling
-            duration = len(audio_data) / self.sample_rate
-            new_length = int(duration * self.whisper_sample_rate)
-            indices = np.linspace(0, len(audio_data) - 1, new_length)
-            audio_data = np.interp(indices, np.arange(len(audio_data)), audio_data.astype(np.float32)).astype(np.int16)
+        audio_data = self._prepare_audio(audio_data, self.sample_rate)
+        audio_data = np.clip(audio_data * 32768, -32768, 32767).astype(np.int16)
 
         with wave.open(filename, 'wb') as wf:
             wf.setnchannels(1)
@@ -291,8 +285,43 @@ class WoWVoiceChat:
             wf.setframerate(self.whisper_sample_rate)
             wf.writeframes(audio_data.tobytes())
 
-    def transcribe_audio(self, audio_file):
-        """Transcribe audio file using faster-whisper"""
+    def _prepare_audio(self, audio_data, source_rate):
+        """Return mono 16 kHz float32 samples for faster-whisper."""
+        audio_data = np.asarray(audio_data).flatten()
+
+        # sounddevice records int16 PCM, while faster-whisper expects float32
+        # PCM in [-1, 1]. Normalize before interpolation: np.interp promotes
+        # int16 to float64, which previously caused this integer check to be
+        # skipped and sent values up to 32768 directly to Whisper.
+        if np.issubdtype(audio_data.dtype, np.integer):
+            max_value = float(max(abs(np.iinfo(audio_data.dtype).min), np.iinfo(audio_data.dtype).max))
+            audio_data = audio_data.astype(np.float32) / max_value
+        else:
+            audio_data = audio_data.astype(np.float32)
+
+        if source_rate != self.whisper_sample_rate and len(audio_data) > 0:
+            new_length = int(len(audio_data) * self.whisper_sample_rate / source_rate)
+            indices = np.linspace(0, len(audio_data) - 1, new_length)
+            audio_data = np.interp(indices, np.arange(len(audio_data)), audio_data).astype(np.float32)
+        return np.clip(audio_data, -1.0, 1.0)
+
+    def _load_wav(self, audio_file):
+        """Decode the PCM WAV files used by test and CLI modes."""
+        with wave.open(str(audio_file), "rb") as wav_file:
+            if wav_file.getsampwidth() != 2:
+                raise ValueError("Only 16-bit PCM WAV files are supported")
+            channels = wav_file.getnchannels()
+            source_rate = wav_file.getframerate()
+            audio_data = np.frombuffer(wav_file.readframes(wav_file.getnframes()), dtype=np.int16)
+        if channels > 1:
+            # Averaging integers promotes them to floating point, so normalize
+            # here before _prepare_audio treats them as already-normalized PCM.
+            audio_data = audio_data.reshape(-1, channels).astype(np.float32)
+            audio_data = audio_data.mean(axis=1) / 32768.0
+        return self._prepare_audio(audio_data, source_rate)
+
+    def transcribe_audio(self, audio_input):
+        """Transcribe PCM samples or a 16-bit PCM WAV file."""
         # Ensure model is loaded
         if not self._load_model():
             print("Model not ready, cannot transcribe")
@@ -305,12 +334,32 @@ class WoWVoiceChat:
         print(f"Context: {initial_prompt}")
         print(f"Hotwords: {hotwords}")
 
-        # Transcribe (auto-detect language)
+        if isinstance(audio_input, (str, os.PathLike, Path)):
+            audio_input = self._load_wav(audio_input)
+        else:
+            audio_input = self._prepare_audio(audio_input, self.sample_rate)
+
+        if len(audio_input) == 0:
+            print("No audio samples to transcribe")
+            return ""
+
+        peak = float(np.max(np.abs(audio_input)))
+        rms = float(np.sqrt(np.mean(np.square(audio_input))))
+        duration = len(audio_input) / self.whisper_sample_rate
+        print(
+            f"Prepared audio: duration={duration:.3f}s, "
+            f"peak={peak:.4f}, rms={rms:.4f}, dtype={audio_input.dtype}"
+        )
+
+        # Passing decoded samples avoids shipping PyAV and its full FFmpeg
+        # codec bundle for the WAV-only Decktation recording path.
         segments, info = self.model.transcribe(
-            audio_file,
+            audio_input,
             beam_size=5,
             initial_prompt=initial_prompt,
-            hotwords=hotwords
+            hotwords=hotwords,
+            vad_filter=True,
+            condition_on_previous_text=False,
         )
 
         # Collect text
@@ -428,9 +477,9 @@ class WoWVoiceChat:
                 logger.error("ydotool not found! Install it or run build_ydotool.sh")
                 return
 
-        # Set socket path - ydotoold running as root uses /tmp/.ydotool_socket
+        # Use the private daemon managed by the Decky backend.
         env = os.environ.copy()
-        env["YDOTOOL_SOCKET"] = "/tmp/.ydotool_socket"
+        env["YDOTOOL_SOCKET"] = "/tmp/decktation-ydotool.sock"
 
         # Determine open/send keys from preset.
         # The "type" channel always skips both (pure typing into focused window).
@@ -535,7 +584,7 @@ class WoWVoiceChat:
             )
             self.recording_stream.start()
 
-    def stop_recording(self):
+    def stop_recording(self, send=True):
         """Stop recording and process audio (for push-to-talk)"""
         with self.recording_lock:
             if not self.is_recording:
@@ -551,7 +600,7 @@ class WoWVoiceChat:
                         print("[TEST MODE] Transcribing...")
                         text = self.transcribe_audio(self.test_audio_file)
                         print(f"[TEST MODE] Transcribed: {text}")
-                        if text:
+                        if text and send:
                             if self.confirm_delay > 0:
                                 with self._pending_lock:
                                     self.pending_text = text
@@ -584,30 +633,22 @@ class WoWVoiceChat:
 
             audio = np.concatenate(audio_data, axis=0)
 
-            # Save to temp file and transcribe
-            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
-                temp_file = f.name
-                self.save_audio_to_wav(audio, temp_file)
+            print("Transcribing...")
+            text = self.transcribe_audio(audio)
+            print(f"Transcribed: {text}")
 
-            try:
-                print("Transcribing...")
-                text = self.transcribe_audio(temp_file)
-                print(f"Transcribed: {text}")
+            # Store last transcription result
+            self.last_transcription = text
+            self.last_transcription_time = time.time()
 
-                # Store last transcription result
-                self.last_transcription = text
-                self.last_transcription_time = time.time()
-
-                if text:
-                    if self.confirm_delay > 0:
-                        with self._pending_lock:
-                            self.pending_text = text
-                            self._pending_timer = threading.Timer(self._confirm_delay_for(text), self._send_pending)
-                            self._pending_timer.start()
-                    else:
-                        self.send_to_wow_chat(text)
-            finally:
-                Path(temp_file).unlink(missing_ok=True)
+            if text and send:
+                if self.confirm_delay > 0:
+                    with self._pending_lock:
+                        self.pending_text = text
+                        self._pending_timer = threading.Timer(self._confirm_delay_for(text), self._send_pending)
+                        self._pending_timer.start()
+                else:
+                    self.send_to_wow_chat(text)
 
     def run_push_to_talk_keyboard(self, ptt_key='`'):
         """Run in push-to-talk mode with keyboard key"""

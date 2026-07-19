@@ -14,7 +14,7 @@ npm run build         # Compile TypeScript to dist/index.js
 npm run watch         # Watch mode for development
 ```
 
-Python dependencies are installed via `install_deps.sh` using the venv pip, which installs faster-whisper, sounddevice, numpy, and evdev-binary to the `lib/` folder.
+Python dependencies are installed via `install_deps.sh` using the venv pip, which installs faster-whisper, sounddevice, and numpy to the `lib/` folder.
 
 ## Testing
 
@@ -49,7 +49,7 @@ The system has five main components:
 
 2. **Backend Plugin** (`main.py`) - Python Decky plugin backend. Uses static methods and class variables (Decky quirk). Spawns the controller listener subprocess and polls for button state. Provides RPC methods for button configuration (`get_button_config`, `set_button_config`) using array format.
 
-3. **Controller Listener** (`controller_listener.py`) - Separate Python process using evdev to detect configurable button combo on the Xbox 360 pad device. Reads configuration from `button_config.json` (array of 1-5 buttons). Writes button state to `/tmp/decktation_l5`. All buttons in the combo must be pressed simultaneously to activate. Required because Steam intercepts some controller inputs and Decky has evdev import issues.
+3. **Controller Listener** (`controller_listener.py`) - Separate Python process using the Steam Deck vendor raw HID interface to detect a configurable physical button combo. Reads configuration from `button_config.json` (array of 1-5 buttons). Writes button state to `/tmp/decktation_l5`. All buttons in the combo must be pressed simultaneously to activate, independent of the active Steam Input layout.
 
 4. **Voice Service** (`wow_voice_chat.py`) - Core audio processing. Records audio via sounddevice, transcribes with faster-whisper (base model, int8, CPU), parses chat channel prefixes, types output via ydotool.
 
@@ -59,7 +59,7 @@ The system has five main components:
 ```
 User adds/removes buttons in UI → set_button_config RPC → button_config.json
     ↓
-Button Combo (1-5 buttons, evdev) → controller_listener.py reads config
+Button Combo (1-5 buttons, raw HID) → controller_listener.py reads config
     ↓
 All buttons pressed? → Button state → /tmp/decktation_l5
     ↓
@@ -79,7 +79,7 @@ Voice input like "party, hello everyone" or "raid: pull boss" is parsed to extra
 
 - `src/index.tsx` - Plugin UI with button configuration dropdowns, status polling, manual test button
 - `main.py` - Plugin lifecycle, spawns controller listener, polls button state, RPC endpoints for config
-- `controller_listener.py` - Standalone evdev process for configurable button combo detection
+- `controller_listener.py` - Standalone raw HID process for configurable button combo detection
 - `button_config.json` - User's button configuration (created on first config change)
 - `wow_voice_chat.py` - Whisper model, audio recording, transcription, ydotool output
 - `convert_wow_context.py` - Lua SavedVariables parser with `--watch` mode
@@ -99,13 +99,12 @@ Voice input like "party, hello everyone" or "raid: pull boss" is parsed to extra
 - Designed for Steam Deck Linux environment (Gaming Mode)
 - Uses **ydotool** for keyboard simulation (requires ydotoold service running)
 - Setup ydotoold: `sudo /path/to/setup_ydotoold.sh` (creates systemd service with proper socket permissions)
-- Steam Deck controller appears as "Microsoft X-Box 360 pad 0" to evdev
-- L4/R4/L5/R5 back grips are read from the Steam Deck vendor raw HID interface; standard buttons continue to use evdev
+- All selectable built-in controls are decoded from the Steam Deck vendor raw HID interface
+- Per-game Steam Input layouts can emit XInput, keyboard, or mouse events without affecting combo detection
 - WoW runs via Proton; addon SavedVariables at `~/.steam/steam/steamapps/compatdata/*/pfx/drive_c/Program Files (x86)/World of Warcraft/_retail_/WTF/Account/<ACCOUNT>/SavedVariables/`
 - Plugin installs to `~/homebrew/plugins/decktation/`
 
 ## Known Issues
 
-- Steam's `RegisterForControllerStateChanges` API doesn't exist on all Steam Deck versions; using evdev subprocess instead
-- Decky's Python environment has issues importing evdev directly (circular import), hence the separate subprocess approach
+- Steam's `RegisterForControllerStateChanges` API doesn't exist on all Steam Deck versions; the listener reads the physical raw HID report instead
 - Plugin class methods must use `@staticmethod` and `Plugin.xxx` instead of `self.xxx` due to Decky loader quirk

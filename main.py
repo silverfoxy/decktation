@@ -2,14 +2,20 @@ import os
 import sys
 import json
 import logging
+import asyncio
 import traceback
 import threading
 import subprocess
 import time
+import shutil
 from pathlib import Path
 
-# The decky plugin module is located at decky-loader/plugin
-import decky_plugin
+# Decky API v1 uses ``decky``. Keep the old module name as a compatibility
+# fallback for stable loader versions that predate the rename.
+try:
+    import decky
+except ImportError:  # pragma: no cover - depends on the installed Decky version
+    import decky_plugin as decky
 
 # Setup logging first
 logging.basicConfig(
@@ -24,12 +30,31 @@ logger.setLevel(logging.DEBUG)
 plugin_path = os.environ["DECKY_PLUGIN_DIR"]
 
 # Add bundled dependencies to Python path
-lib_path = os.path.join(plugin_path, "lib")
-if os.path.exists(lib_path):
-    sys.path.insert(0, lib_path)
-    logger.info(f"Added lib path: {lib_path}")
-else:
-    logger.error(f"Lib path does not exist: {lib_path}")
+dependency_paths = [
+    os.path.join(plugin_path, "bin", "python"),  # Decky store backend output
+    os.path.join(plugin_path, "lib"),  # Legacy GitHub release layout
+]
+for dependency_path in dependency_paths:
+    if os.path.exists(dependency_path):
+        sys.path.insert(0, dependency_path)
+        logger.info(f"Added dependency path: {dependency_path}")
+
+# sounddevice normally searches only system library paths on Linux. Store
+# builds bundle PortAudio in bin/lib so the plugin works on clean SteamOS
+# installations without modifying the read-only operating system.
+bundled_portaudio = os.path.join(plugin_path, "bin", "lib", "libportaudio.so.2")
+if os.path.isfile(bundled_portaudio):
+    import ctypes.util
+
+    system_find_library = ctypes.util.find_library
+
+    def find_bundled_library(name):
+        if name == "portaudio":
+            return bundled_portaudio
+        return system_find_library(name)
+
+    ctypes.util.find_library = find_bundled_library
+    logger.info(f"Using bundled PortAudio: {bundled_portaudio}")
 
 # Add our service to Python path
 sys.path.insert(0, plugin_path)
@@ -53,11 +78,24 @@ except ImportError as e:
 STATE_FILE = "/tmp/decktation_l5"
 PREVIEW_FILE = "/tmp/decktation_button_preview"
 PID_FILE = "/tmp/decktation_listener.pid"
-# Config in user home directory for persistence and write access
-CONFIG_DIR = os.path.expanduser("~/.config/decktation")
+# Decktation owns this socket and never modifies a system ydotool service.
+YDOTOOL_SOCKET = "/tmp/decktation-ydotool.sock"
+
+# Root plugins must not persist settings below /root. Prefer Decky's user-owned
+# settings directory and retain a fallback for older loader releases.
+decky_user_home = getattr(decky, "DECKY_USER_HOME", "/home/deck")
+CONFIG_DIR = getattr(
+    decky,
+    "DECKY_SETTINGS_DIR",
+    os.path.join(decky_user_home, "homebrew", "settings", "decktation"),
+)
 os.makedirs(CONFIG_DIR, exist_ok=True)
 BUTTON_CONFIG_FILE = os.path.join(CONFIG_DIR, "button_config.json")
 PRESETS_FILE = os.path.join(plugin_path, "game_presets.json")
+if not os.path.exists(PRESETS_FILE):
+    # Decky's builder installs the contents of defaults/ at the plugin root.
+    # Keep source-tree execution useful for tests and local development.
+    PRESETS_FILE = os.path.join(plugin_path, "defaults", "game_presets.json")
 
 # Load game presets
 _game_presets = {}
@@ -73,34 +111,89 @@ class Plugin:
     # Class variables (shared state)
     voice_service = None
     listener_process = None
+    ydotoold_process = None
+    ydotoold_ready = False
     poll_thread = None
     poll_running = False
     controller_enabled = False
     recording_start_count = 0  # Increments each time recording starts
 
     @staticmethod
-    def _log_listener_output(process):
-        """Continuously forward listener output into the Decky plugin log."""
+    def start_ydotoold():
+        """Start Decktation's private virtual-keyboard daemon."""
+        Plugin.ydotoold_ready = False
+        ydotoold = os.path.join(plugin_path, "bin", "ydotoold")
+        if not os.path.isfile(ydotoold):
+            logger.error(f"Bundled ydotoold not found: {ydotoold}")
+            return False
+
+        Plugin.stop_ydotoold()
         try:
-            for line in process.stdout:
-                logger.info(f"Controller listener: {line.rstrip()}")
-        except Exception as e:
-            logger.warning(f"Stopped reading controller listener output: {e}")
+            Plugin.ydotoold_process = subprocess.Popen(
+                [
+                    ydotoold,
+                    "--socket-path", YDOTOOL_SOCKET,
+                    "--socket-perm", "0600",
+                    "--mouse-off",
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+            threading.Thread(
+                target=Plugin._log_process_output,
+                args=(Plugin.ydotoold_process,),
+                daemon=True,
+            ).start()
+
+            deadline = time.monotonic() + 3
+            while time.monotonic() < deadline:
+                if Plugin.ydotoold_process.poll() is not None:
+                    logger.error(
+                        "ydotoold exited with code "
+                        f"{Plugin.ydotoold_process.returncode}"
+                    )
+                    Plugin.ydotoold_process = None
+                    return False
+                if os.path.exists(YDOTOOL_SOCKET):
+                    logger.info(f"ydotoold ready on {YDOTOOL_SOCKET}")
+                    Plugin.ydotoold_ready = True
+                    return True
+                time.sleep(0.05)
+            logger.error("Timed out waiting for ydotoold socket")
+        except Exception:
+            logger.error(f"Failed to start ydotoold: {traceback.format_exc()}")
+
+        Plugin.stop_ydotoold()
+        return False
 
     @staticmethod
-    def check_ydotoold():
-        """Check if ydotoold is running"""
+    def stop_ydotoold():
+        """Stop only the ydotoold process started by this plugin."""
+        Plugin.ydotoold_ready = False
+        process = Plugin.ydotoold_process
+        Plugin.ydotoold_process = None
+        if process and process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=2)
         try:
-            result = subprocess.run(["pgrep", "-x", "ydotoold"], capture_output=True, timeout=2)
-            if result.returncode == 0:
-                logger.info("ydotoold is running")
-                return True
-            else:
-                logger.warning("ydotoold is NOT running - keyboard input will not work")
-                return False
+            if os.path.exists(YDOTOOL_SOCKET):
+                os.remove(YDOTOOL_SOCKET)
+        except OSError as error:
+            logger.warning(f"Could not remove ydotool socket: {error}")
+
+    @staticmethod
+    def _log_process_output(process):
+        """Continuously forward child-process output into the plugin log."""
+        try:
+            for line in process.stdout:
+                logger.info(f"Child process: {line.rstrip()}")
         except Exception as e:
-            logger.error(f"Failed to check ydotoold: {e}")
-            return False
+            logger.warning(f"Stopped reading child-process output: {e}")
 
     @staticmethod
     def start_controller_listener():
@@ -129,12 +222,16 @@ class Plugin:
                 [python_bin, listener_script],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                text=True
+                text=True,
+                env={
+                    **os.environ,
+                    "DECKTATION_CONFIG_DIR": CONFIG_DIR,
+                },
             )
             logger.info(f"Started controller listener (PID {Plugin.listener_process.pid})")
 
             threading.Thread(
-                target=Plugin._log_listener_output,
+                target=Plugin._log_process_output,
                 args=(Plugin.listener_process,),
                 daemon=True,
             ).start()
@@ -244,8 +341,8 @@ class Plugin:
         try:
             logger.info("Initializing Decktation plugin")
 
-            # Check if ydotoold is running for keyboard simulation
-            Plugin.check_ydotoold()
+            # Start the bundled daemon; store installs require no terminal setup.
+            Plugin.start_ydotoold()
 
             if WoWVoiceChat is None:
                 logger.error("WoWVoiceChat not available - dependencies may be missing")
@@ -320,11 +417,29 @@ class Plugin:
         try:
             Plugin.poll_running = False
             Plugin.stop_controller_listener()
+            Plugin.stop_ydotoold()
             if Plugin.voice_service and Plugin.voice_service.is_recording:
                 Plugin.voice_service.stop_recording()
         except Exception as e:
             logger.error(f"Error during unload: {traceback.format_exc()}")
         return
+
+    async def _uninstall(self):
+        """Remove runtime processes and transient files on uninstall."""
+        Plugin.poll_running = False
+        Plugin.stop_controller_listener()
+        Plugin.stop_ydotoold()
+
+    async def _migration(self):
+        """Move settings created by pre-store releases into Decky's settings."""
+        legacy_dir = os.path.join(decky_user_home, ".config", "decktation")
+        legacy_config = os.path.join(legacy_dir, "button_config.json")
+        if not os.path.exists(BUTTON_CONFIG_FILE) and os.path.isfile(legacy_config):
+            try:
+                shutil.copy2(legacy_config, BUTTON_CONFIG_FILE)
+                logger.info(f"Migrated settings from {legacy_config}")
+            except OSError as error:
+                logger.warning(f"Could not migrate settings: {error}")
 
     async def set_enabled(self, enabled: bool):
         """Enable or disable controller listening"""
@@ -520,7 +635,7 @@ class Plugin:
             logger.error(f"Error starting recording: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
 
-    async def stop_recording(self):
+    async def stop_recording(self, send: bool = True):
         """Stop recording and transcribe"""
         try:
             if Plugin.voice_service is None:
@@ -528,7 +643,10 @@ class Plugin:
                 return {"success": False, "error": "Service not initialized"}
 
             logger.info("Stopping recording")
-            Plugin.voice_service.stop_recording()
+            # Stream shutdown happens promptly in the worker, while Decky's
+            # event loop remains available for status/UI requests during
+            # transcription.
+            await asyncio.to_thread(Plugin.voice_service.stop_recording, send)
             return {"success": True}
         except Exception as e:
             logger.error(f"Error stopping recording: {traceback.format_exc()}")
@@ -586,6 +704,7 @@ class Plugin:
                 "pending_text": Plugin.voice_service.pending_text or "" if Plugin.voice_service else "",
                 "pending_delay": Plugin.voice_service._confirm_delay_for(Plugin.voice_service.pending_text) if Plugin.voice_service and Plugin.voice_service.pending_text else 0,
                 "confirm_mode": Plugin.voice_service.confirm_delay > 0 if Plugin.voice_service else False,
+                "input_ready": Plugin.ydotoold_ready,
             }
         except Exception as e:
             logger.error(f"Error getting status: {traceback.format_exc()}")
@@ -598,7 +717,10 @@ class Plugin:
                 return {"success": False, "error": "Service not initialized"}
 
             logger.info("Loading Whisper model...")
-            success = Plugin.voice_service._load_model()
+            # Model construction and first-time download are blocking. Keep
+            # Decky's RPC event loop responsive so status calls can report
+            # progress instead of leaving the frontend stuck initializing.
+            success = await asyncio.to_thread(Plugin.voice_service._load_model)
             if success:
                 logger.info("Model loaded successfully")
             else:

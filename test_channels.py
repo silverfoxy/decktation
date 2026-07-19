@@ -8,7 +8,7 @@ from pathlib import Path
 # Test just the parsing logic without loading the full module
 # Load the language config and implement parse_channel_and_text
 
-config_file = Path(__file__).parent / "channel_languages.json"
+config_file = Path(__file__).parent / "defaults" / "channel_languages.json"
 if not config_file.exists():
     print("Error: channel_languages.json not found")
     sys.exit(1)

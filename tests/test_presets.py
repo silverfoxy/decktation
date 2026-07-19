@@ -11,7 +11,7 @@ import pytest
 from wow_voice_chat import WoWVoiceChat
 
 
-PRESETS_FILE = os.path.join(os.path.dirname(__file__), "..", "game_presets.json")
+PRESETS_FILE = os.path.join(os.path.dirname(__file__), "..", "defaults", "game_presets.json")
 
 
 # ---------------------------------------------------------------------------

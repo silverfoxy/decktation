@@ -66,7 +66,6 @@ sudo cp "$SOURCE_DIR/dist/index.js" "$PLUGIN_DIR/dist/"
 
 # Setup scripts
 echo "  → Setup scripts..."
-sudo cp "$SOURCE_DIR/setup_ydotoold.sh" "$PLUGIN_DIR/" 2>/dev/null || true
 
 # Metadata
 echo "  → Metadata files..."
@@ -108,7 +107,6 @@ echo ""
 echo "Setting permissions..."
 sudo chmod +x "$PLUGIN_DIR/main.py"
 sudo chmod +x "$PLUGIN_DIR/controller_listener.py"
-sudo chmod +x "$PLUGIN_DIR/setup_ydotoold.sh" 2>/dev/null || true
 echo "✓ Permissions set"
 echo ""
 

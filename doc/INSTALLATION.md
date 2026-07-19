@@ -12,62 +12,8 @@ Decky Loader must be installed on your Steam Deck. If you don't have it:
 2. Follow the installation instructions
 3. Verify Decky is working by opening Quick Access Menu (... button)
 
-### 2. ydotool Setup
-
-Decktation uses ydotool to simulate keyboard input. You need to set this up **once** before installing the plugin.
-
-#### Automated Setup (Recommended)
-
-```bash
-# Switch to Desktop Mode
-# Open Konsole terminal
-cd ~/Documents/personal/decktation
-sudo ./setup_ydotoold.sh
-```
-
-This script:
-- Installs ydotool via pacman if not present
-- Creates a systemd service for ydotoold
-- Sets proper permissions for /tmp/.ydotool_socket
-- Enables the service to start on boot
-
-#### Verify ydotoold is Running
-
-```bash
-pgrep ydotoold
-# Should output a process ID number
-
-# Or check the service status
-systemctl --user status ydotoold
-```
-
-#### Manual Setup (Alternative)
-
-If the automated setup doesn't work:
-
-```bash
-# Install ydotool
-sudo pacman -S ydotool
-
-# Start ydotoold manually
-ydotoold &
-
-# Or create a systemd service
-mkdir -p ~/.config/systemd/user
-cat > ~/.config/systemd/user/ydotoold.service << 'EOF'
-[Unit]
-Description=ydotool daemon
-
-[Service]
-ExecStart=/usr/bin/ydotoold
-Restart=always
-
-[Install]
-WantedBy=default.target
-EOF
-
-systemctl --user enable --now ydotoold
-```
+Decktation bundles and manages its own private keyboard helper. Do not install
+ydotool or create a system service; no one-time `sudo` setup is required.
 
 ## Installation Methods
 
@@ -99,18 +45,10 @@ cd ~/Documents/personal
 git clone https://github.com/silverfoxy/decktation.git
 cd decktation
 
-# Install Node dependencies
-npm install
+# Build the same artifact used by the Decky marketplace
+decky plugin build -b -o build-output -s directory .
 
-# Build the frontend
-npm run build
-
-# Install Python dependencies to lib folder
-./install_deps.sh
-
-# Copy to Decky plugins directory
-mkdir -p ~/.local/share/decky/plugins
-cp -r ~/Documents/personal/decktation ~/.local/share/decky/plugins/
+# Install build-output/decktation.zip through Decky's developer settings
 
 # Restart Decky Loader
 # Switch to Game Mode, open Quick Access, you should see Decktation
@@ -147,7 +85,7 @@ cp -r decktation ~/.local/share/decky/plugins/
 On first open, the plugin will:
 
 1. Show "Initializing service..." (a few seconds)
-2. Dependencies are already installed in the `lib/` folder
+2. Dependencies are already installed in the packaged `bin/python/` folder
 3. Ready to use!
 
 ### 3. Load Whisper Model
@@ -185,10 +123,9 @@ Default button combo is **L1+R1** (both bumpers):
 
 1. Enable dictation in the plugin
 2. Wait for "Ready" status
-3. Click "Start Test Recording"
+3. Click "Test Recording (3s)"
 4. Speak clearly: "This is a test"
-5. Click "Stop Test Recording"
-6. Check if text appears in active window
+5. Wait for the transcription to appear in the plugin
 
 ### Test 2: Controller Button Combo
 
@@ -237,12 +174,10 @@ systemctl --user restart plugin_loader
 # Check Decktation logs
 tail -f /tmp/decktation.log
 
-# Verify dependencies installed
-ls -la ~/homebrew/plugins/decktation/lib/
+# Verify packaged dependencies exist
+ls -la ~/homebrew/plugins/decktation/bin/python/faster_whisper/
 
-# Re-run dependency installation
-cd ~/homebrew/plugins/decktation
-./install_deps.sh
+# Reinstall the release zip if packaged files are missing
 ```
 
 ### Issue: Recording doesn't start
@@ -250,15 +185,10 @@ cd ~/homebrew/plugins/decktation
 **Possible causes:**
 - Button combo not detected
 - Controller listener not running
-- ydotoold not running
+- The bundled keyboard helper failed to start
 
 **Solutions:**
 ```bash
-# Check ydotoold
-pgrep ydotoold
-# If not running:
-systemctl --user start ydotoold
-
 # Check controller listener
 pgrep -f controller_listener
 # Should show a process ID
@@ -274,24 +204,16 @@ tail -f /tmp/decktation.log
 ### Issue: Text doesn't appear after transcription
 
 **Possible causes:**
-- ydotoold not running
+- The bundled keyboard helper failed to start
 - Wrong window focused
 - Permission issues
 
 **Solutions:**
 ```bash
-# Verify ydotoold is running
-pgrep ydotoold
+# Look for "ydotoold ready on /tmp/decktation-ydotool.sock"
+grep ydotoold /tmp/decktation.log
 
-# Check ydotool permissions
-ls -la /tmp/.ydotool_socket
-
-# Test ydotool manually
-ydotool type "test"
-# Should type "test" in active window
-
-# Restart ydotoold
-systemctl --user restart ydotoold
+# Reload or reinstall the plugin if the helper failed to start
 ```
 
 ### Issue: Transcription is inaccurate
@@ -340,19 +262,8 @@ rm -rf ~/.local/share/decky/plugins/decktation
 systemctl --user restart plugin_loader
 ```
 
-### Remove ydotoold (Optional)
-
-```bash
-# Stop and disable service
-systemctl --user stop ydotoold
-systemctl --user disable ydotoold
-
-# Remove service file
-rm ~/.config/systemd/user/ydotoold.service
-
-# Uninstall ydotool package (optional)
-sudo pacman -R ydotool
-```
+The private keyboard helper is stopped automatically when Decky unloads or
+uninstalls Decktation. No system service or package remains behind.
 
 ## Advanced Configuration
 

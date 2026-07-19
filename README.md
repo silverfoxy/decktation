@@ -28,14 +28,10 @@ Voice dictation plugin for Steam Deck using faster-whisper with context-aware tr
    sudo cp -r decktation /home/deck/homebrew/plugins/
    ```
 
-3. Setup keyboard simulation (one-time):
-   ```bash
-   sudo /home/deck/homebrew/plugins/decktation/setup_ydotoold.sh
-   ```
+3. Restart Decky or reload plugins from Decky settings
 
-4. Restart Decky or reload plugins from Decky settings
-
-All dependencies are pre-bundled in the release.
+All dependencies and the private keyboard helper are pre-bundled in the
+release. No system packages or one-time `sudo` setup are required.
 
 ## Usage
 
@@ -48,7 +44,7 @@ All dependencies are pre-bundled in the release.
 
 ## Game Presets
 
-Decktation ships with three presets configured in `game_presets.json`:
+Decktation ships with three presets configured in `defaults/game_presets.json`:
 
 | Preset | Behavior |
 |--------|----------|
@@ -91,7 +87,7 @@ Available Guild Wars 2 channels: `say`, `map`, `party`, `squad`, `raid` (an alia
 
 You can add channels beyond the built-in ones (e.g. WoW's numbered channels `/1`, `/2`) by editing two config files.
 
-**Step 1 — add the channel command to `game_presets.json`** under the preset's `channels` map:
+**Step 1 — add the channel command to `defaults/game_presets.json`** under the preset's `channels` map:
 
 ```json
 "channels": {
@@ -102,7 +98,7 @@ You can add channels beyond the built-in ones (e.g. WoW's numbered channels `/1`
 }
 ```
 
-**Step 2 — add the spoken trigger words to `channel_languages.json`** under each language's `channels` map:
+**Step 2 — add the spoken trigger words to `defaults/channel_languages.json`** under each language's `channels` map:
 
 ```json
 "en": {
@@ -115,11 +111,11 @@ You can add channels beyond the built-in ones (e.g. WoW's numbered channels `/1`
 
 After saving both files, saying `"one hello"` or `"channel one hello"` will send `/1 hello`.
 
-You can add as many trigger words per channel as you like (e.g., aliases in multiple languages). The key in `channel_languages.json` must match the key in `game_presets.json`.
+You can add as many trigger words per channel as you like (e.g., aliases in multiple languages). The key in `defaults/channel_languages.json` must match the key in `defaults/game_presets.json`.
 
 ### Adding More Presets
 
-Edit `game_presets.json` to add new games — no code changes needed. Each preset specifies:
+Edit `defaults/game_presets.json` to add new games — no code changes needed. Each preset specifies:
 - `chat_open_key` — key to open the chat box (`"enter"` or `null`)
 - `chat_send_key` — key to send the message (`"enter"` or `null`)
 - `default_channel` — channel to use when no prefix is spoken
@@ -168,7 +164,7 @@ See `doc/TESTING_GUIDE.md` for setup instructions.
 
 - Ensure the plugin is enabled
 - Check that Steam Deck mic is working (test in another app)
-- Verify ydotoold is running: `pgrep ydotoold`
+- Check `/tmp/decktation.log` for `ydotoold ready`
 - Check logs: `/tmp/decktation.log`
 
 ### Button combo not detected
@@ -189,9 +185,9 @@ See `doc/TESTING_GUIDE.md` for setup instructions.
 - **Speech recognition**: faster-whisper (CTranslate2 backend)
 - **Model**: base (150MB, ~2-4s transcription time)
 - **Input**: Steam Deck microphone or connected headset
-- **Controller input**: evdev (separate subprocess to avoid Steam interception)
+- **Controller input**: Steam Deck raw HID reports (independent of per-game Steam Input layouts)
 - **Output**: Keyboard simulation via ydotool (bundled)
-- **Game presets**: `game_presets.json` — data-driven, no code changes needed to add games
+- **Game presets**: `defaults/game_presets.json` — data-driven, no code changes needed to add games
 - **Dependencies**: Pre-bundled Python 3.11 libraries in `lib/` folder
 - **Architecture**: TypeScript frontend + Python backend + separate controller listener process
 

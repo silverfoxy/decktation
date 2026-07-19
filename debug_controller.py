@@ -1,38 +1,44 @@
 #!/usr/bin/env python3
-"""Debug controller detection"""
-import sys
-import evdev
+"""Print physical Steam Deck button transitions from raw HID reports."""
 
-print("Available input devices:")
-for path in evdev.list_devices():
+import time
+
+from controller_listener import find_steam_deck_hidraw
+from deck_hid import STEAM_DECK_BUTTON_BITS, raw_button_states
+
+
+def main():
+    previous = {name: False for name in STEAM_DECK_BUTTON_BITS}
+
+    while True:
+        path = find_steam_deck_hidraw()
+        if not path:
+            print("Steam Deck raw HID interface not found; retrying...", flush=True)
+            time.sleep(2)
+            continue
+
+        print(f"Listening on {path}; press Ctrl+C to stop", flush=True)
+        try:
+            with open(path, "r+b", buffering=0) as device:
+                while True:
+                    report = device.read(64)
+                    if not report:
+                        raise OSError("empty HID report")
+                    states = raw_button_states(report)
+                    if states is None:
+                        continue
+                    for name, pressed in states.items():
+                        if pressed != previous[name]:
+                            previous[name] = pressed
+                            state = "pressed" if pressed else "released"
+                            print(f"{name}: {state}", flush=True)
+        except OSError as error:
+            print(f"Raw HID disconnected: {error}; retrying...", flush=True)
+            time.sleep(1)
+
+
+if __name__ == "__main__":
     try:
-        device = evdev.InputDevice(path)
-        name_lower = device.name.lower()
-        print(f"\n{path}: {device.name}")
-        print(f"  Name (lowercase): {name_lower}")
-
-        caps = device.capabilities()
-        print(f"  Capabilities: {list(caps.keys())}")
-
-        # Check for EV_KEY (key/button events)
-        if 1 in caps:
-            key_codes = caps[1]
-            gamepad_buttons = [code for code in [304, 305, 307, 308, 310, 311] if code in key_codes]
-            print(f"  Has EV_KEY: Yes ({len(key_codes)} codes)")
-            print(f"  Gamepad buttons (304,305,307,308,310,311): {gamepad_buttons}")
-
-            # Check name matching
-            keywords = ["x-box 360", "xbox 360", "gamepad", "steam deck controller", "valve"]
-            matching_keywords = [kw for kw in keywords if kw in name_lower]
-            print(f"  Matching keywords: {matching_keywords}")
-
-            has_gamepad_buttons = len(gamepad_buttons) > 0
-            has_keyword_match = len(matching_keywords) > 0
-
-            if has_gamepad_buttons and has_keyword_match:
-                print(f"  *** WOULD SELECT THIS DEVICE ***")
-        else:
-            print(f"  Has EV_KEY: No")
-
-    except Exception as e:
-        print(f"Error reading {path}: {e}")
+        main()
+    except KeyboardInterrupt:
+        pass

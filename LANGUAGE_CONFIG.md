@@ -15,7 +15,7 @@ The plugin:
 
 ## Configuration File
 
-Channel mappings are stored in `channel_languages.json`:
+Channel mappings are stored in `defaults/channel_languages.json`:
 
 ```json
 {
@@ -51,7 +51,7 @@ Channel mappings are stored in `channel_languages.json`:
 
 To add Spanish support:
 
-1. Open `channel_languages.json`
+1. Open `defaults/channel_languages.json`
 2. Add a new language section:
 
 ```json
