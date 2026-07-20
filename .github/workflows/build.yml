@@ -67,6 +67,15 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: build-output/decktation.zip
+          body: |
+            ## Installation
+
+            Download **decktation.zip** from the Assets section and import it
+            with Decky's **Install Plugin from ZIP** option.
+
+            **Do not download “Source code (zip)” or “Source code (tar.gz)”.**
+            GitHub adds those archives automatically, but they do not contain
+            Decktation's bundled Python dependencies and will not run.
           draft: false
           prerelease: false
           generate_release_notes: true

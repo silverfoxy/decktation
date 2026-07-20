@@ -29,16 +29,18 @@ Once published to the Decky Plugin Store:
 
 ### Method 2: Import a Release ZIP
 
-1. Download `decktation.zip` from the latest
-   [GitHub Release](https://github.com/silverfoxy/decktation/releases/latest).
+1. Download **[`decktation.zip`](https://github.com/silverfoxy/decktation/releases/latest/download/decktation.zip)**
+   from the latest release's **Assets** section. Do **not** choose GitHub's
+   **Source code (zip)** or **Source code (tar.gz)**; neither contains the
+   bundled Python dependencies required by Decktation.
 2. Open Quick Access Menu (... button) and navigate to Decky settings.
 3. Enable developer options if **Install Plugin from ZIP** is not visible.
 4. Select **Install Plugin from ZIP** and choose the downloaded archive.
 5. Wait for Decky to import and reload Decktation.
 
 This is the recommended installation method until Decktation is available in
-the Decky Plugin Store. Do not extract the archive or copy files into Decky's
-plugin directory manually.
+the Decky Plugin Store. Do not use **Install from URL**, extract the archive,
+or copy files into Decky's plugin directory manually.
 
 ### Method 3: Install a Local Development Build
 

@@ -7,6 +7,19 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.3.7] - 2026-07-20
+
+### Changed
+
+- Clarified that Decky users must install the `decktation.zip` release asset,
+  not GitHub's automatically generated source archives.
+
+### Fixed
+
+- Corrected the L5 and R5 labels in the controller button-test display.
+- Added one-hot raw HID mapping coverage so swapped or overlapping physical
+  button definitions fail automated tests.
+
 ## [0.3.6] - 2026-07-19
 
 ### Added

@@ -5,7 +5,7 @@
 
     var React__default = /*#__PURE__*/_interopDefaultLegacy(React);
 
-    var _manifest = {"name":"Decktation","version":"0.3.6","author":"silverfoxy","flags":["_root"],"api_version":1,"publish":{"tags":["voice","dictation","speech-to-text","input","chat","gaming","accessibility"],"description":"Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using faster-whisper.","image":"https://raw.githubusercontent.com/silverfoxy/decktation/master/logo.png"}};
+    var _manifest = {"name":"Decktation","version":"0.3.7","author":"silverfoxy","flags":["_root"],"api_version":1,"publish":{"tags":["voice","dictation","speech-to-text","input","chat","gaming","accessibility"],"description":"Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using faster-whisper.","image":"https://raw.githubusercontent.com/silverfoxy/decktation/master/logo.png"}};
 
     const manifest = _manifest;
     const API_VERSION = 2;
@@ -134,8 +134,8 @@
     callable("set_active_preset");
     const setButtonConfig = callable("set_button_config");
     // Button IDs emitted by SteamClient.Input.RegisterForControllerInputMessages.
-    // These match Steam's ControllerInputGamepadButton enum. The lower rear pair is
-    // reported from the controller's perspective, so 33 is physical L5 and 32 R5.
+    // These match Steam's ControllerInputGamepadButton enum as observed by the
+    // button-test callback. Keep the rear buttons in physical left-to-right order.
     const CONTROLLER_BUTTON_NAMES = {
         0: "A",
         1: "B",
@@ -147,8 +147,8 @@
         29: "R2",
         30: "L1",
         31: "R1",
-        32: "R5",
-        33: "L5",
+        32: "L5",
+        33: "R5",
         44: "L4",
         45: "R4",
     };

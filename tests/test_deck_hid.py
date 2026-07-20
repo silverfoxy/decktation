@@ -1,4 +1,4 @@
-from deck_hid import raw_button_states
+from deck_hid import STEAM_DECK_BUTTON_BITS, raw_button_states
 
 
 def make_report():
@@ -29,16 +29,16 @@ def test_face_and_shoulder_buttons_are_decoded():
     assert states["R1"] is False
 
 
-def test_all_rear_grips_are_decoded():
-    report = make_report()
-    set_bit(report, 13, 1)  # L4
-    set_bit(report, 13, 2)  # R4
-    set_bit(report, 9, 7)   # L5
-    set_bit(report, 10, 0)  # R5
+def test_each_digital_button_bit_maps_to_only_its_named_button():
+    """One-hot reports catch swapped or overlapping button definitions."""
+    for expected_name, (byte, bit) in STEAM_DECK_BUTTON_BITS.items():
+        report = make_report()
+        set_bit(report, byte, bit)
 
-    states = raw_button_states(report)
+        states = raw_button_states(report)
+        pressed = {name for name, is_pressed in states.items() if is_pressed}
 
-    assert all(states[name] for name in ("L4", "R4", "L5", "R5"))
+        assert pressed == {expected_name}
 
 
 def test_triggers_activate_at_half_pull_from_analog_values():

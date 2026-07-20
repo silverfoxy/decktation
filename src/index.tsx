@@ -40,8 +40,8 @@ const setButtonConfig = callable<
 >("set_button_config");
 
 // Button IDs emitted by SteamClient.Input.RegisterForControllerInputMessages.
-// These match Steam's ControllerInputGamepadButton enum. The lower rear pair is
-// reported from the controller's perspective, so 33 is physical L5 and 32 R5.
+// These match Steam's ControllerInputGamepadButton enum as observed by the
+// button-test callback. Keep the rear buttons in physical left-to-right order.
 const CONTROLLER_BUTTON_NAMES: Record<number, string> = {
 	0: "A",
 	1: "B",
@@ -53,8 +53,8 @@ const CONTROLLER_BUTTON_NAMES: Record<number, string> = {
 	29: "R2",
 	30: "L1",
 	31: "R1",
-	32: "R5",
-	33: "L5",
+	32: "L5",
+	33: "R5",
 	44: "L4",
 	45: "R4",
 };
