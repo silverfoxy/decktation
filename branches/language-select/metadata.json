@@ -1,0 +1,8 @@
+{
+  "plugin": "Decktation",
+  "channel": "branch",
+  "ref": "language-select",
+  "commit": "46f1bcf067ff110e16da59a1167d11b2029b95cd",
+  "zip_url": "https://silverfoxy.github.io/decktation/branches/language-select/decktation.zip",
+  "generated_at": "2026-08-14T01:12:46Z"
+}
