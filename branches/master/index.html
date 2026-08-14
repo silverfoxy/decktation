@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Decktation branch build: master</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f1ea;
+      --card: rgba(255, 252, 247, 0.92);
+      --ink: #1f2933;
+      --muted: #52606d;
+      --accent: #b44f2a;
+      --accent-dark: #7c3318;
+      --border: rgba(31, 41, 51, 0.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(180, 79, 42, 0.16), transparent 28%),
+        linear-gradient(135deg, #efe7da 0%, #f8f6f2 46%, #ece3d5 100%);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    main {
+      width: min(760px, 100%);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: 0 24px 70px rgba(31, 41, 51, 0.12);
+      backdrop-filter: blur(10px);
+    }
+    h1 {
+      margin: 0 0 12px;
+      font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
+      font-size: clamp(2rem, 5vw, 3rem);
+      line-height: 0.98;
+    }
+    p {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.55;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 24px 0;
+    }
+    a.button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 0 18px;
+      border-radius: 999px;
+      text-decoration: none;
+      font-weight: 700;
+      color: #fffaf2;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+    }
+    a.link {
+      color: var(--accent-dark);
+      text-decoration-thickness: 2px;
+      text-underline-offset: 3px;
+    }
+    code {
+      font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+      font-size: 0.92rem;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Decktation branch build: master</h1>
+    <p>Decky Loader should use the direct ZIP URL below. This page is only a human-friendly landing page.</p>
+    <div class="actions">
+      <a class="button" href="https://silverfoxy.github.io/decktation/branches/master/decktation.zip">Download decktation.zip</a>
+      <a class="button" href="https://silverfoxy.github.io/decktation/branches/master/metadata.json">View metadata</a>
+    </div>
+    <p><strong>Direct ZIP URL</strong><br><code>https://silverfoxy.github.io/decktation/branches/master/decktation.zip</code></p>
+    <p><a class="link" href="https://silverfoxy.github.io/decktation/">Back to all Decktation downloads</a></p>
+  </main>
+</body>
+</html>
