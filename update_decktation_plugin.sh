@@ -48,11 +48,13 @@ sudo chown -R deck:deck "$PLUGIN_DIR" 2>/dev/null || true
 # Core Python files
 echo "  → Core Python files..."
 sudo cp "$SOURCE_DIR/main.py" "$PLUGIN_DIR/"
-sudo cp "$SOURCE_DIR/controller_listener.py" "$PLUGIN_DIR/"
-sudo cp "$SOURCE_DIR/deck_hid.py" "$PLUGIN_DIR/"
-sudo cp "$SOURCE_DIR/telemetry.py" "$PLUGIN_DIR/"
-sudo cp "$SOURCE_DIR/wow_voice_chat.py" "$PLUGIN_DIR/"
-sudo cp "$SOURCE_DIR/convert_wow_context.py" "$PLUGIN_DIR/"
+sudo mkdir -p "$PLUGIN_DIR/bin"
+sudo cp "$SOURCE_DIR/backend/src/decktation_backend.py" "$PLUGIN_DIR/bin/"
+sudo cp "$SOURCE_DIR/backend/src/controller_listener.py" "$PLUGIN_DIR/bin/"
+sudo cp "$SOURCE_DIR/backend/src/deck_hid.py" "$PLUGIN_DIR/bin/"
+sudo cp "$SOURCE_DIR/backend/src/telemetry.py" "$PLUGIN_DIR/bin/"
+sudo cp "$SOURCE_DIR/backend/src/wow_voice_chat.py" "$PLUGIN_DIR/bin/"
+sudo cp "$SOURCE_DIR/backend/src/convert_wow_context.py" "$PLUGIN_DIR/bin/"
 sudo cp -R "$SOURCE_DIR/lib/" "$PLUGIN_DIR/"
 
 # Telemetry was added after the legacy lib bundle was created. Install it
@@ -122,8 +124,9 @@ echo ""
 # Set permissions
 echo "Setting permissions..."
 sudo chmod +x "$PLUGIN_DIR/main.py"
-sudo chmod +x "$PLUGIN_DIR/controller_listener.py"
-sudo chmod 644 "$PLUGIN_DIR/telemetry.py"
+sudo chmod +x "$PLUGIN_DIR/bin/controller_listener.py"
+sudo chmod 644 "$PLUGIN_DIR/bin/decktation_backend.py"
+sudo chmod 644 "$PLUGIN_DIR/bin/telemetry.py"
 echo "✓ Permissions set"
 echo ""
 

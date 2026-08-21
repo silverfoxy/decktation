@@ -108,7 +108,7 @@ All map to the same `/s` command.
 Run the test script to verify channel detection:
 
 ```bash
-python3 test_channels.py
+python3 tests/manual/test_channels.py
 ```
 
 This tests both English and French channel detection without needing the full Whisper model installed.

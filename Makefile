@@ -18,7 +18,7 @@ release-check: version-check
 	if [ -x venv/bin/pytest ]; then venv/bin/pytest tests/ -q; \
 	elif [ -x .venv/bin/pytest ]; then .venv/bin/pytest tests/ -q; \
 	else python -m pytest tests/ -q; fi
-	@python -m py_compile main.py wow_voice_chat.py controller_listener.py deck_hid.py telemetry.py
+	@python -m py_compile main.py backend/src/decktation_backend.py backend/src/wow_voice_chat.py backend/src/controller_listener.py backend/src/deck_hid.py backend/src/telemetry.py
 
 release-tag: release-check
 	@set -eu; \

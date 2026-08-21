@@ -5,13 +5,24 @@ cd /backend
 mkdir -p out/python out/lib out/licenses
 cp -R /runtime/python/. out/python/
 
+# Decky places backend/out under the installed plugin's bin/ directory. Keep
+# substantive Python backend source in backend/src; root main.py is only the
+# Decky Loader entry point.
+cp src/decktation_backend.py src/wow_voice_chat.py src/controller_listener.py \
+    src/deck_hid.py src/telemetry.py src/convert_wow_context.py out/
+
 # Keep inference code and package license metadata, but omit installation-time
 # tools, test suites, caches, and SymPy (used by ONNX conversion tooling, not
 # by faster-whisper/ONNX Runtime inference). This substantially reduces store
 # archive size and file count.
 rm -rf out/python/bin out/python/av out/python/av.libs out/python/av-*.dist-info \
     out/python/sympy out/python/sympy-*.dist-info \
-    out/python/mpmath out/python/mpmath-*.dist-info
+    out/python/mpmath out/python/mpmath-*.dist-info \
+    out/python/onnxruntime/transformers \
+    out/python/typer out/python/typer_slim-*.dist-info \
+    out/python/click out/python/click-*.dist-info \
+    out/python/shellingham out/python/shellingham-*.dist-info \
+    out/python/isympy.py
 # faster-whisper imports PyAV only to decode file paths. Decktation supplies
 # decoded NumPy samples, so keep the decoder function available but lazy-load
 # PyAV if another caller explicitly uses it.

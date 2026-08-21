@@ -1,6 +1,7 @@
+import os
 import sys
 
-sys.path.insert(0, ".")
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend", "src"))
 
 
 # Mock decky_plugin
@@ -9,8 +10,6 @@ class MockDecky:
 
 
 sys.modules["decky_plugin"] = MockDecky()
-
-import os
 
 os.environ["DECKY_PLUGIN_DIR"] = "."
 

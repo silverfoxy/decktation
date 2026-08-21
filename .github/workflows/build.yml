@@ -21,7 +21,7 @@ jobs:
       - run: node scripts/release-version.mjs check
       - run: pip install pytest sentry-sdk==2.66.0
       - run: pytest tests/ -v
-      - run: python -m py_compile main.py wow_voice_chat.py controller_listener.py deck_hid.py telemetry.py
+      - run: python -m py_compile main.py backend/src/decktation_backend.py backend/src/wow_voice_chat.py backend/src/controller_listener.py backend/src/deck_hid.py backend/src/telemetry.py
 
   build:
     if: github.event_name != 'delete'
@@ -54,12 +54,18 @@ jobs:
           unzip -l build-output/decktation.zip | grep -q 'decktation/bin/python/faster_whisper'
           unzip -l build-output/decktation.zip | grep -q 'decktation/bin/python/sentry_sdk'
           unzip -l build-output/decktation.zip | grep -q 'decktation/bin/lib/libportaudio.so.2'
-          unzip -l build-output/decktation.zip | grep -q 'decktation/telemetry.py'
+          unzip -l build-output/decktation.zip | grep -q 'decktation/bin/telemetry.py'
+          unzip -l build-output/decktation.zip | grep -q 'decktation/bin/decktation_backend.py'
+          unzip -l build-output/decktation.zip | grep -q 'decktation/bin/controller_listener.py'
           unzip -l build-output/decktation.zip | grep -q 'decktation/game_presets.json'
           unzip -l build-output/decktation.zip | grep -q 'decktation/channel_languages.json'
           unzip -l build-output/decktation.zip | grep -q 'cpython-311'
           ! unzip -l build-output/decktation.zip | grep -q 'cpython-313'
           ! unzip -l build-output/decktation.zip | grep -q 'decktation/bin/python/av/'
+          ! unzip -l build-output/decktation.zip | grep -q 'decktation/debug_controller.py'
+          ! unzip -l build-output/decktation.zip | grep -q 'decktation/test.py'
+          ! unzip -l build-output/decktation.zip | grep -q 'decktation/test_channels.py'
+          ! unzip -l build-output/decktation.zip | grep -q 'decktation/test_audio.wav'
 
       - name: Upload CI build as a direct file
         uses: actions/upload-artifact@v7

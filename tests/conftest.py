@@ -9,8 +9,8 @@ import sys
 import os
 from unittest.mock import MagicMock
 
-# Point tests at the project root
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+# Point tests at the reviewable backend source directory.
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend", "src"))
 
 # Mock heavy deps before wow_voice_chat is imported.
 # numpy's C-extensions require the right libstdc++ which may not be present in the

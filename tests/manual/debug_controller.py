@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Print physical Steam Deck button transitions from raw HID reports."""
+"""Print physical Steam Deck button transitions from raw HID reports (manual tool)."""
 
 import time
 

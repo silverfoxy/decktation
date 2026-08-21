@@ -86,10 +86,13 @@ class WoWVoiceChat:
         self.channel_triggers = {}  # Maps trigger word -> channel name
 
         # Try to load language config file
-        config_file = Path(__file__).parent / "channel_languages.json"
+        plugin_root = Path(
+            os.environ.get("DECKY_PLUGIN_DIR", Path(__file__).parents[2])
+        )
+        config_file = plugin_root / "channel_languages.json"
         if not config_file.exists():
             # Decky's builder flattens defaults/ into the installed plugin root.
-            config_file = Path(__file__).parent / "defaults" / "channel_languages.json"
+            config_file = plugin_root / "defaults" / "channel_languages.json"
         if not config_file.exists():
             # Fallback: build English-only triggers
             for channel in self.default_channel_commands.keys():
