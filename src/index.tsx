@@ -866,6 +866,17 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 				</PanelSectionRow>
 			</PanelSection>
 
+			<PanelSection title="Permissions">
+				<PanelSectionRow>
+					<div style={{ fontSize: '13px', lineHeight: '1.5' }}>
+						Decktation uses Decky root access only to read raw Steam Deck
+						controller input and to create virtual keyboard events for dictated
+						text. Your transcription is passed to the bundled keyboard helper as
+						data, never as a shell command.
+					</div>
+				</PanelSectionRow>
+			</PanelSection>
+
 			<PanelSection title="How to use:">
 				<PanelSectionRow>
 					<Focusable

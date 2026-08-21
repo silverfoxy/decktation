@@ -15,7 +15,8 @@ run this repository's `.github/workflows/build.yml` first.
 - Decky's Holo backend builds the Python runtime directory and ydotool 1.0.4.
 - The ydotool source revision, build recipe, and AGPL license are included.
 - The plugin owns a private `0600` ydotool socket and cleans up its process.
-- `_root` is declared for `/dev/uinput` and raw Steam Deck HID access.
+- `_root` is declared only for `/dev/uinput` and raw Steam Deck HID access;
+  dictation is passed to ydotool as an argument, never executed by a shell.
 - A frozen `pnpm-lock.yaml` is committed for the marketplace frontend build.
 - Decky CLI 0.0.7 produces a valid 82.7 MB zip (274 MB installed).
 - Frontend source and the generated `dist/index.js` are present.

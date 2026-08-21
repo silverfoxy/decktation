@@ -490,7 +490,9 @@ class WoWVoiceChat:
         logger.info(f"Full message: {full_message}")
 
         # Find ydotool binary - check bundled first, then fallback to system paths
-        plugin_dir = os.path.dirname(os.path.abspath(__file__))
+        plugin_dir = os.environ.get(
+            "DECKY_PLUGIN_DIR", os.path.dirname(os.path.abspath(__file__))
+        )
         bundled_ydotool = os.path.join(plugin_dir, "bin", "ydotool")
 
         # Try locations in priority order: bundled, system, user install

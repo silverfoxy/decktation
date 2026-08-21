@@ -235,6 +235,21 @@ CI runs unit tests and the TypeScript build on every push via GitHub Actions.
 - You can disable diagnostics at any time from the plugin’s Diagnostics
   section; no diagnostics connection is initialized while the setting is off.
 
+## Permissions
+
+Decktation declares Decky’s `_root` permission solely for the Steam Deck
+devices required by push-to-talk and text input:
+
+- It reads Valve raw controller reports from `/dev/hidraw*` so the configured
+  physical button combination works independently of a game’s Steam Input
+  layout.
+- It runs its bundled `ydotoold` helper against `/dev/uinput` to simulate the
+  keystrokes that enter the transcription in the active window. The helper uses
+  a private, owner-only socket in `/tmp` and is stopped when the plugin unloads.
+- Dictated text is passed as data to `ydotool`; it is never evaluated as a
+  shell command. Decktation does not modify the system filesystem, install
+  system packages, or create system services.
+
 ## Credits
 
 Built with:

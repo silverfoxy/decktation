@@ -325,6 +325,14 @@ grep "controller_listener" /tmp/decktation.log
 - Transcribed text is typed directly into the active window. Recordings are
   not retained as user files.
 
+## Permissions
+
+Decktation requests Decky’s `_root` permission only to read the Steam Deck’s
+raw controller reports from `/dev/hidraw*` and to use `/dev/uinput` through its
+bundled `ydotoold` helper for virtual keyboard input. The helper uses a private
+`0600` socket in `/tmp`, is stopped on plugin unload, and dictated text is never
+executed as a shell command. It does not install system packages or services.
+
 ## What's Next?
 
 - Read `CLAUDE.md` for technical details

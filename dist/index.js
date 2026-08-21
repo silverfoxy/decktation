@@ -789,6 +789,9 @@
                                 setRpcError(result.error || "Could not update diagnostics setting");
                             }
                         } }))),
+            React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: "Permissions" },
+                React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                    React__default["default"].createElement("div", { style: { fontSize: '13px', lineHeight: '1.5' } }, "Decktation uses Decky root access only to read raw Steam Deck controller input and to create virtual keyboard events for dictated text. Your transcription is passed to the bundled keyboard helper as data, never as a shell command."))),
             React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: "How to use:" },
                 React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                     React__default["default"].createElement(deckyFrontendLib.Focusable, { tabIndex: 0, role: "region", "aria-label": "How to use Decktation", onActivate: () => { }, focusWithinClassName: "gpfocuswithin", style: { fontSize: '13px', lineHeight: '1.6' } },
