@@ -852,7 +852,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 				<PanelSectionRow>
 					<ToggleField
 						label="Share"
-						description="Anonymous diagnostics"
+						description="Optional scrubbed diagnostics sent to Sentry"
 						checked={shareDiagnostics}
 						onChange={async (e) => {
 							setShareDiagnostics(e);

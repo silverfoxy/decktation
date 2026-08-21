@@ -781,7 +781,7 @@
                         React__default["default"].createElement("strong", null, buttonState)))),
             React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: "Diagnostics" },
                 React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                    React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: "Share", description: "Anonymous diagnostics", checked: shareDiagnostics, onChange: async (e) => {
+                    React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: "Share", description: "Optional scrubbed diagnostics sent to Sentry", checked: shareDiagnostics, onChange: async (e) => {
                             setShareDiagnostics(e);
                             const result = await setShareDiagnosticsRpc(e);
                             if (!result.success) {

@@ -312,11 +312,18 @@ grep "controller_listener" /tmp/decktation.log
 
 ## Privacy & Security
 
-- All voice processing happens **locally** on your Steam Deck
-- No data sent to external servers
-- Whisper model downloads from HuggingFace (one-time, ~150MB)
-- Transcribed text is typed directly into active window
-- No recordings are saved to disk (unless explicitly configured)
+- Voice recording, transcription, chat parsing, and simulated keyboard input
+  happen **locally** on your Steam Deck. Audio, transcription text, and WoW
+  context are not uploaded.
+- The first use of each selected Whisper model downloads model files from
+  Hugging Face (the default base model is about 150 MB). Later use is local
+  while that model is cached.
+- **Diagnostics → Share** is disabled by default. If enabled, scrubbed error
+  and performance data is sent to Sentry; it excludes audio, transcription
+  text, WoW context, credentials, device/host identifiers, IP addresses, and
+  local user-name paths.
+- Transcribed text is typed directly into the active window. Recordings are
+  not retained as user files.
 
 ## What's Next?
 

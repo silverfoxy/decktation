@@ -219,9 +219,21 @@ CI runs unit tests and the TypeScript build on every push via GitHub Actions.
 
 ## Privacy
 
-- All processing happens locally on your Steam Deck
-- No data sent to external servers
-- Whisper model downloads from HuggingFace (one-time)
+- **Voice data stays local.** Recording, transcription, chat parsing, and
+  simulated keyboard input run on your Steam Deck. Decktation does not upload
+  audio recordings, transcribed text, or WoW context data.
+- **Model downloads.** The first use of each selected Whisper model downloads
+  its model files from Hugging Face. This requires an internet connection;
+  subsequent use is local while the model remains cached on the device.
+- **Optional diagnostics.** The **Diagnostics → Share** setting is off by
+  default. When enabled, Decktation sends scrubbed error and performance data
+  to Sentry to help diagnose failures. It excludes audio, transcription text,
+  WoW context, credentials, device/host identifiers, IP addresses, and paths
+  containing the local user name. Diagnostics include the plugin release,
+  error category/type, selected game preset, controller type, and whether a
+  dictation operation succeeded.
+- You can disable diagnostics at any time from the plugin’s Diagnostics
+  section; no diagnostics connection is initialized while the setting is off.
 
 ## Credits
 

@@ -362,7 +362,7 @@ Check if WoW-specific terms are transcribed correctly.
 
 ## Privacy & Security
 
-- All processing is local (no network calls)
+- The WoW addon and context converter run locally and make no network calls.
 - Context data stays on your machine
 - No sensitive data is collected (only public game state)
 - SavedVariables are standard WoW addon storage
