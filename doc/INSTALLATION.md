@@ -31,6 +31,9 @@ Once published to the Decky Plugin Store:
 
 1. Use one of these direct ZIP URLs:
    - Stable latest release:
+     **[`https://silverfoxy.github.io/decktation/latest.zip`](https://silverfoxy.github.io/decktation/latest.zip)**
+
+     The full stable URL is also available:
      **[`https://silverfoxy.github.io/decktation/releases/latest/decktation.zip`](https://silverfoxy.github.io/decktation/releases/latest/decktation.zip)**
    - A specific branch build:
      **`https://silverfoxy.github.io/decktation/branches/<url-encoded-branch-name>/decktation.zip`**

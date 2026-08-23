@@ -235,6 +235,10 @@ render_pages_content() {
     mkdir -p "$PAGES_DIR/releases/$RELEASE_TAG" "$PAGES_DIR/releases/latest"
     cp "$ZIP_SOURCE" "$PAGES_DIR/releases/$RELEASE_TAG/decktation.zip"
     cp "$ZIP_SOURCE" "$PAGES_DIR/releases/latest/decktation.zip"
+    # Short, stable install URL for Decky's "Install Plugin from URL" action.
+    # Only release tags update it; branch builds must never replace the stable
+    # artifact a user receives from this address.
+    cp "$ZIP_SOURCE" "$PAGES_DIR/latest.zip"
     write_metadata \
       "$PAGES_DIR/releases/$RELEASE_TAG/metadata.json" \
       "release" \
@@ -347,6 +351,7 @@ render_pages_content() {
         <p>Stable, direct ZIP URLs for Decky Loader installs. Use the ZIP URLs directly with Decky's <strong>Install Plugin from URL</strong> flow.</p>
       </div>
       <div class="panel">
+        <p><strong>Short install URL</strong><br><code>${PAGES_BASE_URL}/latest.zip</code></p>
         <p><strong>Latest release ZIP</strong><br><code>${PAGES_BASE_URL}/releases/latest/decktation.zip</code></p>
         <p><strong>Branch ZIP pattern</strong><br><code>${PAGES_BASE_URL}/branches/&lt;url-encoded-branch-name&gt;/decktation.zip</code></p>
       </div>
@@ -376,6 +381,9 @@ publish_pages() {
 }
 
 for attempt in 1 2 3; do
+  # Never remove the directory that is the shell's current working directory.
+  # A failed push retries from a fresh checkout of the updated gh-pages head.
+  cd /
   rm -rf "$PAGES_DIR"
   checkout_pages_branch
   render_pages_content

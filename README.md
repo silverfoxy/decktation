@@ -22,7 +22,9 @@ Voice dictation plugin for Steam Deck using faster-whisper with context-aware tr
 
 > [!IMPORTANT]
 > Use a direct ZIP URL that points to the packaged plugin artifact.
-> Recommended stable URL:
+> Recommended short install URL:
+> **[`https://silverfoxy.github.io/decktation/latest.zip`](https://silverfoxy.github.io/decktation/latest.zip)**
+> Full stable URL:
 > **[`https://silverfoxy.github.io/decktation/releases/latest/decktation.zip`](https://silverfoxy.github.io/decktation/releases/latest/decktation.zip)**
 > Branch build URL pattern:
 > **`https://silverfoxy.github.io/decktation/branches/<url-encoded-branch-name>/decktation.zip`**
