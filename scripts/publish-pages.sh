@@ -11,8 +11,9 @@ GITHUB_SHA="${GITHUB_SHA:-}"
 REF_NAME="${REF_NAME:-}"
 REF_TYPE="${REF_TYPE:-}"
 RELEASE_TAG="${RELEASE_TAG:-$REF_NAME}"
+WORKSPACE_DIR="$(pwd)"
 PAGES_DIR=/tmp/decktation-gh-pages
-ZIP_SOURCE=build-output/decktation.zip
+ZIP_SOURCE="$WORKSPACE_DIR/build-output/decktation.zip"
 
 if [ "$CLEANUP_ONLY" != "true" ] && [ ! -f "$ZIP_SOURCE" ]; then
   echo "Missing build artifact: $ZIP_SOURCE" >&2
