@@ -182,7 +182,7 @@ cleanup_deleted_branch_dirs() {
   local normalized_heads
 
   mkdir -p "$branches_dir"
-  remote_heads="$(git ls-remote --heads origin)"
+  remote_heads="$(git -C "$PAGES_DIR" ls-remote --heads origin)"
   normalized_heads="$(
     printf '%s\n' "$remote_heads" | while read -r _ ref; do
       normalize_ref "${ref#refs/heads/}"
