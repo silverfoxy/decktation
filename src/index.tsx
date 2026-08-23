@@ -709,6 +709,19 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 
 			<PanelSection title="Input">
 				<PanelSectionRow>
+					<div style={{
+						padding: '10px',
+						backgroundColor: '#4a3410',
+						borderRadius: '6px',
+						fontSize: '12px',
+						lineHeight: '1.5',
+						border: '1px solid #8a651c',
+					}}>
+						<strong>Steam Controller:</strong> not currently supported. Decktation reads Steam Deck raw HID input, so push-to-talk may not detect buttons from an original Steam Controller.
+					</div>
+				</PanelSectionRow>
+
+				<PanelSectionRow>
 					<ToggleField
 						label="Toasts"
 						description="Recording alerts"

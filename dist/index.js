@@ -5,7 +5,7 @@
 
     var React__default = /*#__PURE__*/_interopDefaultLegacy(React);
 
-    var _manifest = {"name":"Decktation","version":"0.3.10","author":"silverfoxy","flags":["_root"],"api_version":1,"publish":{"tags":["voice","dictation","speech-to-text","input","chat","gaming","accessibility"],"description":"Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using faster-whisper.","image":"https://raw.githubusercontent.com/silverfoxy/decktation/master/logo.png"}};
+    var _manifest = {"name":"Decktation","version":"0.3.14","author":"silverfoxy","flags":["_root"],"api_version":1,"publish":{"tags":["voice","dictation","speech-to-text","input","chat","gaming","accessibility"],"description":"Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using faster-whisper.","image":"https://raw.githubusercontent.com/silverfoxy/decktation/master/logo.png"}};
 
     const manifest = _manifest;
     const API_VERSION = 2;
@@ -694,6 +694,17 @@
                             }
                         } }))),
             React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: "Input" },
+                React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                    React__default["default"].createElement("div", { style: {
+                            padding: '10px',
+                            backgroundColor: '#4a3410',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            lineHeight: '1.5',
+                            border: '1px solid #8a651c',
+                        } },
+                        React__default["default"].createElement("strong", null, "Steam Controller:"),
+                        " not currently supported. Decktation reads Steam Deck raw HID input, so push-to-talk may not detect buttons from an original Steam Controller.")),
                 React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                     React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: "Toasts", description: "Recording alerts", checked: showNotifications, onChange: async (e) => {
                             setShowNotifications(e);

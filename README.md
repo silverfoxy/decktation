@@ -140,6 +140,13 @@ Edit `defaults/game_presets.json` to add new games — no code changes needed. E
 
 The plugin uses a configurable button combo for push-to-talk. You can set 1–5 buttons from the plugin UI.
 
+> [!WARNING]
+> **Original Steam Controller support is currently unverified and treated as
+> unsupported.** Decktation reads Steam Deck raw HID reports for reliable
+> physical-button detection, so push-to-talk may not detect buttons from a
+> Steam Controller. See [the Steam Controller test plan](doc/STEAM_CONTROLLER_TEST_PLAN.md)
+> if you can help validate it.
+
 Available buttons:
 
 - **L1, R1** (bumpers) — _Default combo_
@@ -184,6 +191,9 @@ See `doc/TESTING_GUIDE.md` for setup instructions.
 ### Button combo not detected
 
 - Try a different button combination in the plugin UI
+- Original Steam Controllers are not currently supported; see the [Steam
+  Controller test plan](doc/STEAM_CONTROLLER_TEST_PLAN.md) if you can help
+  validate support.
 - Rear grip buttons are supported on Steam Deck hardware through raw HID
 - Check `/tmp/decktation.log` for controller listener errors
 - Verify controller listener is running: `pgrep -f controller_listener`

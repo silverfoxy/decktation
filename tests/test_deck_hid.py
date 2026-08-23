@@ -3,6 +3,7 @@ from deck_hid import (
     STEAM_DECK_BUTTON_BITS,
     raw_button_states,
 )
+from controller_listener import steam_controller_profile
 
 
 def make_report():
@@ -100,3 +101,19 @@ def test_original_steam_controller_analog_triggers_activate_at_half_pull():
 
     assert states["L2"] is True
     assert states["R2"] is False
+
+
+def test_known_valve_hid_ids_select_the_expected_raw_report_profile():
+    assert steam_controller_profile("0003:000028DE:00001205") == {
+        "controller_type": "steam_deck",
+        "report_type": 9,
+    }
+    assert steam_controller_profile("0003:000028DE:00001102") == {
+        "controller_type": "steam_controller_wired",
+        "report_type": 1,
+    }
+    assert steam_controller_profile("0003:000028DE:00001142") == {
+        "controller_type": "steam_controller_wireless",
+        "report_type": 1,
+    }
+    assert steam_controller_profile("0003:000028DE:0000FFFF") is None
