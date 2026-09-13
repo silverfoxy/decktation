@@ -38,6 +38,15 @@ jobs:
         run: |
           node scripts/release-version.mjs check "$RELEASE_TAG"
 
+      - name: Set development version for master builds
+        if: github.ref == 'refs/heads/master'
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          BASE_VERSION="$(node scripts/release-version.mjs print)"
+          DEV_VERSION="$(node -e 'const [major, minor, patch] = process.argv[1].split(".").map(Number); console.log(`${major}.${minor}.${patch + 1}-dev.${process.argv[2].slice(0, 7)}`)' "$BASE_VERSION" "$COMMIT_SHA")"
+          node scripts/release-version.mjs set "$DEV_VERSION"
+
       - name: Download Decky CLI
         run: |
           curl -fL -o /tmp/decky-cli \

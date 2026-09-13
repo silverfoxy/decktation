@@ -261,11 +261,22 @@ render_pages_content() {
       "Decktation latest release" \
       "$PAGES_BASE_URL/releases/latest/decktation.zip" \
       "$PAGES_BASE_URL/releases/latest/metadata.json"
+  fi
+
+  if [ "$CLEANUP_ONLY" != "true" ] && { [ "$REF_TYPE" = "tag" ] || [ "$REF_NAME" = "master" ]; }; then
+    local catalog_artifact_url
+    if [ "$REF_TYPE" = "tag" ]; then
+      catalog_artifact_url="$PAGES_BASE_URL/releases/$RELEASE_TAG/decktation.zip"
+    else
+      catalog_artifact_url="$PAGES_BASE_URL/branches/master/decktation.zip"
+    fi
+    mkdir -p "$PAGES_DIR/store"
     python3 "$WORKSPACE_DIR/scripts/generate-store-catalog.py" \
       --plugin-manifest "$WORKSPACE_DIR/plugin.json" \
       --package-manifest "$WORKSPACE_DIR/package.json" \
       --artifact "$ZIP_SOURCE" \
-      --artifact-url "$PAGES_BASE_URL/releases/$RELEASE_TAG/decktation.zip" \
+      --artifact-url "$catalog_artifact_url" \
+      --github-repository "$GITHUB_REPOSITORY" \
       --output "$PAGES_DIR/store/plugins.json"
   fi
 

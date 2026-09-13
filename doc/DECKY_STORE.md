@@ -16,8 +16,11 @@ https://homebrew.imsilverfoxy.com/plugins.json
 
 Users can select Decky's Custom store channel and enter that URL to see,
 install, and update Decktation from the plugin browser. The catalog points to
-an immutable versioned ZIP and includes its SHA-256 hash. Branch builds remain
-available as direct downloads but are not advertised as stable updates.
+SHA-256-verified release ZIPs and retains older installable releases in the
+version selector. The latest `master` build is published as the next patch's
+SemVer prerelease (for example, `0.3.16-dev.abcdef0`) so Decky can distinguish
+it from the stable release. Other branch builds remain available as direct
+downloads but are not advertised as stable updates.
 
 ## Completed in the repository
 

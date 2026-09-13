@@ -17,6 +17,6 @@
       "accessibility"
     ],
     "description": "Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using faster-whisper.",
-    "image": "https://raw.githubusercontent.com/silverfoxy/decktation/master/logo.png"
+    "image": "https://raw.githubusercontent.com/silverfoxy/decktation/master/store-card.png"
   }
 }
