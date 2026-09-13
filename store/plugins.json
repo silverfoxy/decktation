@@ -13,12 +13,92 @@
       "gaming",
       "accessibility"
     ],
-    "image_url": "https://raw.githubusercontent.com/silverfoxy/decktation/master/logo.png",
+    "image_url": "https://raw.githubusercontent.com/silverfoxy/decktation/master/store-card.png",
     "versions": [
+      {
+        "name": "0.3.16-dev.a2aec28",
+        "hash": "094c6607465a11443527d08a1cee400af0783b232a7ae940b0d21315d3dbccaf",
+        "artifact": "https://silverfoxy.github.io/decktation/branches/master/decktation.zip"
+      },
       {
         "name": "0.3.15",
         "hash": "116cf6a050865b262fcfab6c57e2a2ee9ce8f2754a9439c4faaa1e58e8a4d4d5",
-        "artifact": "https://silverfoxy.github.io/decktation/releases/v0.3.15/decktation.zip"
+        "artifact": "https://github.com/silverfoxy/decktation/releases/download/v0.3.15/decktation.zip"
+      },
+      {
+        "name": "0.3.14",
+        "hash": "ac8521e54ce3c2a3c38ad13aa467d5073c842c55589672d1958ddd436ef635d5",
+        "artifact": "https://github.com/silverfoxy/decktation/releases/download/v0.3.14/decktation.zip"
+      },
+      {
+        "name": "0.3.10",
+        "hash": "59c61ed47e54842ff44e66c1e1c5175bffe7cbfbb010f2c566d9b8ec77c18360",
+        "artifact": "https://github.com/silverfoxy/decktation/releases/download/v0.3.10/decktation.zip"
+      },
+      {
+        "name": "0.3.9",
+        "hash": "b5d4743e0b0e473e377af06ac952e2fcd6e6f482767679442890f30bf83b51ce",
+        "artifact": "https://github.com/silverfoxy/decktation/releases/download/v0.3.9/decktation.zip"
+      },
+      {
+        "name": "0.3.8",
+        "hash": "021557839e35878cb4c9ae3ee62f74d9c7e2f5ecda84bbb0a952f9b05a85faac",
+        "artifact": "https://github.com/silverfoxy/decktation/releases/download/v0.3.8/decktation.zip"
+      },
+      {
+        "name": "0.3.7",
+        "hash": "5a5f1306dcfbafbde5bb255c4533ca9d6e0806b825328f7e0d23e8fbd592d43c",
+        "artifact": "https://github.com/silverfoxy/decktation/releases/download/v0.3.7/decktation.zip"
+      },
+      {
+        "name": "0.3.6",
+        "hash": "ab62d80270e8277ab65a87d5c884f84d3b63bcb0b3e0e6fc67af42de79405fc8",
+        "artifact": "https://github.com/silverfoxy/decktation/releases/download/v0.3.6/decktation.zip"
+      },
+      {
+        "name": "0.3.4",
+        "hash": "17c40c03466a7e29ba12a9f7a094f324ef4e8634f9ed64ccf240f8641f9dbe18",
+        "artifact": "https://github.com/silverfoxy/decktation/releases/download/v0.3.4/decktation.zip"
+      },
+      {
+        "name": "0.3.3",
+        "hash": "b88283ab996ba3985ee2c5351c07a785ef64314ca264e4e53a6622ce20f6c48b",
+        "artifact": "https://github.com/silverfoxy/decktation/releases/download/v0.3.3/decktation.zip"
+      },
+      {
+        "name": "0.3.2",
+        "hash": "4176f2c74983ee1751d62e99408d62f017b01cdaed89061cf8d3787908dfb937",
+        "artifact": "https://github.com/silverfoxy/decktation/releases/download/v0.3.2/decktation.zip"
+      },
+      {
+        "name": "0.3.1",
+        "hash": "eb0ae68ad42b6702a73290a154f67368f14400eec93a7250fc4597e1f54835dd",
+        "artifact": "https://github.com/silverfoxy/decktation/releases/download/v0.3.1/decktation.zip"
+      },
+      {
+        "name": "0.3.0",
+        "hash": "017dc17cd201ca3b9dc686fb1cf53b3aac8c418cbe854c7481569fe5a6a8e835",
+        "artifact": "https://github.com/silverfoxy/decktation/releases/download/v0.3.0/decktation.zip"
+      },
+      {
+        "name": "0.2.5",
+        "hash": "3abc4007794b3d895229e45c9cb764fb810db6eb850f3e5e86d484317e085d71",
+        "artifact": "https://github.com/silverfoxy/decktation/releases/download/v0.2.5/decktation.zip"
+      },
+      {
+        "name": "0.2.4",
+        "hash": "8853a2969f971c88c4c7137f2c7fa4b28ccc1b3feffcab8ab0d3d3eff4d0a9d1",
+        "artifact": "https://github.com/silverfoxy/decktation/releases/download/v0.2.4/decktation.zip"
+      },
+      {
+        "name": "0.2.3",
+        "hash": "71959f949776622a0e588b9e85006806ce724d06df2e37975fe4ddc7e11804e9",
+        "artifact": "https://github.com/silverfoxy/decktation/releases/download/v0.2.3/decktation.zip"
+      },
+      {
+        "name": "0.2.2",
+        "hash": "889c80e5435bdbba45d775cd8bf2af99f6b8942aa56353111a86a500f5d076a1",
+        "artifact": "https://github.com/silverfoxy/decktation/releases/download/v0.2.2/decktation.zip"
       }
     ]
   }
