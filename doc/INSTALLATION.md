@@ -37,7 +37,7 @@ plugin browser through its own GitHub Pages catalog:
 3. Enter this Custom Store URL:
 
    ```text
-   https://silverfoxy.github.io/decktation/store/plugins.json
+   https://homebrew.imsilverfoxy.com/plugins.json
    ```
 
 4. Open the plugin browser and install Decktation.

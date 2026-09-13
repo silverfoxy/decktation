@@ -54,7 +54,7 @@ notifications, select **Custom** under **Decky Settings → General → Store
 Channel**, then enter:
 
 ```text
-https://silverfoxy.github.io/decktation/store/plugins.json
+https://homebrew.imsilverfoxy.com/plugins.json
 ```
 
 The catalog is updated when a new version tag is published. Switching to a

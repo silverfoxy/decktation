@@ -11,7 +11,7 @@ Tagged releases also publish a single-plugin Decky catalog through GitHub
 Pages:
 
 ```text
-https://silverfoxy.github.io/decktation/store/plugins.json
+https://homebrew.imsilverfoxy.com/plugins.json
 ```
 
 Users can select Decky's Custom store channel and enter that URL to see,

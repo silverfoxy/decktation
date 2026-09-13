@@ -361,7 +361,7 @@ render_pages_content() {
       <div class="panel">
         <p><strong>Short install URL</strong><br><code>${PAGES_BASE_URL}/latest.zip</code></p>
         <p><strong>Latest release ZIP</strong><br><code>${PAGES_BASE_URL}/releases/latest/decktation.zip</code></p>
-        <p><strong>Decky Custom Store URL</strong><br><code>${PAGES_BASE_URL}/store/plugins.json</code></p>
+        <p><strong>Decky Custom Store URL</strong><br><code>https://homebrew.imsilverfoxy.com/plugins.json</code></p>
         <p><strong>Branch ZIP pattern</strong><br><code>${PAGES_BASE_URL}/branches/&lt;url-encoded-branch-name&gt;/decktation.zip</code></p>
       </div>
     </div>

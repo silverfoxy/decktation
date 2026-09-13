@@ -18,6 +18,7 @@ jobs:
         with:
           python-version: '3.13'
       - run: node scripts/release-version.mjs check
+      - run: node --test cloudflare/tests/*.test.js
       - run: pip install pytest sentry-sdk==2.66.0
       - run: pytest tests/ -v
       - run: python -m py_compile main.py backend/src/decktation_backend.py backend/src/wow_voice_chat.py backend/src/controller_listener.py backend/src/deck_hid.py backend/src/telemetry.py
