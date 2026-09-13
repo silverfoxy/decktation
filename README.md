@@ -47,6 +47,20 @@ For example, branch `feature/chat polish` becomes
 All dependencies and the private keyboard helper are pre-bundled in the
 release. No system packages or one-time `sudo` setup are required.
 
+### Install from the Decktation store
+
+To make Decktation appear in Decky's plugin browser and receive update
+notifications, select **Custom** under **Decky Settings → General → Store
+Channel**, then enter:
+
+```text
+https://silverfoxy.github.io/decktation/store/plugins.json
+```
+
+The catalog is updated when a new version tag is published. Switching to a
+custom store replaces the catalog shown by Decky's Default or Testing store;
+users can switch channels again at any time.
+
 ## Usage
 
 1. Open Quick Access Menu (... button on Steam Deck)

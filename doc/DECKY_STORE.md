@@ -5,6 +5,20 @@ the same build path used by the Decky Plugin Database. The store runs
 `decky plugin build -b` against the submitted repository commit. It does not
 run this repository's `.github/workflows/build.yml` first.
 
+## Decktation custom store
+
+Tagged releases also publish a single-plugin Decky catalog through GitHub
+Pages:
+
+```text
+https://silverfoxy.github.io/decktation/store/plugins.json
+```
+
+Users can select Decky's Custom store channel and enter that URL to see,
+install, and update Decktation from the plugin browser. The catalog points to
+an immutable versioned ZIP and includes its SHA-256 hash. Branch builds remain
+available as direct downloads but are not advertised as stable updates.
+
 ## Completed in the repository
 
 - `plugin.json` declares Decky API version 1 and has release-safe flags.

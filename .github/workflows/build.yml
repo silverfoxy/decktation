@@ -66,6 +66,15 @@ jobs:
           ! unzip -l build-output/decktation.zip | grep -q 'decktation/test_channels.py'
           ! unzip -l build-output/decktation.zip | grep -q 'decktation/test_audio.wav'
 
+      - name: Validate custom store catalog
+        run: |
+          DECKTATION_VERSION="$(node scripts/release-version.mjs print)"
+          python scripts/generate-store-catalog.py \
+            --artifact build-output/decktation.zip \
+            --artifact-url "https://silverfoxy.github.io/decktation/releases/v${DECKTATION_VERSION}/decktation.zip" \
+            --output /tmp/decktation-store.json
+          python -m json.tool /tmp/decktation-store.json >/dev/null
+
       - name: Upload CI build as a direct file
         uses: actions/upload-artifact@v7
         with:

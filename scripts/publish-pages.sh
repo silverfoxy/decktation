@@ -233,7 +233,8 @@ render_pages_content() {
   cleanup_deleted_branch_dirs
 
   if [ "$CLEANUP_ONLY" != "true" ] && [ "$REF_TYPE" = "tag" ]; then
-    mkdir -p "$PAGES_DIR/releases/$RELEASE_TAG" "$PAGES_DIR/releases/latest"
+    mkdir -p "$PAGES_DIR/releases/$RELEASE_TAG" "$PAGES_DIR/releases/latest" \
+      "$PAGES_DIR/store"
     cp "$ZIP_SOURCE" "$PAGES_DIR/releases/$RELEASE_TAG/decktation.zip"
     cp "$ZIP_SOURCE" "$PAGES_DIR/releases/latest/decktation.zip"
     # Short, stable install URL for Decky's "Install Plugin from URL" action.
@@ -260,6 +261,12 @@ render_pages_content() {
       "Decktation latest release" \
       "$PAGES_BASE_URL/releases/latest/decktation.zip" \
       "$PAGES_BASE_URL/releases/latest/metadata.json"
+    python3 "$WORKSPACE_DIR/scripts/generate-store-catalog.py" \
+      --plugin-manifest "$WORKSPACE_DIR/plugin.json" \
+      --package-manifest "$WORKSPACE_DIR/package.json" \
+      --artifact "$ZIP_SOURCE" \
+      --artifact-url "$PAGES_BASE_URL/releases/$RELEASE_TAG/decktation.zip" \
+      --output "$PAGES_DIR/store/plugins.json"
   fi
 
   cat >"$PAGES_DIR/index.html" <<EOF
@@ -354,6 +361,7 @@ render_pages_content() {
       <div class="panel">
         <p><strong>Short install URL</strong><br><code>${PAGES_BASE_URL}/latest.zip</code></p>
         <p><strong>Latest release ZIP</strong><br><code>${PAGES_BASE_URL}/releases/latest/decktation.zip</code></p>
+        <p><strong>Decky Custom Store URL</strong><br><code>${PAGES_BASE_URL}/store/plugins.json</code></p>
         <p><strong>Branch ZIP pattern</strong><br><code>${PAGES_BASE_URL}/branches/&lt;url-encoded-branch-name&gt;/decktation.zip</code></p>
       </div>
     </div>
