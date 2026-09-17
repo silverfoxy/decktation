@@ -5,7 +5,7 @@
 
     var React__default = /*#__PURE__*/_interopDefaultLegacy(React);
 
-    var _manifest = {"name":"Decktation","version":"0.3.10","author":"silverfoxy","flags":["_root"],"api_version":1,"publish":{"tags":["voice","dictation","speech-to-text","input","chat","gaming","accessibility"],"description":"Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using faster-whisper.","image":"https://raw.githubusercontent.com/silverfoxy/decktation/master/logo.png"}};
+    var _manifest = {"name":"Decktation","version":"0.3.15","author":"silverfoxy","flags":["_root"],"api_version":1,"publish":{"tags":["voice","dictation","speech-to-text","input","chat","gaming","accessibility"],"description":"Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using faster-whisper.","image":"https://raw.githubusercontent.com/silverfoxy/decktation/master/store-card.png"}};
 
     const manifest = _manifest;
     const API_VERSION = 2;
@@ -131,6 +131,7 @@
     const getLastTranscription = callable("get_last_transcription");
     const setConfirmModeRpc = callable("set_confirm_mode");
     const setManualSendRpc = callable("set_manual_send");
+    const setRememberLastChannelRpc = callable("set_remember_last_channel");
     const setShareDiagnosticsRpc = callable("set_share_diagnostics");
     const setActivePresetRpc = callable("set_active_preset");
     const setModelSizeRpc = callable("set_model_size");
@@ -458,6 +459,7 @@
         const [presets, setPresets] = React.useState([]);
         const [confirmMode, setConfirmMode] = React.useState(false);
         const [manualSend, setManualSend] = React.useState(false);
+        const [rememberLastChannel, setRememberLastChannel] = React.useState(false);
         const [shareDiagnostics, setShareDiagnostics] = React.useState(false);
         const [modelSize, setModelSize] = React.useState("base");
         const [transcriptionLanguage, setTranscriptionLanguage] = React.useState("auto");
@@ -490,6 +492,9 @@
                         }
                         if (config.manualSend !== undefined) {
                             setManualSend(config.manualSend);
+                        }
+                        if (config.rememberLastChannel !== undefined) {
+                            setRememberLastChannel(config.rememberLastChannel);
                         }
                         if (config.shareDiagnostics !== undefined) {
                             setShareDiagnostics(config.shareDiagnostics);
@@ -598,6 +603,15 @@
                                 void stopRecording();
                                 logic.recording = false;
                                 setRecording(false);
+                            }
+                        } })),
+                React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                    React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: "Remember channel", description: "Reuse the last spoken channel", checked: rememberLastChannel, onChange: async (e) => {
+                            setRememberLastChannel(e);
+                            const result = await setRememberLastChannelRpc(e);
+                            if (!result.success) {
+                                setRememberLastChannel(!e);
+                                setRpcError(result.error || "Could not update channel setting");
                             }
                         } })),
                 enabled && modelReady && (React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,

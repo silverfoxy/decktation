@@ -33,6 +33,7 @@ const stopRecording = callable<[send?: boolean], RpcResponse>("stop_recording");
 const getLastTranscription = callable<[], RpcResponse>("get_last_transcription");
 const setConfirmModeRpc = callable<[enabled: boolean], RpcResponse>("set_confirm_mode");
 const setManualSendRpc = callable<[enabled: boolean], RpcResponse>("set_manual_send");
+const setRememberLastChannelRpc = callable<[enabled: boolean], RpcResponse>("set_remember_last_channel");
 const setShareDiagnosticsRpc = callable<[enabled: boolean], RpcResponse>("set_share_diagnostics");
 const setActivePresetRpc = callable<[game: string], RpcResponse>("set_active_preset");
 const setModelSizeRpc = callable<[modelSize: string], RpcResponse>("set_model_size");
@@ -381,6 +382,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [presets, setPresets] = useState<DropdownOption[]>([]);
 	const [confirmMode, setConfirmMode] = useState<boolean>(false);
 	const [manualSend, setManualSend] = useState<boolean>(false);
+	const [rememberLastChannel, setRememberLastChannel] = useState<boolean>(false);
 	const [shareDiagnostics, setShareDiagnostics] = useState<boolean>(false);
 	const [modelSize, setModelSize] = useState<string>("base");
 	const [transcriptionLanguage, setTranscriptionLanguage] = useState<string>("auto");
@@ -415,6 +417,9 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					}
 					if (config.manualSend !== undefined) {
 						setManualSend(config.manualSend);
+					}
+					if (config.rememberLastChannel !== undefined) {
+						setRememberLastChannel(config.rememberLastChannel);
 					}
 					if (config.shareDiagnostics !== undefined) {
 						setShareDiagnostics(config.shareDiagnostics);
@@ -542,6 +547,22 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 								void stopRecording();
 								logic.recording = false;
 								setRecording(false);
+							}
+						}}
+					/>
+				</PanelSectionRow>
+
+				<PanelSectionRow>
+					<ToggleField
+						label="Remember channel"
+						description="Reuse the last spoken channel"
+						checked={rememberLastChannel}
+						onChange={async (e) => {
+							setRememberLastChannel(e);
+							const result = await setRememberLastChannelRpc(e);
+							if (!result.success) {
+								setRememberLastChannel(!e);
+								setRpcError(result.error || "Could not update channel setting");
 							}
 						}}
 					/>

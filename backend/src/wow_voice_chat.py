@@ -18,7 +18,7 @@ import wave
 
 
 class WoWVoiceChat:
-    def __init__(self, context_file="wow_context.json", sample_rate=44100, default_channel="say", lazy_load=False, test_mode=False, test_audio_file=None, preset=None, confirm_delay=0, manual_send=False, transcription_language=None, model_size="base", diagnostic_reporter=None):
+    def __init__(self, context_file="wow_context.json", sample_rate=44100, default_channel="say", lazy_load=False, test_mode=False, test_audio_file=None, preset=None, confirm_delay=0, manual_send=False, transcription_language=None, model_size="base", diagnostic_reporter=None, remember_last_channel=False, last_channel=None, channel_rememberer=None):
         self.preset = preset or {}
         self.diagnostic_reporter = diagnostic_reporter
         self.context_file = Path(context_file)
@@ -27,6 +27,9 @@ class WoWVoiceChat:
         self.default_channel = self.preset.get("default_channel", default_channel)
         self.confirm_delay = confirm_delay  # seconds to wait before auto-sending (0 = disabled)
         self.manual_send = manual_send  # if True, skip final Enter press (user sends manually)
+        self.remember_last_channel = remember_last_channel
+        self.last_channel = last_channel
+        self.channel_rememberer = channel_rememberer
         self.transcription_language = None if transcription_language in (None, "", "auto") else transcription_language
         self.model_size = model_size
         self.pending_text = None
@@ -63,6 +66,8 @@ class WoWVoiceChat:
 
         # Chat channel mappings - from preset or loaded config
         self.channel_commands = self.preset.get("channels") or self.default_channel_commands
+        if self.last_channel not in self.channel_commands:
+            self.last_channel = None
 
     def _report_diagnostic(self, name, error=None):
         if self.diagnostic_reporter:
@@ -95,8 +100,10 @@ class WoWVoiceChat:
             config_file = plugin_root / "defaults" / "channel_languages.json"
         if not config_file.exists():
             # Fallback: build English-only triggers
-            for channel in self.default_channel_commands.keys():
-                self.channel_triggers[channel] = channel
+            fallback_channels = self.preset.get("channels") or self.default_channel_commands
+            for channel in fallback_channels:
+                # Preset keys use underscores where the spoken form uses spaces.
+                self.channel_triggers[channel.replace("_", " ")] = channel
             return
 
         try:
@@ -127,8 +134,9 @@ class WoWVoiceChat:
         except Exception as e:
             print(f"Warning: Could not load language config: {e}")
             # Use default English-only triggers
-            for channel in self.default_channel_commands.keys():
-                self.channel_triggers[channel] = channel
+            fallback_channels = self.preset.get("channels") or self.default_channel_commands
+            for channel in fallback_channels:
+                self.channel_triggers[channel.replace("_", " ")] = channel
 
     def _load_model(self):
         """Load the Whisper model (can be called lazily)"""
@@ -168,6 +176,34 @@ class WoWVoiceChat:
         self.preset = preset
         self.default_channel = preset.get("default_channel", "say")
         self.channel_commands = preset.get("channels") or {"say": "", "type": ""}
+        if self.last_channel not in self.channel_commands:
+            self.last_channel = None
+
+    def set_remember_last_channel(self, enabled, last_channel=None):
+        """Configure whether unprefixed messages reuse the last spoken channel."""
+        self.remember_last_channel = bool(enabled)
+        self.last_channel = (
+            last_channel if self.remember_last_channel and last_channel in self.channel_commands
+            else None
+        )
+
+    def _parse_channel_and_text(self, text):
+        """Return the parsed channel, message, and whether a channel was spoken."""
+        text = text.strip()
+        text_lower = text.lower()
+
+        for trigger, channel_name in sorted(
+            self.channel_triggers.items(), key=lambda item: len(item[0]), reverse=True
+        ):
+            prefixes = [f"{trigger}:", f"{trigger},", f"{trigger}.", f"{trigger} "]
+            for prefix in prefixes:
+                if text_lower.startswith(prefix) and channel_name in self.channel_commands:
+                    return channel_name, text[len(prefix):].strip(), True
+
+        channel = self.last_channel if (
+            self.remember_last_channel and self.last_channel in self.channel_commands
+        ) else self.default_channel
+        return channel, text, False
 
     def set_transcription_options(self, language=None):
         """Update faster-whisper transcription options without reloading the model."""
@@ -419,32 +455,8 @@ class WoWVoiceChat:
         - "Party, I need mana" -> (party, "I need mana")
         - "hello world" -> (default_channel, "hello world")
         """
-        text = text.strip()
-        text_lower = text.lower()
-
-        # Check for channel trigger at start (case-insensitive)
-        # Check longer phrases first so "guild one" wins over "guild".
-        for trigger, channel_name in sorted(
-            self.channel_triggers.items(), key=lambda item: len(item[0]), reverse=True
-        ):
-            # Match various separators: "party:", "party,", "party ", "party."
-            prefixes = [
-                f"{trigger}:",
-                f"{trigger},",
-                f"{trigger}.",
-                f"{trigger} ",
-            ]
-
-            for prefix in prefixes:
-                if text_lower.startswith(prefix):
-                    # Only use this channel if it exists in the current preset
-                    if channel_name in self.channel_commands:
-                        # Extract the message after the prefix
-                        message = text[len(prefix):].strip()
-                        return channel_name, message
-
-        # No channel prefix found, use default
-        return self.default_channel, text
+        channel, message, _ = self._parse_channel_and_text(text)
+        return channel, message
 
     def auto_detect_channel(self):
         """Auto-detect best channel based on context"""
@@ -472,7 +484,11 @@ class WoWVoiceChat:
 
         # Parse channel from text if not explicitly provided
         if channel is None:
-            channel, text = self.parse_channel_and_text(text)
+            channel, text, explicitly_selected = self._parse_channel_and_text(text)
+            if explicitly_selected and self.remember_last_channel:
+                self.last_channel = channel
+                if self.channel_rememberer:
+                    self.channel_rememberer(channel)
 
         # Get the channel command
         channel_cmd = self.channel_commands.get(channel, "/s ")

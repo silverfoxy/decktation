@@ -147,6 +147,8 @@ DEFAULT_BUTTON_CONFIG = {
     "game": "wow",
     "confirmMode": False,
     "manualSend": False,
+    "rememberLastChannel": False,
+    "lastChannel": None,
     "shareDiagnostics": False,
     "modelSize": "base",
     "transcriptionLanguage": "auto",
@@ -543,6 +545,8 @@ class Plugin:
 
             confirm_mode = saved_config.get("confirmMode", False)
             manual_send = saved_config.get("manualSend", False)
+            remember_last_channel = saved_config.get("rememberLastChannel", False)
+            last_channel = saved_config.get("lastChannel")
             model_size = saved_config.get("modelSize", "base")
             transcription_language = saved_config.get("transcriptionLanguage", "auto")
 
@@ -557,6 +561,9 @@ class Plugin:
                 preset=active_preset,
                 confirm_delay=2.0 if confirm_mode else 0,
                 manual_send=manual_send,
+                remember_last_channel=remember_last_channel,
+                last_channel=last_channel,
+                channel_rememberer=Plugin._remember_channel,
                 model_size=model_size,
                 transcription_language=(
                     None if transcription_language == "auto" else transcription_language
@@ -746,6 +753,35 @@ class Plugin:
             logger.error(f"Error setting manual send mode: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
 
+    @staticmethod
+    def _remember_channel(channel):
+        """Persist a channel selected by a spoken prefix."""
+        try:
+            config = _read_button_config()
+            if config.get("rememberLastChannel", False):
+                config["lastChannel"] = channel
+                _write_button_config(config)
+        except Exception as e:
+            logger.error(f"Error remembering channel: {e}")
+
+    async def set_remember_last_channel(self, enabled: bool):
+        """Enable or disable reuse of the most recently spoken chat channel."""
+        try:
+            config = _read_button_config()
+            config["rememberLastChannel"] = bool(enabled)
+            # Enabling starts fresh; disabling must not influence later messages.
+            config["lastChannel"] = None
+            _write_button_config(config)
+
+            if Plugin.voice_service:
+                Plugin.voice_service.set_remember_last_channel(enabled)
+
+            logger.info(f"Remember last channel {'enabled' if enabled else 'disabled'}")
+            return {"success": True}
+        except Exception as e:
+            logger.error(f"Error setting remember last channel: {traceback.format_exc()}")
+            return {"success": False, "error": str(e)}
+
     async def set_transcription_options(self, language: str = "auto", translateToEnglish: bool = False):
         """Set Faster Whisper language selection."""
         try:
@@ -827,11 +863,15 @@ class Plugin:
 
             config = _read_button_config()
             config["game"] = game
+            config["lastChannel"] = None
             _write_button_config(config)
 
             # Update running voice service
             if Plugin.voice_service:
                 Plugin.voice_service.set_preset(_game_presets[game])
+                Plugin.voice_service.set_remember_last_channel(
+                    config.get("rememberLastChannel", False)
+                )
             Plugin.active_preset = game
 
             logger.info(f"Switched game preset to: {game}")
