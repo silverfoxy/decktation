@@ -70,6 +70,8 @@ try:
     from telemetry import (
         breadcrumb as telemetry_breadcrumb,
         capture_error as telemetry_capture_error,
+        controller_event as telemetry_controller_event,
+        clear_controller_context as telemetry_clear_controller_context,
         flush as telemetry_flush,
         finish_dictation_trace as telemetry_finish_dictation,
         initialize as initialize_telemetry,
@@ -332,17 +334,8 @@ class Plugin:
             for line in process.stdout:
                 message = line.rstrip()
                 logger.info(f"Child process: {message}")
-                if telemetry:
-                    if "raw HID interface not found" in message:
-                        telemetry_capture_error(
-                            "controller.device_not_found",
-                            controller_type=Plugin._controller_type(),
-                        )
-                    elif "Raw HID disconnected:" in message:
-                        telemetry_capture_error(
-                            "controller.hid_disconnected",
-                            controller_type=Plugin._controller_type(),
-                        )
+                if telemetry_available:
+                    telemetry_controller_event(message)
         except Exception as e:
             logger.warning(f"Stopped reading child-process output: {e}")
 
@@ -406,6 +399,8 @@ class Plugin:
     @staticmethod
     def stop_controller_listener():
         """Stop the external controller listener process"""
+        if telemetry_available:
+            telemetry_clear_controller_context()
         try:
             # Kill by PID file
             if os.path.exists(PID_FILE):
@@ -507,6 +502,7 @@ class Plugin:
                             telemetry_capture_error(
                                 "controller.listener_crashed",
                                 controller_type=Plugin._controller_type(),
+                                exit_code=Plugin.listener_process.returncode,
                             )
                         if not Plugin.start_controller_listener() and telemetry:
                             telemetry_capture_error(

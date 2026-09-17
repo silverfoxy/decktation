@@ -1,6 +1,128 @@
 from unittest.mock import MagicMock
+import json
+
+import pytest
 
 import telemetry
+
+
+@pytest.fixture(autouse=True)
+def clean_controller_context(monkeypatch):
+    monkeypatch.setattr(telemetry, '_controller_context', {})
+
+
+def controller_message(event='active_changed', **changes):
+    controller = {
+        'controller_type': 'xbox', 'input_backend': 'evdev', 'connection': 'bluetooth',
+        'vendor_id': 0x045e, 'product_id': 0x0b13, 'hardware_version': 1, 'bus': 5,
+        'supported_buttons': ['A', 'L1', 'R1'], 'combo_supported': True,
+        'input_received': True, 'resync_count': 0,
+        'name': 'Private controller name', 'serial': 'secret-serial',
+        'address': '01:02:03:04:05:06',
+    }
+    return 'DECKTATION_CONTROLLER ' + json.dumps({
+        'event': event, 'current_controller': controller, 'sources': [controller],
+        'configured_buttons': ['L1', 'R1'], **changes,
+    })
+
+
+def test_controller_snapshot_is_allowlisted_even_with_sharing_disabled(monkeypatch):
+    monkeypatch.setattr(telemetry, '_enabled', False)
+    add = MagicMock()
+    capture = MagicMock()
+    monkeypatch.setattr(telemetry.sentry_sdk, 'add_breadcrumb', add)
+    monkeypatch.setattr(telemetry.sentry_sdk, 'capture_message', capture)
+    telemetry.controller_event(controller_message('open_failed', errno=13))
+    assert telemetry._controller_context['current_controller']['product_id'] == 0x0b13
+    assert telemetry._controller_context['errno'] == 13
+    serialized = json.dumps(telemetry._controller_context)
+    assert 'Private' not in serialized
+    assert 'secret-serial' not in serialized
+    assert '01:02' not in serialized
+    add.assert_not_called()
+    capture.assert_not_called()
+
+
+@pytest.mark.parametrize('message', [
+    'ordinary child output', 'DECKTATION_CONTROLLER invalid',
+    'DECKTATION_CONTROLLER []', 'DECKTATION_CONTROLLER {"event": []}',
+    'DECKTATION_CONTROLLER {"event": "connected", "sources": null}',
+])
+def test_malformed_controller_messages_are_ignored(message):
+    telemetry.controller_event(message)
+    assert telemetry._controller_context == {}
+
+
+def test_controller_disconnect_clears_current_controller(monkeypatch):
+    monkeypatch.setattr(telemetry, '_enabled', False)
+    telemetry.controller_event(controller_message())
+    telemetry.controller_event(controller_message('disconnected', current_controller={}, sources=[]))
+    assert 'controller_type' not in telemetry._controller_context['current_controller']
+    assert telemetry._controller_context['source_count'] == 0
+    telemetry.clear_controller_context()
+    assert telemetry._controller_context == {}
+
+
+def test_real_sdk_captures_controller_errors_traces_and_consent(monkeypatch):
+    """Exercise the pinned SDK and scrub hooks with an in-memory transport."""
+    from sentry_sdk.transport import Transport
+
+    envelopes = []
+    class MemoryTransport(Transport):
+        def capture_envelope(self, envelope):
+            envelopes.append(envelope)
+
+    sdk = telemetry.sentry_sdk
+    original_init = sdk.init
+    previous_client = sdk.get_client()
+    options = {}
+    def initialize(**kwargs):
+        options.update(kwargs)
+        kwargs.update(transport=MemoryTransport(), traces_sample_rate=1.0)
+        return original_init(**kwargs)
+    monkeypatch.setattr(sdk, 'init', initialize)
+    monkeypatch.setattr(telemetry, '_enabled', False)
+    monkeypatch.setattr(telemetry, '_captured_errors', set())
+    try:
+        with sdk.isolation_scope():
+            telemetry.set_enabled(True, 'test-version')
+            telemetry.controller_event(controller_message())
+            telemetry.controller_event(controller_message('open_failed', errno=13, input_backend='evdev'))
+            telemetry.capture_error('recording.start_failed', RuntimeError('private speech'),
+                                    transcription='private speech')
+            transaction = telemetry.start_dictation_trace('wow', 'unknown')
+            # A subsequent disconnect must not rewrite the trace's starting controller.
+            telemetry.controller_event(controller_message('disconnected', current_controller={}, sources=[]))
+            telemetry.finish_dictation_trace(transaction, True)
+            telemetry.set_enabled(False, 'test-version')
+            count = len(envelopes)
+            telemetry.controller_event(controller_message('open_failed', errno=13))
+            telemetry.capture_error('after.optout')
+            assert telemetry.start_dictation_trace('wow', 'xbox') is None
+            assert len(envelopes) == count
+
+        events = [item.payload.json for envelope in envelopes for item in envelope.items
+                  if item.headers.get('type') in ('event', 'transaction')]
+        assert len(events) == 3
+        errors = [event for event in events if event.get('type') != 'transaction']
+        for event in errors:
+            assert event['tags']['controller_type'] == 'xbox'
+            assert event['tags']['input_backend'] == 'evdev'
+            assert event['contexts']['controller']['configured_buttons'] == ['L1', 'R1']
+        assert errors[0]['contexts']['controller']['errno'] == 13
+        trace = next(event for event in events if event.get('type') == 'transaction')
+        assert trace['tags']['controller_type'] == 'xbox'
+        assert trace['contexts']['controller']['current_controller']['product_id'] == 0x0b13
+        assert trace['tags']['success'] is True
+        assert trace['release'] == 'decktation@test-version'
+        assert options['default_integrations'] is False
+        assert options['send_default_pii'] is False
+        serialized = json.dumps(events)
+        for private in ('private speech', 'Private controller name', 'secret-serial', '01:02:03:04:05:06'):
+            assert private not in serialized
+    finally:
+        sdk.get_client().close(timeout=0)
+        sdk.get_global_scope().set_client(previous_client)
 
 
 def test_dictation_trace_contains_only_requested_diagnostics(monkeypatch):

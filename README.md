@@ -161,6 +161,20 @@ Available buttons:
 - **L4, R4, L5, R5** (Steam Deck back grips, detected through raw HID)
 - **A, B, X, Y** (face buttons)
 
+Controller input combines Linux evdev gamepad events with Valve raw HID reports.
+Xbox and other Linux gamepads can use face buttons, bumpers, and triggers without
+a device-ID allowlist. Steam Deck raw input preserves L4/R4/L5/R5 and combos
+mixing grips with other buttons, independently of Steam Input layouts. Original
+Steam Controllers retain raw L5/R5 grip support on wired/USB receiver connections;
+other connections can use evdev when a gamepad is exposed by Linux or Steam Input.
+Generic evdev input follows the exposed gamepad layout; a keyboard/mouse-only
+Steam Input layout may not expose usable gamepad buttons. Third-party paddles
+are not universally exposed as distinct buttons, so use a standard-button combo
+on those controllers. Face-button names follow Xbox positions.
+
+Controllers are detected automatically when connected. Each combo must be held
+on one input device; disconnecting it releases push-to-talk.
+
 ## Use Cases
 
 ### Gaming
@@ -213,7 +227,7 @@ See `doc/TESTING_GUIDE.md` for setup instructions.
 - **Speech recognition**: faster-whisper (CTranslate2 backend)
 - **Model**: base (150MB, ~2-4s transcription time)
 - **Input**: Steam Deck microphone or connected headset
-- **Controller input**: Steam Deck raw HID reports (independent of per-game Steam Input layouts)
+- **Controller input**: Linux evdev gamepads plus Valve raw HID for physical Deck controls and grips
 - **Output**: Keyboard simulation via ydotool (bundled)
 - **Game presets**: `defaults/game_presets.json` — data-driven, no code changes needed to add games
 - **Dependencies**: Pre-bundled Python 3.11 libraries in `lib/` folder
@@ -227,7 +241,7 @@ npm run build         # Compile TypeScript to dist/index.js
 npm run watch         # Watch mode for development
 
 # Unit tests (no hardware required)
-python3 -m venv .venv && .venv/bin/pip install pytest
+python3 -m venv .venv && .venv/bin/pip install pytest sentry-sdk==2.66.0
 .venv/bin/pytest tests/ -v
 ```
 
@@ -246,8 +260,13 @@ CI runs unit tests and the TypeScript build on every push via GitHub Actions.
   to Sentry to help diagnose failures. It excludes audio, transcription text,
   WoW context, credentials, device/host identifiers, IP addresses, and paths
   containing the local user name. Diagnostics include the plugin release,
-  error category/type, selected game preset, controller type, and whether a
-  dictation operation succeeded.
+  error category/type, selected game preset, and whether dictation succeeded.
+  Controller diagnostics include family, vendor/product IDs (model identifiers,
+  not unique serials), USB/Bluetooth/virtual connection, evdev/raw HID backend,
+  configured combo and supported buttons, connected input-source count, first
+  input received, dropped-event recovery count, connection lifecycle, and
+  numeric input errors or listener exit code. Controller names, serial numbers,
+  Bluetooth addresses, and individual button-press streams are not uploaded.
 - You can disable diagnostics at any time from the plugin’s Diagnostics
   section; no diagnostics connection is initialized while the setting is off.
 
@@ -259,6 +278,8 @@ devices required by push-to-talk and text input:
 - It reads Valve raw controller reports from `/dev/hidraw*` so the configured
   physical button combination works independently of a game’s Steam Input
   layout.
+- It also reads gamepad events from `/dev/input/event*` for other controllers,
+  without exclusively grabbing devices or changing their mappings.
 - It runs its bundled `ydotoold` helper against `/dev/uinput` to simulate the
   keystrokes that enter the transcription in the active window. The helper uses
   a private, owner-only socket in `/tmp` and is stopped when the plugin unloads.
