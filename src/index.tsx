@@ -552,22 +552,6 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					/>
 				</PanelSectionRow>
 
-				<PanelSectionRow>
-					<ToggleField
-						label="Remember channel"
-						description="Reuse the last spoken channel"
-						checked={rememberLastChannel}
-						onChange={async (e) => {
-							setRememberLastChannel(e);
-							const result = await setRememberLastChannelRpc(e);
-							if (!result.success) {
-								setRememberLastChannel(!e);
-								setRpcError(result.error || "Could not update channel setting");
-							}
-						}}
-					/>
-				</PanelSectionRow>
-
 				{enabled && modelReady && (
 					<PanelSectionRow>
 						<div style={{
@@ -766,6 +750,22 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 						onChange={async (e) => {
 							setManualSend(e);
 							await setManualSendRpc(e);
+						}}
+					/>
+				</PanelSectionRow>
+
+				<PanelSectionRow>
+					<ToggleField
+						label="Remember channel"
+						description="Reuse the last spoken channel"
+						checked={rememberLastChannel}
+						onChange={async (e) => {
+							setRememberLastChannel(e);
+							const result = await setRememberLastChannelRpc(e);
+							if (!result.success) {
+								setRememberLastChannel(!e);
+								setRpcError(result.error || "Could not update channel setting");
+							}
 						}}
 					/>
 				</PanelSectionRow>

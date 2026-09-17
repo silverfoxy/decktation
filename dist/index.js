@@ -605,15 +605,6 @@
                                 setRecording(false);
                             }
                         } })),
-                React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                    React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: "Remember channel", description: "Reuse the last spoken channel", checked: rememberLastChannel, onChange: async (e) => {
-                            setRememberLastChannel(e);
-                            const result = await setRememberLastChannelRpc(e);
-                            if (!result.success) {
-                                setRememberLastChannel(!e);
-                                setRpcError(result.error || "Could not update channel setting");
-                            }
-                        } })),
                 enabled && modelReady && (React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                     React__default["default"].createElement("div", { style: {
                             padding: '12px',
@@ -727,6 +718,15 @@
                     React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: "Manual", description: "You press Enter", checked: manualSend, onChange: async (e) => {
                             setManualSend(e);
                             await setManualSendRpc(e);
+                        } })),
+                React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                    React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: "Remember channel", description: "Reuse the last spoken channel", checked: rememberLastChannel, onChange: async (e) => {
+                            setRememberLastChannel(e);
+                            const result = await setRememberLastChannelRpc(e);
+                            if (!result.success) {
+                                setRememberLastChannel(!e);
+                                setRpcError(result.error || "Could not update channel setting");
+                            }
                         } })),
                 React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                     React__default["default"].createElement("div", { style: {
