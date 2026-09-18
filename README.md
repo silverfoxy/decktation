@@ -226,6 +226,45 @@ privileges.
 
 ### Button combo not detected
 
+The button preview shows the last button decoded by the backend, using the
+same mappings as recording combos. It stays visible after release so short
+presses are not missed between status polls. Updates can take about one second.
+
+#### Custom controller mappings
+
+Create `controller_mappings.json` in the plugin settings directory (normally
+`/home/deck/homebrew/settings/decktation/`). Each key is a lowercase hexadecimal
+`bus:vendor:product` ID, with four digits per component. For example, this
+explicitly maps X/Y for the Bluetooth Xbox `045e:02fd`:
+
+```json
+{
+  "0005:045e:02fd": {
+    "0x133": "X",
+    "0x134": "Y"
+  }
+}
+```
+
+Values may be `A`, `B`, `X`, `Y`, `L1`, `R1`, `L2`, or `R2`. Keys are Linux
+evdev button codes written as hex strings (not Steam button IDs). Unspecified
+codes retain their built-in mapping. This config overrides digital buttons;
+analog trigger axes still use automatic detection. Controllers must expose
+the standard A/B capabilities to be discovered.
+
+Use controller diagnostics and `Controller input` log lines to identify the
+device and its raw codes. Restart the plugin or reconnect the controller after
+editing; mappings are read when devices open. Invalid overrides are logged and
+ignored. USB and Bluetooth IDs can differ, and Steam's virtual controller is a
+separate device with its own mapping.
+
+Xbox evdev devices and Steam's virtual Xbox pads use Xbox X/Y button labels;
+other evdev gamepads use the default positional mapping. Steam Deck raw HID
+input is decoded separately. Button-change logs include the device path,
+decoded held buttons, and held evdev key codes to distinguish physical input
+from Steam's virtual output. If a controller still mismatches, capture separate
+X and Y presses from the same device before changing its mapping.
+
 - Try a different button combination in the plugin UI
 - Rear grip buttons are supported on Steam Deck hardware through raw HID
 - Check `/home/deck/homebrew/logs/decktation/*.log` for controller listener errors

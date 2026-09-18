@@ -5,7 +5,7 @@
 
     var React__default = /*#__PURE__*/_interopDefaultLegacy(React);
 
-    var _manifest = {"name":"Decktation","version":"0.3.15","author":"silverfoxy","flags":["_root"],"api_version":1,"publish":{"tags":["voice","dictation","speech-to-text","input","chat","gaming","accessibility"],"description":"Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using faster-whisper.","image":"https://raw.githubusercontent.com/silverfoxy/decktation/master/store-card.png"}};
+    var _manifest = {"name":"Decktation","version":"0.3.15","author":"silverfoxy","flags":["root"],"api_version":1,"publish":{"tags":["voice","dictation","speech-to-text","input","chat","gaming","accessibility"],"description":"Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using faster-whisper.","image":"https://raw.githubusercontent.com/silverfoxy/decktation/master/store-card.png"}};
 
     const manifest = _manifest;
     const API_VERSION = 2;
@@ -137,36 +137,10 @@
     const setModelSizeRpc = callable("set_model_size");
     const setTranscriptionOptionsRpc = callable("set_transcription_options");
     const setButtonConfig = callable("set_button_config");
-    // Button IDs emitted by SteamClient.Input.RegisterForControllerInputMessages.
-    // These match Steam's ControllerInputGamepadButton enum as observed by the
-    // button-test callback. Keep the rear buttons in physical left-to-right order.
-    const CONTROLLER_BUTTON_NAMES = {
-        0: "A",
-        1: "B",
-        2: "X",
-        3: "Y",
-        26: "L2",
-        27: "R2",
-        28: "L2",
-        29: "R2",
-        30: "L1",
-        31: "R1",
-        32: "L5",
-        33: "R5",
-        44: "L4",
-        45: "R4",
-    };
-    // L5 = bit 15, R5 = bit 16 in ulButtons (same as antiquitte/decky-dictation)
-    const L5_MASK = 1 << 15;
     class DecktationLogic {
         constructor() {
             this.enabled = false;
             this.recording = false;
-            this.lastButtonState = "None";
-            this.inputRegistered = false;
-            this.inputError = "";
-            this.onButtonChange = null;
-            this.l5Held = false;
             this.showNotifications = true;
             this.prevRecordingStartCount = 0;
             this.prevPendingText = "";
@@ -235,64 +209,6 @@
                     window.NotificationStore.ProcessNotification(info, toastData, 0);
                 }
                 catch (_e) { }
-            };
-            // Handler for RegisterForControllerStateChanges (antiquitte style)
-            this.handleControllerState = (val) => {
-                if (!val || val.length === 0)
-                    return;
-                const inputs = val[0];
-                if (!inputs)
-                    return;
-                const ulButtons = inputs.ulButtons || 0;
-                const l5Pressed = (ulButtons & L5_MASK) !== 0;
-                // Debug: show button state
-                this.lastButtonState = l5Pressed ? "L5" : "None";
-                if (this.onButtonChange)
-                    this.onButtonChange();
-                if (!this.enabled) {
-                    return;
-                }
-                // Push-to-talk: L5 held = recording
-                if (l5Pressed && !this.l5Held) {
-                    this.l5Held = true;
-                    this.recording = true;
-                    // Disable system buttons temporarily
-                    deckyFrontendLib.Router.DisableHomeAndQuickAccessButtons();
-                    setTimeout(() => {
-                        deckyFrontendLib.Router.EnableHomeAndQuickAccessButtons();
-                    }, 1000);
-                    startRecording();
-                    this.notify("Decktation", 1500, "Recording...");
-                }
-                else if (!l5Pressed && this.l5Held) {
-                    this.l5Held = false;
-                    this.recording = false;
-                    stopRecording();
-                    this.notify("Decktation", 1500, "Transcribing...");
-                }
-            };
-            this.updateButtonPreview = (gamepadButton, isButtonPressed) => {
-                const buttonName = CONTROLLER_BUTTON_NAMES[gamepadButton] || `Button ${gamepadButton}`;
-                this.lastButtonState = isButtonPressed ? buttonName : "None";
-                if (this.onButtonChange)
-                    this.onButtonChange();
-            };
-            // Steam has shipped both a positional callback and a batched message callback.
-            // Support both so the preview keeps working across Steam client versions.
-            this.handleButtonInput = (...args) => {
-                if (Array.isArray(args[0])) {
-                    for (const message of args[0]) {
-                        if (message && typeof message.nA === "number") {
-                            this.updateButtonPreview(message.nA, Boolean(message.bS));
-                        }
-                    }
-                    return;
-                }
-                const gamepadButton = args[1];
-                const isButtonPressed = args[2];
-                if (typeof gamepadButton === "number") {
-                    this.updateButtonPreview(gamepadButton, Boolean(isButtonPressed));
-                }
             };
             this.testRecording = async (onComplete) => {
                 this.notify("Decktation", 1000, "Recording for 3 seconds...");
@@ -453,6 +369,7 @@
         const [modelLoading, setModelLoading] = React.useState(false);
         const [inputReady, setInputReady] = React.useState(true);
         const [buttonState, setButtonState] = React.useState("None");
+        const [controllerReady, setControllerReady] = React.useState(false);
         const [buttons, setButtons] = React.useState(["L1", "R1"]);
         const [showNotifications, setShowNotifications] = React.useState(true);
         const [activePreset, setActivePreset] = React.useState("wow");
@@ -469,9 +386,6 @@
         React.useEffect(() => {
             setEnabled(logic.enabled);
             setRecording(logic.recording);
-            logic.onButtonChange = () => {
-                setButtonState(logic.lastButtonState);
-            };
             // Load button configuration, settings, and active game preset
             getButtonConfig().then((result) => {
                 if (result.success) {
@@ -525,9 +439,6 @@
                     setPresets(opts);
                 }
             }).catch((error) => setRpcError(String(error)));
-            return () => {
-                logic.onButtonChange = null;
-            };
         }, []);
         React.useEffect(() => {
             let cancelled = false;
@@ -535,7 +446,11 @@
             const poll = async () => {
                 try {
                     const result = await getStatus();
+                    if (cancelled)
+                        return;
                     if (result.success) {
+                        setButtonState(result.detected_button || "None");
+                        setControllerReady(result.controller_ready === true);
                         setRpcError("");
                         setServiceReady(result.service_ready);
                         setModelReady(result.model_ready);
@@ -546,10 +461,12 @@
                         }
                     }
                     else {
+                        setControllerReady(false);
                         setRpcError(result.error || "Backend status request failed");
                     }
                 }
                 catch (error) {
+                    setControllerReady(false);
                     setRpcError(String(error));
                 }
                 finally {
@@ -782,16 +699,16 @@
                 React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                     React__default["default"].createElement("div", { style: {
                             padding: '8px',
-                            backgroundColor: logic.inputRegistered ? '#1a3a1a' : '#3a1a1a',
+                            backgroundColor: controllerReady ? '#1a3a1a' : '#3a1a1a',
                             borderRadius: '4px',
                             fontSize: '12px',
                             textAlign: 'center',
                             fontFamily: 'monospace'
                         } },
                         "Input: ",
-                        logic.inputRegistered ? "OK" : "FAILED",
+                        controllerReady ? "OK" : "FAILED",
                         React__default["default"].createElement("br", null),
-                        "Button: ",
+                        "Last backend button: ",
                         React__default["default"].createElement("strong", null, buttonState)))),
             React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: "Diagnostics" },
                 React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
@@ -827,16 +744,6 @@
     };
     var index = deckyFrontendLib.definePlugin(() => {
         let logic = new DecktationLogic();
-        let input_register = null;
-        // Use RegisterForControllerInputMessages (RegisterForControllerStateChanges doesn't exist)
-        try {
-            input_register = window.SteamClient.Input.RegisterForControllerInputMessages(logic.handleButtonInput);
-            logic.inputRegistered = true;
-            console.log("[Decktation] RegisterForControllerInputMessages succeeded");
-        }
-        catch (e) {
-            console.error("[Decktation] RegisterForControllerInputMessages failed:", e);
-        }
         // Seed the recording start count so we don't fire a spurious toast on load
         getStatus().then((result) => {
             if (result.success) {
@@ -888,9 +795,6 @@
             icon: React__default["default"].createElement(FaMicrophone, null),
             onDismount() {
                 clearInterval(bgNotifyInterval);
-                if (input_register) {
-                    input_register.unregister();
-                }
                 if (logic.recording) {
                     void stopRecording();
                 }

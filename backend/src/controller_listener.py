@@ -213,6 +213,15 @@ def main():
     def publish(path, states, controller_type):
         nonlocal active_source
         previous = tracker.sources.get(path, {})
+        changed = {name: pressed for name, pressed in states.items()
+                   if pressed != previous.get(name, False)}
+        if changed:
+            device = devices[path][0]
+            raw_keys = [hex(code) for code in sorted(getattr(device, 'keys', set()))
+                        if code in getattr(device, 'key_buttons', {})]
+            print(f"Controller input: path={path} type={details[path]['controller_type']} "
+                  f"changed={changed} held={[name for name, down in states.items() if down]} "
+                  f"evdev_keys={raw_keys}", flush=True)
         for name, pressed in states.items():
             if pressed != previous.get(name, False):
                 write_button_preview(name, pressed)

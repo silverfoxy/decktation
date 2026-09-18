@@ -3,7 +3,6 @@ import {
 	PanelSection,
 	PanelSectionRow,
 	quickAccessMenuClasses,
-	Router,
 	ToggleField,
 	ButtonItem,
 	DropdownItem,
@@ -46,38 +45,9 @@ const setButtonConfig = callable<
 	RpcResponse
 >("set_button_config");
 
-// Button IDs emitted by SteamClient.Input.RegisterForControllerInputMessages.
-// These match Steam's ControllerInputGamepadButton enum as observed by the
-// button-test callback. Keep the rear buttons in physical left-to-right order.
-const CONTROLLER_BUTTON_NAMES: Record<number, string> = {
-	0: "A",
-	1: "B",
-	2: "X",
-	3: "Y",
-	26: "L2",
-	27: "R2",
-	28: "L2",
-	29: "R2",
-	30: "L1",
-	31: "R1",
-	32: "L5",
-	33: "R5",
-	44: "L4",
-	45: "R4",
-};
-
-// L5 = bit 15, R5 = bit 16 in ulButtons (same as antiquitte/decky-dictation)
-const L5_MASK = 1 << 15;
-const R5_MASK = 1 << 16;
-
 class DecktationLogic {
 	enabled: boolean = false;
 	recording: boolean = false;
-	lastButtonState: string = "None";
-	inputRegistered: boolean = false;
-	inputError: string = "";
-	onButtonChange: (() => void) | null = null;
-	l5Held: boolean = false;
 	showNotifications: boolean = true;
 	prevRecordingStartCount: number = 0;
 	prevPendingText: string = "";
@@ -146,68 +116,6 @@ class DecktationLogic {
 			};
 			(window as any).NotificationStore.ProcessNotification(info, toastData, 0);
 		} catch (_e) {}
-	}
-
-	// Handler for RegisterForControllerStateChanges (antiquitte style)
-	handleControllerState = (val: any[]) => {
-		if (!val || val.length === 0) return;
-
-		const inputs = val[0];
-		if (!inputs) return;
-
-		const ulButtons = inputs.ulButtons || 0;
-		const l5Pressed = (ulButtons & L5_MASK) !== 0;
-
-		// Debug: show button state
-		this.lastButtonState = l5Pressed ? "L5" : "None";
-		if (this.onButtonChange) this.onButtonChange();
-
-		if (!this.enabled) {
-			return;
-		}
-
-		// Push-to-talk: L5 held = recording
-		if (l5Pressed && !this.l5Held) {
-			this.l5Held = true;
-			this.recording = true;
-			// Disable system buttons temporarily
-			(Router as any).DisableHomeAndQuickAccessButtons();
-			setTimeout(() => {
-				(Router as any).EnableHomeAndQuickAccessButtons();
-			}, 1000);
-			startRecording();
-			this.notify("Decktation", 1500, "Recording...");
-		} else if (!l5Pressed && this.l5Held) {
-			this.l5Held = false;
-			this.recording = false;
-			stopRecording();
-			this.notify("Decktation", 1500, "Transcribing...");
-		}
-	}
-
-	updateButtonPreview = (gamepadButton: number, isButtonPressed: boolean) => {
-		const buttonName = CONTROLLER_BUTTON_NAMES[gamepadButton] || `Button ${gamepadButton}`;
-		this.lastButtonState = isButtonPressed ? buttonName : "None";
-		if (this.onButtonChange) this.onButtonChange();
-	}
-
-	// Steam has shipped both a positional callback and a batched message callback.
-	// Support both so the preview keeps working across Steam client versions.
-	handleButtonInput = (...args: any[]) => {
-		if (Array.isArray(args[0])) {
-			for (const message of args[0]) {
-				if (message && typeof message.nA === "number") {
-					this.updateButtonPreview(message.nA, Boolean(message.bS));
-				}
-			}
-			return;
-		}
-
-		const gamepadButton = args[1];
-		const isButtonPressed = args[2];
-		if (typeof gamepadButton === "number") {
-			this.updateButtonPreview(gamepadButton, Boolean(isButtonPressed));
-		}
 	}
 
 	testRecording = async (onComplete?: (text: string, time: string) => void) => {
@@ -376,6 +284,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [modelLoading, setModelLoading] = useState<boolean>(false);
 	const [inputReady, setInputReady] = useState<boolean>(true);
 	const [buttonState, setButtonState] = useState<string>("None");
+	const [controllerReady, setControllerReady] = useState<boolean>(false);
 	const [buttons, setButtons] = useState<string[]>(["L1", "R1"]);
 	const [showNotifications, setShowNotifications] = useState<boolean>(true);
 	const [activePreset, setActivePreset] = useState<string>("wow");
@@ -393,9 +302,6 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	useEffect(() => {
 		setEnabled(logic.enabled);
 		setRecording(logic.recording);
-		logic.onButtonChange = () => {
-			setButtonState(logic.lastButtonState);
-		};
 
 		// Load button configuration, settings, and active game preset
 		getButtonConfig().then((result) => {
@@ -451,10 +357,6 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 				setPresets(opts);
 			}
 		}).catch((error) => setRpcError(String(error)));
-
-		return () => {
-			logic.onButtonChange = null;
-		};
 	}, []);
 
 	useEffect(() => {
@@ -463,7 +365,10 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 		const poll = async () => {
 			try {
 				const result = await getStatus();
+				if (cancelled) return;
 				if (result.success) {
+					setButtonState(result.detected_button || "None");
+					setControllerReady(result.controller_ready === true);
 					setRpcError("");
 					setServiceReady(result.service_ready);
 					setModelReady(result.model_ready);
@@ -473,9 +378,11 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 						setRecording(result.recording);
 					}
 				} else {
+					setControllerReady(false);
 					setRpcError(result.error || "Backend status request failed");
 				}
 			} catch (error) {
+				setControllerReady(false);
 				setRpcError(String(error));
 			} finally {
 				if (!cancelled) timeout = setTimeout(poll, 1000);
@@ -855,15 +762,15 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 				<PanelSectionRow>
 					<div style={{
 						padding: '8px',
-						backgroundColor: logic.inputRegistered ? '#1a3a1a' : '#3a1a1a',
+						backgroundColor: controllerReady ? '#1a3a1a' : '#3a1a1a',
 						borderRadius: '4px',
 						fontSize: '12px',
 						textAlign: 'center',
 						fontFamily: 'monospace'
 					}}>
-						Input: {logic.inputRegistered ? "OK" : "FAILED"}
+						Input: {controllerReady ? "OK" : "FAILED"}
 						<br />
-						Button: <strong>{buttonState}</strong>
+						Last backend button: <strong>{buttonState}</strong>
 					</div>
 				</PanelSectionRow>
 
@@ -931,17 +838,6 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 
 export default definePlugin(() => {
 	let logic = new DecktationLogic();
-	let input_register: { unregister: () => void } | null = null;
-
-	// Use RegisterForControllerInputMessages (RegisterForControllerStateChanges doesn't exist)
-	try {
-		input_register = (window as any).SteamClient.Input.RegisterForControllerInputMessages(logic.handleButtonInput);
-		logic.inputRegistered = true;
-		console.log("[Decktation] RegisterForControllerInputMessages succeeded");
-	} catch (e: any) {
-		console.error("[Decktation] RegisterForControllerInputMessages failed:", e);
-	}
-
 	// Seed the recording start count so we don't fire a spurious toast on load
 	getStatus().then((result) => {
 		if (result.success) {
@@ -992,9 +888,6 @@ export default definePlugin(() => {
 		icon: <FaMicrophone />,
 		onDismount() {
 			clearInterval(bgNotifyInterval);
-			if (input_register) {
-				input_register.unregister();
-			}
 			if (logic.recording) {
 				void stopRecording();
 			}

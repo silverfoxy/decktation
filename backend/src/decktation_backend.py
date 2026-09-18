@@ -982,6 +982,7 @@ class Plugin:
                 "recording": Plugin.voice_service.is_recording if Plugin.voice_service else False,
                 "recording_start_count": Plugin.recording_start_count,
                 "detected_button": detected_button,
+                "controller_ready": Plugin.listener_process is not None and Plugin.listener_process.poll() is None,
                 "pending_text": Plugin.voice_service.pending_text or "" if Plugin.voice_service else "",
                 "pending_delay": Plugin.voice_service._confirm_delay_for(Plugin.voice_service.pending_text) if Plugin.voice_service and Plugin.voice_service.pending_text else 0,
                 "confirm_mode": Plugin.voice_service.confirm_delay > 0 if Plugin.voice_service else False,

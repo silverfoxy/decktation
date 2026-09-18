@@ -4,6 +4,13 @@ from pathlib import Path
 FRONTEND = Path(__file__).parents[1] / "src" / "index.tsx"
 
 
+def test_button_preview_uses_backend_status_without_steam_input_mapping():
+    source = FRONTEND.read_text()
+    assert 'setButtonState(result.detected_button || "None")' in source
+    assert 'RegisterForControllerInputMessages' not in source
+    assert 'CONTROLLER_BUTTON_NAMES' not in source
+
+
 def test_settings_rpc_functions_are_not_shadowed_by_react_state_setters():
     source = FRONTEND.read_text()
 

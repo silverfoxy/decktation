@@ -4,6 +4,7 @@ Devices are selected by gamepad capabilities, never USB vendor/product IDs.
 No exclusive grab is taken, so Steam and games keep receiving input.
 """
 import fcntl
+import json
 import os
 import struct
 
@@ -14,6 +15,45 @@ KEY_BUTTONS = {
 }
 # Common xpad/hid mappings, then the gamepad specification's HAT2 axes.
 TRIGGER_AXES = {'L2': (0x02, 0x0a, 0x15), 'R2': (0x05, 0x09, 0x14)}
+
+
+def button_mapping(identity):
+    mapping = KEY_BUTTONS.copy()
+    # Xbox drivers use the historical BTN_X/BTN_Y aliases (0x133/0x134),
+    # rather than the positional NORTH/WEST interpretation. Steam's virtual
+    # Xbox 360 pads expose the same convention. Keep other gamepads positional.
+    if identity.get('vendor_id') == 0x045e or (
+        identity.get('vendor_id'), identity.get('product_id')
+    ) == (0x28de, 0x11ff):
+        mapping.update({0x133: 'X', 0x134: 'Y'})
+    return mapping
+
+
+def configured_button_mapping(identity):
+    mapping = button_mapping(identity)
+    config_dir = os.environ.get('DECKTATION_CONFIG_DIR', os.path.expanduser('~/.config/decktation'))
+    path = os.path.join(config_dir, 'controller_mappings.json')
+    device_id = '{bus:04x}:{vendor_id:04x}:{product_id:04x}'.format(
+        bus=identity.get('bus', 0), vendor_id=identity.get('vendor_id', 0),
+        product_id=identity.get('product_id', 0))
+    try:
+        with open(path) as config_file:
+            config = json.load(config_file)
+        overrides = config.get(device_id, {})
+        if not isinstance(overrides, dict):
+            raise ValueError('device mapping must be an object')
+        validated = {}
+        for code, name in overrides.items():
+            key = int(code, 0)
+            if not 0x120 <= key <= 0x2ff or name not in set(KEY_BUTTONS.values()):
+                raise ValueError(f'invalid button mapping: {code}={name}')
+            validated[key] = name
+        mapping.update(validated)
+    except FileNotFoundError:
+        pass
+    except (OSError, ValueError, TypeError, AttributeError) as error:
+        print(f'Ignoring controller mapping for {device_id}: {error}', flush=True)
+    return mapping
 
 
 def ioctl_read(fd, number, size):
@@ -33,7 +73,6 @@ class EvdevGamepad:
             keys = bits(ioctl_read(self.fd, 0x21, 96))
             if not {0x130, 0x131}.issubset(keys):
                 raise ValueError('not a gamepad')
-            self.supported_buttons = {name for code, name in KEY_BUTTONS.items() if code in keys}
             self.identity = {}
             try:
                 bus, vendor, product, version = struct.unpack('4H', ioctl_read(self.fd, 0x02, 8))
@@ -41,6 +80,8 @@ class EvdevGamepad:
                                  'hardware_version': version}
             except OSError:
                 pass  # Diagnostics must not prevent controller input.
+            self.key_buttons = configured_button_mapping(self.identity)
+            self.supported_buttons = {name for code, name in self.key_buttons.items() if code in keys}
             axes = bits(ioctl_read(self.fd, 0x23, 8))
             self.axes = {}
             for name, candidates in TRIGGER_AXES.items():
@@ -69,7 +110,9 @@ class EvdevGamepad:
         self.values = {code: self.absinfo(code)[0] for code in self.axes}
 
     def states(self):
-        states = {name: code in self.keys for code, name in KEY_BUTTONS.items()}
+        states = {name: False for name in KEY_BUTTONS.values()}
+        for code, name in self.key_buttons.items():
+            states[name] |= code in self.keys
         for code, (name, low, high) in self.axes.items():
             states[name] |= 2 * (self.values[code] - low) >= high - low
         return states

@@ -3,7 +3,28 @@ import struct
 
 import pytest
 
-from gamepad_evdev import EvdevGamepad, KEY_BUTTONS
+from gamepad_evdev import EvdevGamepad, KEY_BUTTONS, button_mapping, configured_button_mapping
+
+
+def test_custom_mapping_is_scoped_and_duplicate_buttons_are_ored(monkeypatch, tmp_path):
+    monkeypatch.setenv('DECKTATION_CONFIG_DIR', str(tmp_path))
+    (tmp_path / 'controller_mappings.json').write_text(
+        '{"0005:1234:5678": {"0x133": "X", "0x134": "Y", "0x135": "X"}}')
+    identity = {'bus': 5, 'vendor_id': 0x1234, 'product_id': 0x5678}
+    device = gamepad()
+    device.key_buttons = configured_button_mapping(identity)
+    device.feed(1, 0x133, 1)
+    assert device.feed(0, 0, 0)['X']
+    assert configured_button_mapping({**identity, 'bus': 3})[0x133] == 'Y'
+
+
+@pytest.mark.parametrize('contents', ['{', '[]',
+    '{"0005:1234:5678": {"0x133": "X", "0x134": "INVALID"}}'])
+def test_invalid_custom_mapping_falls_back_atomically(monkeypatch, tmp_path, contents, capsys):
+    monkeypatch.setenv('DECKTATION_CONFIG_DIR', str(tmp_path))
+    (tmp_path / 'controller_mappings.json').write_text(contents)
+    assert configured_button_mapping({'bus': 5, 'vendor_id': 0x1234, 'product_id': 0x5678}) == KEY_BUTTONS
+    assert 'Ignoring controller mapping' in capsys.readouterr().out
 
 
 @pytest.fixture
@@ -12,14 +33,46 @@ def listener(monkeypatch, tmp_path):
     return importlib.import_module('controller_listener')
 
 
-def gamepad(axes=None):
+def gamepad(axes=None, identity=None):
     device = EvdevGamepad.__new__(EvdevGamepad)
+    device.key_buttons = button_mapping(identity or {})
     device.keys = set()
     device.axes = axes or {}
     device.values = {code: low for code, (_, low, _) in device.axes.items()}
     device.dropped = False
     device.resync_count = 0
     return device
+
+
+@pytest.mark.parametrize('identity', [
+    {'vendor_id': 0x045e, 'product_id': 0x02fd, 'bus': 5},
+    {'vendor_id': 0x045e, 'product_id': 0x028e, 'bus': 3},
+    {'vendor_id': 0x28de, 'product_id': 0x11ff, 'bus': 3},
+])
+def test_xbox_x_combo_uses_historical_key_codes(listener, identity):
+    device = gamepad({2: ('L2', 0, 255), 5: ('R2', 0, 255)}, identity)
+    tracker = listener.ComboTracker(['L2', 'R2', 'X'])
+    device.feed(3, 2, 255)
+    device.feed(3, 5, 255)
+    device.feed(1, 0x134, 1)  # Physical Xbox Y must not trigger X.
+    assert not tracker.update('pad', device.feed(0, 0, 0))
+    device.feed(1, 0x134, 0)
+    device.feed(1, 0x133, 1)  # Physical Xbox X.
+    assert tracker.update('pad', device.feed(0, 0, 0))
+    device.feed(1, 0x133, 0)
+    assert not tracker.update('pad', device.feed(0, 0, 0))
+
+
+@pytest.mark.parametrize('vendor', [0x054c, 0x057e, 0x28de, 0xffff])
+def test_other_gamepads_keep_positional_mapping(vendor):
+    device = gamepad(identity={'vendor_id': vendor})
+    device.feed(1, 0x133, 1)
+    states = device.feed(0, 0, 0)
+    assert states['Y'] and not states['X']
+    device.feed(1, 0x133, 0)
+    device.feed(1, 0x134, 1)
+    states = device.feed(0, 0, 0)
+    assert states['X'] and not states['Y']
 
 
 def test_combo_does_not_span_controllers_and_disconnect_releases(listener):
