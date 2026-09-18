@@ -3,7 +3,7 @@
   "version": "0.3.15",
   "author": "silverfoxy",
   "flags": [
-    "_root"
+    "root"
   ],
   "api_version": 1,
   "publish": {
