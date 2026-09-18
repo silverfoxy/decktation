@@ -1,7 +1,6 @@
 import os
 import sys
 import json
-import logging
 import asyncio
 import traceback
 import threading
@@ -17,15 +16,8 @@ try:
 except ImportError:  # pragma: no cover - depends on the installed Decky version
     import decky_plugin as decky
 
-# Setup logging first
-logging.basicConfig(
-    filename="/tmp/decktation.log",
-    format="Decktation: %(asctime)s %(levelname)s %(message)s",
-    filemode="w+",
-    force=True,
-)
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+# Keep Decky's configured handlers, log destination, and logging level.
+logger = decky.logger
 
 plugin_path = os.environ["DECKY_PLUGIN_DIR"]
 

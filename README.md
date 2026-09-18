@@ -202,18 +202,33 @@ See `doc/TESTING_GUIDE.md` for setup instructions.
 - Ensure all Python dependencies are installed
 - Restart Decky Loader
 
+### Plugin logs
+
+Decktation uses `decky.logger`, including forwarded controller-listener output.
+Decky writes timestamped `.log` files in `DECKY_PLUGIN_LOG_DIR`, normally
+`/home/deck/homebrew/logs/decktation/`. Open the newest file for the current
+session; after a plugin restart, Decky creates a new log file.
+
+```bash
+ls -lt /home/deck/homebrew/logs/decktation/*.log
+```
+
+The plugin no longer creates `/tmp/decktation.log`. This logging change does
+not migrate the controller's separate `/tmp` state files or change plugin
+privileges.
+
 ### Recording not working
 
 - Ensure the plugin is enabled
 - Check that Steam Deck mic is working (test in another app)
-- Check `/tmp/decktation.log` for `ydotoold ready`
-- Check logs: `/tmp/decktation.log`
+- Check `/home/deck/homebrew/logs/decktation/*.log` for `ydotoold ready`
+- Check logs: `/home/deck/homebrew/logs/decktation/*.log`
 
 ### Button combo not detected
 
 - Try a different button combination in the plugin UI
 - Rear grip buttons are supported on Steam Deck hardware through raw HID
-- Check `/tmp/decktation.log` for controller listener errors
+- Check `/home/deck/homebrew/logs/decktation/*.log` for controller listener errors
 - Verify controller listener is running: `pgrep -f controller_listener`
 
 ### Performance on Steam Deck

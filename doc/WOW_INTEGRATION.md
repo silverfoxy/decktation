@@ -358,7 +358,7 @@ Check if WoW-specific terms are transcribed correctly.
 1. **Run converter in watch mode** - Most efficient for real-time updates
 2. **Don't spam /reload** - SavedVariables write automatically on events
 3. **Use daemon mode** - Best for Decky plugin integration
-4. **Monitor logs** - Check `/tmp/decktation.log` for issues
+4. **Monitor logs** - Check `/home/deck/homebrew/logs/decktation/*.log` for issues
 
 ## Privacy & Security
 
@@ -384,6 +384,6 @@ If you run into issues:
 2. Verify SavedVariables file exists and has data
 3. Test converter script independently
 4. Check voice service can read wow_context.json
-5. Review logs in `/tmp/decktation.log`
+5. Review logs in `/home/deck/homebrew/logs/decktation/*.log`
 
 For more help, see the main README.md and individual component documentation.

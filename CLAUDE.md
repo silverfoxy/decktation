@@ -92,7 +92,7 @@ Voice input like "party, hello everyone" or "raid: pull boss" is parsed to extra
 - Button config: `button_config.json` (default: `{"buttons": ["L1", "R1"]}`)
 - Push-to-talk: Configurable 1-5 button combo via UI (default: L1+R1)
 - Available buttons: L1, R1, L2, R2, L4, R4, L5, R5, A, B, X, Y
-- Logs: `/tmp/decktation.log`
+- Logs: `/home/deck/homebrew/logs/decktation/*.log`
 
 ## Platform Notes
 

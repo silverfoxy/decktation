@@ -191,7 +191,7 @@ systemctl --user restart plugin_loader
 **Solutions:**
 ```bash
 # Check Decktation logs
-tail -f /tmp/decktation.log
+tail -f /home/deck/homebrew/logs/decktation/*.log
 
 # Verify packaged dependencies exist
 ls -la ~/homebrew/plugins/decktation/bin/python/faster_whisper/
@@ -213,7 +213,7 @@ pgrep -f controller_listener
 # Should show a process ID
 
 # Check logs
-tail -f /tmp/decktation.log
+tail -f /home/deck/homebrew/logs/decktation/*.log
 # Look for "Controller listener starting"
 
 # Try a different button combo
@@ -230,7 +230,7 @@ tail -f /tmp/decktation.log
 **Solutions:**
 ```bash
 # Look for "ydotoold ready on /tmp/decktation-ydotool.sock"
-grep ydotoold /tmp/decktation.log
+grep ydotoold /home/deck/homebrew/logs/decktation/*.log
 
 # Reload or reinstall the plugin if the helper failed to start
 ```
@@ -313,18 +313,18 @@ This helps Whisper recognize domain-specific terms.
 
 ```bash
 # Decktation plugin logs
-tail -f /tmp/decktation.log
+tail -f /home/deck/homebrew/logs/decktation/*.log
 
 # Decky Loader logs
 tail -f /tmp/decky*.log
 
 # Controller listener logs (via plugin log)
-grep "controller_listener" /tmp/decktation.log
+grep "controller_listener" /home/deck/homebrew/logs/decktation/*.log
 ```
 
 ## Getting Help
 
-1. Check logs: `/tmp/decktation.log`
+1. Check logs: `/home/deck/homebrew/logs/decktation/*.log`
 2. Run test scripts: `./quick_test.sh`
 3. Report issues: https://github.com/silverfoxy/decktation/issues
 4. Include:
