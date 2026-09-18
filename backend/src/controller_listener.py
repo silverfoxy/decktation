@@ -11,6 +11,7 @@ import time
 import json
 import glob
 import selectors
+import tempfile
 from deck_hid import STEAM_DECK_BUTTON_BITS, raw_button_states
 from gamepad_evdev import EvdevGamepad
 
@@ -64,19 +65,18 @@ def controller_details(device, controller_type):
             'connection': {3: 'usb', 5: 'bluetooth', 6: 'virtual'}.get(identity.get('bus'), 'other'),
             'supported_buttons': sorted(getattr(device, 'supported_buttons', []))}
 
-def write_button_preview(name, pressed):
-    """Publish the latest pressed button for the plugin test display.
-
-    Keep the last press latched so a quick tap cannot begin and end between two
-    frontend status polls. ``None`` is used only to initialize the display.
-    """
-    if pressed or name == "None":
-        with open(PREVIEW_FILE, "w") as f:
-            f.write(name if pressed else "None")
-    print(
-        f"Button preview: {name} {'pressed' if pressed else 'released'}",
-        flush=True,
-    )
+def write_button_preview(states):
+    """Publish one controller's held buttons atomically, including releases."""
+    value = '+'.join(name for name, pressed in states.items() if pressed) or 'None'
+    with tempfile.NamedTemporaryFile(mode='w', dir=os.path.dirname(PREVIEW_FILE),
+                                     prefix='.decktation-preview-', delete=False) as f:
+        temporary = f.name
+        f.write(value)
+    try:
+        os.replace(temporary, PREVIEW_FILE)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
 
 def load_button_config():
     """Load button configuration from JSON file"""
@@ -161,7 +161,7 @@ def main():
     # Initial state - not pressed
     with open(STATE_FILE, 'w') as f:
         f.write("0")
-    write_button_preview("None", False)
+    write_button_preview({})
 
     identity = {
         'uid': os.geteuid(),
@@ -222,9 +222,6 @@ def main():
             print(f"Controller input: path={path} type={details[path]['controller_type']} "
                   f"changed={changed} held={[name for name, down in states.items() if down]} "
                   f"evdev_keys={raw_keys}", flush=True)
-        for name, pressed in states.items():
-            if pressed != previous.get(name, False):
-                write_button_preview(name, pressed)
         # Keep the controller responsible for a held combo selected even when
         # another controller sends unrelated input or a virtual duplicate.
         owns_combo = active_source and all(tracker.sources.get(active_source, {}).get(b, False)
@@ -237,6 +234,8 @@ def main():
             if changed_source:
                 diagnostic('active_changed')
         tracker.update(path, states)
+        if changed:
+            write_button_preview(tracker.sources.get(active_source, {}))
         update_combo()
 
     def remove(path, error=None):
@@ -252,6 +251,7 @@ def main():
             with open(CONTROLLER_TYPE_FILE, 'w') as f:
                 f.write(details.get(active_source, {}).get('controller_type', 'unknown'))
         diagnostic('disconnected', affected_controller=disconnected, errno=getattr(error, 'errno', None))
+        write_button_preview(tracker.sources.get(active_source, {}))
         update_combo()
 
     try:

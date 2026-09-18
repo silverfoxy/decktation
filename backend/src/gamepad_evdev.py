@@ -14,7 +14,9 @@ KEY_BUTTONS = {
     0x136: 'L1', 0x137: 'R1', 0x138: 'L2', 0x139: 'R2',
 }
 # Common xpad/hid mappings, then the gamepad specification's HAT2 axes.
-TRIGGER_AXES = {'L2': (0x02, 0x0a, 0x15), 'R2': (0x05, 0x09, 0x14)}
+# Prefer dedicated GAS/BRAKE axes: Xbox Bluetooth can expose Z/RZ for
+# the right stick alongside these trigger axes.
+TRIGGER_AXES = {'L2': (0x0a, 0x02, 0x15), 'R2': (0x09, 0x05, 0x14)}
 
 
 def button_mapping(identity):

@@ -471,7 +471,7 @@
                 }
                 finally {
                     if (!cancelled)
-                        timeout = setTimeout(poll, 1000);
+                        timeout = setTimeout(poll, 100);
                 }
             };
             void poll();
@@ -708,7 +708,7 @@
                         "Input: ",
                         controllerReady ? "OK" : "FAILED",
                         React__default["default"].createElement("br", null),
-                        "Last backend button: ",
+                        "Held buttons: ",
                         React__default["default"].createElement("strong", null, buttonState)))),
             React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: "Diagnostics" },
                 React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,

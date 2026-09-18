@@ -226,9 +226,9 @@ privileges.
 
 ### Button combo not detected
 
-The button preview shows the last button decoded by the backend, using the
-same mappings as recording combos. It stays visible after release so short
-presses are not missed between status polls. Updates can take about one second.
+The button preview shows currently held buttons on the backend's selected
+controller, including triggers, using the same mappings as recording combos.
+It clears on release and refreshes every 100 ms while the panel is mounted.
 
 #### Custom controller mappings
 

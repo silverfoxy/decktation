@@ -385,7 +385,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 				setControllerReady(false);
 				setRpcError(String(error));
 			} finally {
-				if (!cancelled) timeout = setTimeout(poll, 1000);
+				if (!cancelled) timeout = setTimeout(poll, 100);
 			}
 		};
 		void poll();
@@ -770,7 +770,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					}}>
 						Input: {controllerReady ? "OK" : "FAILED"}
 						<br />
-						Last backend button: <strong>{buttonState}</strong>
+						Held buttons: <strong>{buttonState}</strong>
 					</div>
 				</PanelSectionRow>
 
