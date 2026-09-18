@@ -7,6 +7,26 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.3.16] - 2026-09-17
+
+### Added
+
+- Added Xbox and other Linux gamepad input support alongside Steam Controller
+  support, with per-device button mapping overrides.
+- Added an option to remember the last chat channel between dictations.
+- Added controller diagnostics and a custom Decky store with historical releases
+  and development builds.
+
+### Changed
+
+- Switched backend logging to Decky's plugin logs.
+- Enabled root permissions for controller device access.
+- Improved controller input polling and refreshed the button preview every 100 ms.
+
+### Fixed
+
+- Corrected Xbox Bluetooth face-button and trigger mappings.
+
 ## [0.3.9] - 2026-08-03
 
 ### Added
