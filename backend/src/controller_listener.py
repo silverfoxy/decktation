@@ -163,7 +163,17 @@ def main():
         f.write("0")
     write_button_preview("None", False)
 
-    print(f"Controller listener starting (PID {os.getpid()})...", flush=True)
+    identity = {
+        'uid': os.geteuid(),
+        'gid': os.getegid(),
+        'groups': os.getgroups(),
+    }
+    print(
+        f"Controller listener starting (PID {os.getpid()}, "
+        f"uid={identity['uid']}, gid={identity['gid']}, "
+        f"groups={identity['groups']})...",
+        flush=True,
+    )
 
     # Load button configuration
     button_names = load_button_config()
@@ -240,7 +250,7 @@ def main():
         waiting = False
         with open(CONTROLLER_TYPE_FILE, 'w') as f:
             f.write('unknown')
-        diagnostic('started')
+        diagnostic('started', process_identity=identity)
         while True:
             if time.monotonic() >= next_scan:
                 candidates = dict(find_steam_hidraw())

@@ -353,6 +353,11 @@ class Plugin:
                 logger.error(f"Controller listener script not found: {listener_script}")
                 return False
 
+            logger.info(
+                "Starting controller listener as "
+                f"uid={os.geteuid()} gid={os.getegid()} groups={os.getgroups()}"
+            )
+
             # Start the listener as a subprocess using system Python
             # Note: sys.executable is the PyInstaller frozen Decky binary, not a Python interpreter
             python_bin = "/usr/bin/python3"
