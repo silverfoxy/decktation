@@ -2,8 +2,8 @@ import json
 import time
 from pathlib import Path
 from unittest.mock import patch
-from backend.src.convert_wow_context import parse_lua_table, find_savedvariables_file
-from backend.src.wow_voice_chat import WoWVoiceChat
+from convert_wow_context import parse_lua_table, find_savedvariables_file
+from wow_voice_chat import WoWVoiceChat
 
 
 def test_parse_lua_table_standard():
@@ -82,7 +82,7 @@ def test_find_savedvariables_file_discovered_in_home(tmp_path):
     wow_saved.parent.mkdir(parents=True)
     wow_saved.write_text('DecktationContextDB = { ["zone"] = "Barrens" }')
 
-    with patch("backend.src.convert_wow_context.get_candidate_home_dirs", return_value=[mock_home]):
+    with patch("convert_wow_context.get_candidate_home_dirs", return_value=[mock_home]):
         found = find_savedvariables_file()
         assert found == wow_saved
 
@@ -101,7 +101,7 @@ DecktationContextDB = {
 """)
     json_cache = tmp_path / "wow_context.json"
 
-    with patch("backend.src.wow_voice_chat.find_savedvariables_file", return_value=lua_file):
+    with patch("wow_voice_chat.find_savedvariables_file", return_value=lua_file):
         service = WoWVoiceChat(context_file=str(json_cache), lazy_load=True)
         loaded = service.load_context()
         assert loaded is True
@@ -120,7 +120,7 @@ def test_wow_voice_chat_fallback_to_json(tmp_path):
     json_cache = tmp_path / "wow_context.json"
     json_cache.write_text(json.dumps({"zone": "Ironforge", "subzone": "Commons"}))
 
-    with patch("backend.src.wow_voice_chat.find_savedvariables_file", return_value=None):
+    with patch("wow_voice_chat.find_savedvariables_file", return_value=None):
         service = WoWVoiceChat(context_file=str(json_cache), lazy_load=True)
         loaded = service.load_context()
         assert loaded is True

@@ -257,23 +257,25 @@ end
 SLASH_DECKTATION1 = "/decktation"
 SLASH_DECKTATION2 = "/dct"
 SlashCmdList["DECKTATION"] = function(msg)
-    msg = msg:lower():trim()
+    pcall(function()
+        local cmd = (msg or ""):match("^%s*(.-)%s*$"):lower()
 
-    if msg == "" or msg == "export" then
-        ExportToChat()
-    elseif msg == "errors" or msg == "log" then
-        ShowErrorLog()
-    elseif msg == "clearerrors" or msg == "clearlog" then
-        ClearErrorLog()
-    elseif msg == "help" then
-        print("|cff00ff00Decktation Context Commands:|r")
-        print("  /decktation or /dct - Export current context")
-        print("  /decktation errors - Show error log")
-        print("  /decktation clearerrors - Clear error log")
-        print("  /decktation help - Show this help")
-    else
-        print("|cffff0000Unknown command. Use /decktation help for commands.|r")
-    end
+        if cmd == "" or cmd == "export" then
+            ExportToChat()
+        elseif cmd == "errors" or cmd == "log" then
+            ShowErrorLog()
+        elseif cmd == "clearerrors" or cmd == "clearlog" then
+            ClearErrorLog()
+        elseif cmd == "help" then
+            print("|cff00ff00Decktation Context Commands:|r")
+            print("  /decktation or /dct - Export current context")
+            print("  /decktation errors - Show error log")
+            print("  /decktation clearerrors - Clear error log")
+            print("  /decktation help - Show this help")
+        else
+            print("|cffff0000Unknown command. Use /decktation help for commands.|r")
+        end
+    end)
 end
 
 -- Update frame

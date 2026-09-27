@@ -12,10 +12,7 @@ import threading
 import subprocess
 from pathlib import Path
 from faster_whisper import WhisperModel
-try:
-    from .convert_wow_context import find_savedvariables_file, parse_lua_table
-except (ImportError, ValueError):
-    from convert_wow_context import find_savedvariables_file, parse_lua_table
+from convert_wow_context import find_savedvariables_file, parse_lua_table
 
 import sounddevice as sd
 import numpy as np
