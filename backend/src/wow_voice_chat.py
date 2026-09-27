@@ -12,6 +12,11 @@ import threading
 import subprocess
 from pathlib import Path
 from faster_whisper import WhisperModel
+try:
+    from .convert_wow_context import find_savedvariables_file, parse_lua_table
+except (ImportError, ValueError):
+    from convert_wow_context import find_savedvariables_file, parse_lua_table
+
 import sounddevice as sd
 import numpy as np
 import wave
@@ -249,14 +254,34 @@ class WoWVoiceChat:
             self.send_to_wow_chat(text)
 
     def load_context(self):
-        """Load WoW context from addon-generated file"""
-        if self.context_file.exists():
+        """Load WoW context from SavedVariables or addon-generated JSON file"""
+        # First attempt to read live SavedVariables if present
+        try:
+            saved_vars = find_savedvariables_file()
+            if saved_vars and saved_vars.exists():
+                with open(saved_vars, "r", encoding="utf-8") as f:
+                    lua_content = f.read()
+                parsed = parse_lua_table(lua_content)
+                if parsed:
+                    self.context = parsed
+                    if self.context_file:
+                        try:
+                            with open(self.context_file, "w", encoding="utf-8") as f:
+                                json.dump(self.context, f, indent=2)
+                        except Exception:
+                            pass
+                    return True
+        except Exception as e:
+            print(f"Warning: Could not load context from SavedVariables: {e}")
+
+        # Fallback: load from context_file JSON if available
+        if self.context_file and self.context_file.exists():
             try:
-                with open(self.context_file) as f:
+                with open(self.context_file, "r", encoding="utf-8") as f:
                     self.context = json.load(f)
                 return True
             except Exception as e:
-                print(f"Warning: Could not load context: {e}")
+                print(f"Warning: Could not load context from file: {e}")
         return False
 
     def build_prompt_from_context(self):
