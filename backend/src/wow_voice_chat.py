@@ -282,9 +282,18 @@ class WoWVoiceChat:
                 "Common short phrases: hi, gg, brb, afk, lol, omw, ty, np, wp, gz."
             )
 
+        # Extract preset hotwords if configured
+        preset_hotwords_raw = self.preset.get("hotwords") if self.preset else None
+        if isinstance(preset_hotwords_raw, list):
+            hotwords = ", ".join(str(w).strip() for w in preset_hotwords_raw if str(w).strip()) or None
+        elif isinstance(preset_hotwords_raw, str):
+            hotwords = preset_hotwords_raw.strip() or None
+        else:
+            hotwords = None
+
         # Only append dynamic game context if this preset uses a context file (e.g. WoW addon)
         if not self.preset.get("context_file"):
-            return base_prompt or None, None
+            return base_prompt or None, hotwords
 
         zone = self.context.get("zone", "")
         subzone = self.context.get("subzone", "")
@@ -308,17 +317,7 @@ class WoWVoiceChat:
         else:
             initial_prompt = base_prompt
 
-        # Keep hotwords simple - just the most relevant current context
-        hotwords = []
-        if zone:
-            hotwords.append(zone)
-        if boss:
-            hotwords.append(boss)
-        if target:
-            hotwords.append(target)
-        hotwords_str = ", ".join(hotwords) if hotwords else None
-
-        return initial_prompt, hotwords_str
+        return initial_prompt, hotwords
 
     def audio_callback(self, indata, frames, time_info, status):
         """Callback for audio recording"""
