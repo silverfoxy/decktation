@@ -440,20 +440,25 @@ EventFrame:RegisterEvent("SPELLS_CHANGED")
 EventFrame:RegisterEvent("PLAYER_GUILD_UPDATE")
 EventFrame:RegisterEvent("PLAYER_LOGOUT")
 
+local function OnEventHandler(self, event, ...)
+    if event == "PLAYER_LOGIN" then
+        Initialize()
+    elseif event == "ENCOUNTER_START" then
+        local encounterID, encounterName = ...
+        Context.boss = encounterName or ""
+        SaveContext()
+    elseif event == "ENCOUNTER_END" then
+        Context.boss = ""
+        SaveContext()
+    else
+        UpdateContext()
+        SaveContext()
+    end
+end
+
 EventFrame:SetScript("OnEvent", function(self, event, ...)
-    pcall(function()
-        if event == "PLAYER_LOGIN" then
-            Initialize()
-        elseif event == "ENCOUNTER_START" then
-            local encounterID, encounterName = ...
-            Context.boss = encounterName or ""
-            SaveContext()
-        elseif event == "ENCOUNTER_END" then
-            Context.boss = ""
-            SaveContext()
-        else
-            UpdateContext()
-            SaveContext()
-        end
-    end)
+    local success, err = pcall(OnEventHandler, self, event, ...)
+    if not success then
+        LogError("OnEvent error: " .. tostring(event), err)
+    end
 end)
