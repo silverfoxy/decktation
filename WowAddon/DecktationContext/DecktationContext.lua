@@ -303,7 +303,7 @@ EventFrame:RegisterEvent("ENCOUNTER_START")
 EventFrame:RegisterEvent("ENCOUNTER_END")
 EventFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
 
-EventFrame:SetScript("OnEvent", function(self, event, ...)
+local function OnEventHandler(self, event, ...)
     if event == "PLAYER_LOGIN" then
         Initialize()
     elseif event == "PLAYER_ENTERING_WORLD" then
@@ -326,19 +326,21 @@ EventFrame:SetScript("OnEvent", function(self, event, ...)
         Context.boss = ""
         SaveContext()
     elseif event == "PLAYER_SPECIALIZATION_CHANGED" then
-        local specIndex = GetSpecialization()
-        if specIndex then
-            local _, specName = GetSpecializationInfo(specIndex)
-            Context.spec = specName or ""
+        if GetSpecialization then
+            local specIndex = GetSpecialization()
+            if specIndex and GetSpecializationInfo then
+                local _, specName = GetSpecializationInfo(specIndex)
+                Context.spec = specName or ""
+            end
         end
         SaveContext()
-    end
-end)
-
--- Force save on logout
-EventFrame:RegisterEvent("PLAYER_LOGOUT")
-EventFrame:SetScript("OnEvent", function(self, event)
-    if event == "PLAYER_LOGOUT" then
+    elseif event == "PLAYER_LOGOUT" then
         SaveContext()
     end
+end
+
+EventFrame:RegisterEvent("PLAYER_LOGOUT")
+EventFrame:SetScript("OnEvent", function(self, event, ...)
+    pcall(OnEventHandler, self, event, ...)
 end)
+
