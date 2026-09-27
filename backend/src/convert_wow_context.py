@@ -1,13 +1,25 @@
-#!/usr/bin/env python3
-"""
-Convert WoW SavedVariables to JSON context file
-Parses DecktationContext.lua and outputs wow_context.json
-"""
-
+import os
 import json
 import re
 import sys
 from pathlib import Path
+
+
+def extract_table(lua_content, table_name="DecktationContextDB"):
+    """Extract table content taking nested braces into account."""
+    m = re.search(rf'{table_name}\s*=\s*\{{', lua_content)
+    if not m:
+        return ""
+    brace_start = m.end() - 1
+    depth = 0
+    for i in range(brace_start, len(lua_content)):
+        if lua_content[i] == '{':
+            depth += 1
+        elif lua_content[i] == '}':
+            depth -= 1
+            if depth == 0:
+                return lua_content[brace_start + 1:i]
+    return ""
 
 
 def parse_lua_table(lua_content):
@@ -17,12 +29,9 @@ def parse_lua_table(lua_content):
     """
     context = {}
 
-    # Extract the DecktationContextDB table
-    match = re.search(r'DecktationContextDB\s*=\s*\{([^}]+)\}', lua_content, re.DOTALL)
-    if not match:
+    table_content = extract_table(lua_content, "DecktationContextDB")
+    if not table_content:
         return context
-
-    table_content = match.group(1)
 
     # Parse string fields
     string_fields = ['zone', 'subzone', 'boss', 'target', 'class', 'spec']
@@ -52,39 +61,74 @@ def parse_lua_table(lua_content):
     return context
 
 
+def get_candidate_home_dirs():
+    """Get candidate user home directories (works even if running as root under systemd)"""
+    home_dirs = [Path.home()]
+    if os.path.exists("/home"):
+        try:
+            for user_dir in Path("/home").iterdir():
+                if user_dir.is_dir() and user_dir not in home_dirs and not user_dir.name.startswith("."):
+                    home_dirs.append(user_dir)
+        except Exception:
+            pass
+    return home_dirs
+
+
 def find_savedvariables_file(wow_path=None):
     """
-    Find the DecktationContext SavedVariables file
-    Searches common WoW installation locations
+    Find the DecktationContext SavedVariables file.
+    Searches common WoW installation locations and returns the most recently modified one.
     """
-    # Common WoW paths on Steam Deck
-    search_paths = []
+    candidate_files = []
 
     if wow_path:
-        search_paths.append(Path(wow_path))
+        p = Path(wow_path)
+        if p.is_file() and p.name == "DecktationContext.lua":
+            return p
+        if p.exists():
+            for lua_path in p.glob("**/SavedVariables/DecktationContext.lua"):
+                if lua_path.is_file():
+                    candidate_files.append(lua_path)
 
-    # Steam Deck common locations
-    search_paths.extend([
-        Path.home() / ".steam/steam/steamapps/compatdata/*/pfx/drive_c/Program Files (x86)/World of Warcraft",
-        Path.home() / ".local/share/Steam/steamapps/compatdata/*/pfx/drive_c/Program Files (x86)/World of Warcraft",
-    ])
+    # Search common WoW paths across all discovered user homes
+    home_dirs = get_candidate_home_dirs()
 
-    # Look for SavedVariables
-    for base_path in search_paths:
-        if not base_path.exists():
-            continue
+    relative_search_patterns = [
+        "Games/battlenet/drive_c/Program Files (x86)/World of Warcraft",
+        "Games/battlenet/drive_c/Program Files/World of Warcraft",
+        "Games/world-of-warcraft/drive_c/Program Files (x86)/World of Warcraft",
+        "Games/world-of-warcraft/drive_c/Program Files/World of Warcraft",
+        ".steam/steam/steamapps/compatdata/*/pfx/drive_c/Program Files (x86)/World of Warcraft",
+        ".steam/steam/steamapps/compatdata/*/pfx/drive_c/Program Files/World of Warcraft",
+        ".local/share/Steam/steamapps/compatdata/*/pfx/drive_c/Program Files (x86)/World of Warcraft",
+        ".local/share/Steam/steamapps/compatdata/*/pfx/drive_c/Program Files/World of Warcraft",
+        ".var/app/com.valvesoftware.Steam/.steam/steam/steamapps/compatdata/*/pfx/drive_c/Program Files (x86)/World of Warcraft",
+        ".local/share/bottles/bottles/*/drive_c/Program Files (x86)/World of Warcraft",
+        ".local/share/bottles/bottles/*/drive_c/Program Files/World of Warcraft",
+        ".local/share/lutris/runners/wine/*/drive_c/Program Files (x86)/World of Warcraft",
+        ".wine/drive_c/Program Files (x86)/World of Warcraft",
+        ".wine/drive_c/Program Files/World of Warcraft",
+    ]
 
-        # Search in WTF directory for any account
-        wtf_path = base_path / "WTF" / "Account"
-        if wtf_path.exists():
-            # Find any account directory
-            for account_dir in wtf_path.iterdir():
-                if account_dir.is_dir():
-                    saved_vars = account_dir / "SavedVariables" / "DecktationContext.lua"
-                    if saved_vars.exists():
-                        return saved_vars
+    for home in home_dirs:
+        for rel_pattern in relative_search_patterns:
+            try:
+                for wow_dir in home.glob(rel_pattern):
+                    if wow_dir.is_dir():
+                        for lua_file in wow_dir.glob("**/SavedVariables/DecktationContext.lua"):
+                            if lua_file.is_file():
+                                candidate_files.append(lua_file)
+            except Exception:
+                continue
 
-    return None
+    if not candidate_files:
+        return None
+
+    try:
+        candidate_files.sort(key=lambda f: f.stat().st_mtime, reverse=True)
+        return candidate_files[0]
+    except Exception:
+        return candidate_files[0]
 
 
 def convert_context(input_file, output_file="wow_context.json"):
