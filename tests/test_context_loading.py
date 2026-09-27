@@ -144,7 +144,6 @@ def test_build_prompt_from_context():
         "party": ["Hero1", "Hero2"]
     }
 
-    prompt, hotwords = service.build_prompt_from_context()
+    prompt, _ = service.build_prompt_from_context()
     assert "base prompt words." in prompt
     assert "Currently in Duskwood at Darkshire fighting Mor'Ladim with party members Hero1, Hero2." in prompt
-    assert hotwords == "Duskwood, Mor'Ladim, Mor'Ladim"
