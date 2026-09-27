@@ -12,6 +12,7 @@ import threading
 import subprocess
 from pathlib import Path
 from faster_whisper import WhisperModel
+from convert_wow_context import find_savedvariables_file, parse_lua_table
 import sounddevice as sd
 import numpy as np
 import wave
@@ -249,18 +250,38 @@ class WoWVoiceChat:
             self.send_to_wow_chat(text)
 
     def load_context(self):
-        """Load WoW context from addon-generated file"""
-        if self.context_file.exists():
+        """Load WoW context from SavedVariables or addon-generated JSON file"""
+        # First attempt to read live SavedVariables if present
+        try:
+            saved_vars = find_savedvariables_file()
+            if saved_vars and saved_vars.exists():
+                with open(saved_vars, "r", encoding="utf-8") as f:
+                    lua_content = f.read()
+                parsed = parse_lua_table(lua_content)
+                if parsed:
+                    self.context = parsed
+                    if self.context_file:
+                        try:
+                            with open(self.context_file, "w", encoding="utf-8") as f:
+                                json.dump(self.context, f, indent=2)
+                        except Exception:
+                            pass
+                    return True
+        except Exception as e:
+            print(f"Warning: Could not load context from SavedVariables: {e}")
+
+        # Fallback: load from context_file JSON if available
+        if self.context_file and self.context_file.exists():
             try:
-                with open(self.context_file) as f:
+                with open(self.context_file, "r", encoding="utf-8") as f:
                     self.context = json.load(f)
                 return True
             except Exception as e:
-                print(f"Warning: Could not load context: {e}")
+                print(f"Warning: Could not load context from file: {e}")
         return False
 
     def build_prompt_from_context(self):
-        """Build initial_prompt and hotwords from context"""
+        """Build initial_prompt and hotwords from context and preset profile"""
         # English game prompts bias non-English transcription heavily. When the
         # user explicitly selects a non-English language, let Whisper work from
         # the audio alone.
@@ -272,51 +293,88 @@ class WoWVoiceChat:
         # Fall back to hardcoded WoW prompt when no preset is provided (direct CLI usage)
         if base_prompt is None:
             base_prompt = (
-                "World of Warcraft gameplay discussion. "
-                "Playing as orc warrior, tauren druid, blood elf paladin, undead warlock, troll shaman, or night elf hunter. "
-                "Discussing enhancement shaman, restoration druid, protection warrior, holy paladin, arcane mage, shadow priest, affliction warlock. "
-                "Running mythic dungeons, heroic raids, doing quests in Azeroth, Orgrimmar, Stormwind, Ironforge. "
-                "Fighting bosses like Lich King, Ragnaros, Illidan, pulling trash mobs, need tank healer and DPS. "
-                "Using abilities, cooldowns, buffs, debuffs, interrupts, dispels, cleave and AOE damage. "
-                "Chat channel prefixes: say, party, raid, guild, officer, yell, instance, whisper, type. "
-                "Common short phrases: hi, gg, brb, afk, lol, omw, ty, np, wp, gz."
+                "say hello, party let's go, raid stack on the boss, guild anyone for a dungeon?, "
+                "general tank LFG SFK, trade WTB Silk Cloth, thanks for the heal, wait for mana, "
+                "give me a sec brb, omw now, watch out for adds, can i get a rez please, ty!, tks, haha, nice!, ready to pull"
             )
 
-        # Only append dynamic game context if this preset uses a context file (e.g. WoW addon)
-        if not self.preset.get("context_file"):
-            return base_prompt or None, None
+        # 1. Collect base preset hotwords
+        preset_hotwords_raw = self.preset.get("hotwords", []) if self.preset else []
+        if isinstance(preset_hotwords_raw, str):
+            preset_hotwords = [w.strip() for w in preset_hotwords_raw.split(",") if w.strip()]
+        elif isinstance(preset_hotwords_raw, list):
+            preset_hotwords = [str(w).strip() for w in preset_hotwords_raw if str(w).strip()]
+        else:
+            preset_hotwords = []
 
+        # If this preset doesn't use dynamic context, return base prompt & hotwords
+        if not self.preset.get("context_file"):
+            hotwords_str = ", ".join(preset_hotwords) if preset_hotwords else None
+            return base_prompt or None, hotwords_str
+
+        # 2. Extract dynamic context fields
         zone = self.context.get("zone", "")
         subzone = self.context.get("subzone", "")
         boss = self.context.get("boss", "")
         target = self.context.get("target", "")
+        player = self.context.get("player", "")
+        guild = self.context.get("guild", "")
         party = self.context.get("party", [])
+        inventory = self.context.get("inventory", [])
+        quests = self.context.get("quests", [])
+        spells = self.context.get("spells", [])
 
-        # Add dynamic context to the prompt
+        # 3. Build deduplicated hotwords list (dynamic entities first, then preset hotwords)
+        dynamic_entities = []
+        if zone:
+            dynamic_entities.append(zone)
+        if subzone and subzone != zone:
+            dynamic_entities.append(subzone)
+        if boss:
+            dynamic_entities.append(boss)
+        if target and target != boss:
+            dynamic_entities.append(target)
+        if player:
+            dynamic_entities.append(player)
+        if guild:
+            dynamic_entities.append(guild)
+        dynamic_entities.extend(party)
+        dynamic_entities.extend(quests)
+        dynamic_entities.extend(inventory)
+        dynamic_entities.extend(spells)
+
+        hotwords = []
+        seen = set()
+        for item in dynamic_entities + preset_hotwords:
+            if not item:
+                continue
+            item_clean = str(item).strip()
+            if item_clean and item_clean.lower() not in seen:
+                seen.add(item_clean.lower())
+                hotwords.append(item_clean)
+
+        hotwords_str = ", ".join(hotwords) if hotwords else None
+
+        # 4. Build compact initial_prompt with immediate location/quests/party
         dynamic_parts = []
         if zone:
-            dynamic_parts.append(f"Currently in {zone}")
-        if subzone:
-            dynamic_parts.append(f"at {subzone}")
+            loc = f"Zone: {zone}"
+            if subzone and subzone != zone:
+                loc += f" ({subzone})"
+            dynamic_parts.append(loc)
         if boss:
-            dynamic_parts.append(f"fighting {boss}")
+            dynamic_parts.append(f"Boss: {boss}")
+        if target and target != boss:
+            dynamic_parts.append(f"Target: {target}")
         if party:
-            dynamic_parts.append(f"with party members {', '.join(party[:5])}")
+            dynamic_parts.append(f"Party: {', '.join(party[:5])}")
+        if quests:
+            dynamic_parts.append(f"Quests: {', '.join(quests[:5])}")
 
         if dynamic_parts:
-            initial_prompt = base_prompt + " " + " ".join(dynamic_parts) + "."
+            initial_prompt = (base_prompt or "").strip() + " " + ". ".join(dynamic_parts) + "."
         else:
             initial_prompt = base_prompt
-
-        # Keep hotwords simple - just the most relevant current context
-        hotwords = []
-        if zone:
-            hotwords.append(zone)
-        if boss:
-            hotwords.append(boss)
-        if target:
-            hotwords.append(target)
-        hotwords_str = ", ".join(hotwords) if hotwords else None
 
         return initial_prompt, hotwords_str
 

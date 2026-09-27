@@ -4,28 +4,43 @@ Convert WoW SavedVariables to JSON context file
 Parses DecktationContext.lua and outputs wow_context.json
 """
 
+import os
 import json
 import re
 import sys
 from pathlib import Path
 
 
+def extract_table(lua_content, table_name="DecktationContextDB"):
+    """Extract table content taking nested braces into account."""
+    m = re.search(rf'{table_name}\s*=\s*\{{', lua_content)
+    if not m:
+        return ""
+    brace_start = m.end() - 1
+    depth = 0
+    for i in range(brace_start, len(lua_content)):
+        if lua_content[i] == '{':
+            depth += 1
+        elif lua_content[i] == '}':
+            depth -= 1
+            if depth == 0:
+                return lua_content[brace_start + 1:i]
+    return ""
+
+
 def parse_lua_table(lua_content):
     """
-    Simple parser for WoW SavedVariables Lua format
-    Handles basic table structure from DecktationContextDB
+    Parser for WoW SavedVariables Lua format.
+    Extracts zone, subzone, boss, target, class, spec, party, inventory, quests, spells, player, guild.
     """
     context = {}
 
-    # Extract the DecktationContextDB table
-    match = re.search(r'DecktationContextDB\s*=\s*\{([^}]+)\}', lua_content, re.DOTALL)
-    if not match:
+    table_content = extract_table(lua_content, "DecktationContextDB")
+    if not table_content:
         return context
 
-    table_content = match.group(1)
-
     # Parse string fields
-    string_fields = ['zone', 'subzone', 'boss', 'target', 'class', 'spec']
+    string_fields = ['zone', 'subzone', 'boss', 'target', 'class', 'spec', 'player', 'guild']
     for field in string_fields:
         pattern = rf'\["{field}"\]\s*=\s*"([^"]*)"'
         match = re.search(pattern, table_content)
@@ -34,15 +49,16 @@ def parse_lua_table(lua_content):
         else:
             context[field] = ""
 
-    # Parse party array
-    party_match = re.search(r'\["party"\]\s*=\s*\{([^}]*)\}', table_content)
-    if party_match:
-        party_content = party_match.group(1)
-        # Extract all quoted strings
-        party_members = re.findall(r'"([^"]+)"', party_content)
-        context['party'] = party_members
-    else:
-        context['party'] = []
+    # Parse array / list fields (party, inventory, quests, spells)
+    list_fields = ['party', 'inventory', 'quests', 'spells']
+    for field in list_fields:
+        field_match = re.search(rf'\["{field}"\]\s*=\s*\{{([^}}]*)\}}', table_content)
+        if field_match:
+            sub_content = field_match.group(1)
+            items = re.findall(r'"([^"]+)"', sub_content)
+            context[field] = items
+        else:
+            context[field] = []
 
     # Parse timestamp
     timestamp_match = re.search(r'\["timestamp"\]\s*=\s*(\d+)', table_content)
@@ -52,39 +68,75 @@ def parse_lua_table(lua_content):
     return context
 
 
+def get_candidate_home_dirs():
+    """Get candidate user home directories (works even if running as root under systemd)"""
+    home_dirs = [Path.home()]
+    if os.path.exists("/home"):
+        try:
+            for user_dir in Path("/home").iterdir():
+                if user_dir.is_dir() and user_dir not in home_dirs and not user_dir.name.startswith("."):
+                    home_dirs.append(user_dir)
+        except Exception:
+            pass
+    return home_dirs
+
+
 def find_savedvariables_file(wow_path=None):
     """
-    Find the DecktationContext SavedVariables file
-    Searches common WoW installation locations
+    Find the DecktationContext SavedVariables file.
+    Searches common WoW installation locations across user home directories
+    and returns the most recently modified file.
     """
-    # Common WoW paths on Steam Deck
-    search_paths = []
+    candidate_files = []
 
     if wow_path:
-        search_paths.append(Path(wow_path))
+        p = Path(wow_path)
+        if p.is_file() and p.name == "DecktationContext.lua":
+            return p
+        if p.exists():
+            for lua_path in p.glob("**/SavedVariables/DecktationContext.lua"):
+                if lua_path.is_file():
+                    candidate_files.append(lua_path)
 
-    # Steam Deck common locations
-    search_paths.extend([
-        Path.home() / ".steam/steam/steamapps/compatdata/*/pfx/drive_c/Program Files (x86)/World of Warcraft",
-        Path.home() / ".local/share/Steam/steamapps/compatdata/*/pfx/drive_c/Program Files (x86)/World of Warcraft",
-    ])
+    # Search common WoW paths across all discovered user homes
+    home_dirs = get_candidate_home_dirs()
 
-    # Look for SavedVariables
-    for base_path in search_paths:
-        if not base_path.exists():
-            continue
+    relative_search_patterns = [
+        "Games/battlenet/drive_c/Program Files (x86)/World of Warcraft",
+        "Games/battlenet/drive_c/Program Files/World of Warcraft",
+        "Games/world-of-warcraft/drive_c/Program Files (x86)/World of Warcraft",
+        "Games/world-of-warcraft/drive_c/Program Files/World of Warcraft",
+        ".steam/steam/steamapps/compatdata/*/pfx/drive_c/Program Files (x86)/World of Warcraft",
+        ".steam/steam/steamapps/compatdata/*/pfx/drive_c/Program Files/World of Warcraft",
+        ".local/share/Steam/steamapps/compatdata/*/pfx/drive_c/Program Files (x86)/World of Warcraft",
+        ".local/share/Steam/steamapps/compatdata/*/pfx/drive_c/Program Files/World of Warcraft",
+        ".var/app/com.valvesoftware.Steam/.steam/steam/steamapps/compatdata/*/pfx/drive_c/Program Files (x86)/World of Warcraft",
+        ".local/share/bottles/bottles/*/drive_c/Program Files (x86)/World of Warcraft",
+        ".local/share/bottles/bottles/*/drive_c/Program Files/World of Warcraft",
+        ".local/share/lutris/runners/wine/*/drive_c/Program Files (x86)/World of Warcraft",
+        ".wine/drive_c/Program Files (x86)/World of Warcraft",
+        ".wine/drive_c/Program Files/World of Warcraft",
+    ]
 
-        # Search in WTF directory for any account
-        wtf_path = base_path / "WTF" / "Account"
-        if wtf_path.exists():
-            # Find any account directory
-            for account_dir in wtf_path.iterdir():
-                if account_dir.is_dir():
-                    saved_vars = account_dir / "SavedVariables" / "DecktationContext.lua"
-                    if saved_vars.exists():
-                        return saved_vars
+    for home in home_dirs:
+        for rel_pattern in relative_search_patterns:
+            try:
+                for wow_dir in home.glob(rel_pattern):
+                    if wow_dir.is_dir():
+                        for lua_file in wow_dir.glob("**/SavedVariables/DecktationContext.lua"):
+                            if lua_file.is_file():
+                                candidate_files.append(lua_file)
+            except Exception:
+                continue
 
-    return None
+    if not candidate_files:
+        return None
+
+    try:
+        candidate_files.sort(key=lambda f: f.stat().st_mtime, reverse=True)
+        return candidate_files[0]
+    except Exception:
+        return candidate_files[0]
 
 
 def convert_context(input_file, output_file="wow_context.json"):
@@ -98,37 +150,40 @@ def convert_context(input_file, output_file="wow_context.json"):
         return False
 
     try:
-        # Read Lua file
         with open(input_path, 'r', encoding='utf-8') as f:
             lua_content = f.read()
 
-        # Parse to Python dict
         context = parse_lua_table(lua_content)
 
         if not context:
             print("Warning: Could not parse context from Lua file")
             context = {
+                "player": "",
+                "guild": "",
                 "zone": "",
                 "subzone": "",
                 "boss": "",
                 "target": "",
                 "party": [],
                 "class": "",
-                "spec": ""
+                "spec": "",
+                "inventory": [],
+                "quests": [],
+                "spells": []
             }
 
-        # Write JSON
         output_path = Path(output_file)
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(context, f, indent=2)
 
         print(f"Converted: {input_file} -> {output_file}")
-        print(f"Context: {context['zone']} - {context['subzone']}")
-        if context['boss']:
-            print(f"Boss: {context['boss']}")
-        if context['party']:
-            print(f"Party: {', '.join(context['party'][:5])}")
-
+        if context.get("player"):
+            print(f"Player: {context['player']}")
+        print(f"Context: {context.get('zone', '')} - {context.get('subzone', '')}")
+        if context.get('inventory'):
+            print(f"Inventory ({len(context['inventory'])} items): {', '.join(context['inventory'][:5])}...")
+        if context.get('quests'):
+            print(f"Quests ({len(context['quests'])}): {', '.join(context['quests'][:3])}...")
         return True
 
     except Exception as e:
@@ -153,7 +208,6 @@ if __name__ == "__main__":
 
     input_file = args.input
 
-    # Auto-detect SavedVariables file if not specified
     if not input_file:
         print("Searching for DecktationContext SavedVariables...")
         input_file = find_savedvariables_file(args.wow_path)
@@ -168,13 +222,10 @@ if __name__ == "__main__":
 
         print(f"Found: {input_file}")
 
-    # Convert once
     success = convert_context(input_file, args.output)
-
     if not success:
         sys.exit(1)
 
-    # Watch mode
     if args.watch:
         import time
 
@@ -186,12 +237,10 @@ if __name__ == "__main__":
         try:
             while True:
                 current_mtime = Path(input_file).stat().st_mtime
-
                 if current_mtime != last_mtime:
                     print(f"\n[{time.strftime('%H:%M:%S')}] File changed, converting...")
                     convert_context(input_file, args.output)
                     last_mtime = current_mtime
-
-                time.sleep(2)  # Check every 2 seconds
+                time.sleep(2)
         except KeyboardInterrupt:
             print("\nStopped watching")

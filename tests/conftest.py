@@ -18,3 +18,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend", "src
 sys.modules.setdefault("numpy", MagicMock())
 sys.modules.setdefault("faster_whisper", MagicMock())
 sys.modules.setdefault("sounddevice", MagicMock())
+sys.modules.setdefault("decky", MagicMock())
+os.environ.setdefault("DECKY_PLUGIN_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+

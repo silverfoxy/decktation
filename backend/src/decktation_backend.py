@@ -208,14 +208,53 @@ def _write_button_config(config):
         json.dump(normalized_config, config_file)
     return normalized_config
 
+USER_PROFILES_FILE = os.path.join(CONFIG_DIR, "profiles.json")
+
+
+def _load_game_presets():
+    """Load default game presets and merge user profile overrides from CONFIG_DIR."""
+    presets = {}
+    if os.path.exists(PRESETS_FILE):
+        try:
+            with open(PRESETS_FILE, "r") as f:
+                presets = json.load(f)
+        except Exception as e:
+            logger.error(f"Failed to load default game presets from {PRESETS_FILE}: {e}")
+
+    # Check for user profile overrides in CONFIG_DIR
+    user_file = None
+    for candidate in [
+        os.path.join(CONFIG_DIR, "profiles.json"),
+        os.path.join(CONFIG_DIR, "custom_presets.json"),
+        os.path.join(CONFIG_DIR, "game_presets.json"),
+    ]:
+        if os.path.exists(candidate):
+            user_file = candidate
+            break
+
+    if user_file:
+        try:
+            with open(user_file, "r") as f:
+                user_profiles = json.load(f)
+            if isinstance(user_profiles, dict):
+                for game_key, profile_data in user_profiles.items():
+                    if isinstance(profile_data, dict):
+                        if game_key in presets and isinstance(presets[game_key], dict):
+                            merged = dict(presets[game_key])
+                            merged.update(profile_data)
+                            presets[game_key] = merged
+                        else:
+                            presets[game_key] = profile_data
+                logger.info(f"Loaded user profile overrides from {user_file}")
+        except Exception as e:
+            logger.error(f"Failed to load user profiles from {user_file}: {e}")
+
+    logger.info(f"Loaded {len(presets)} game presets: {list(presets.keys())}")
+    return presets
+
+
 # Load game presets
-_game_presets = {}
-try:
-    with open(PRESETS_FILE, 'r') as f:
-        _game_presets = json.load(f)
-    logger.info(f"Loaded {len(_game_presets)} game presets: {list(_game_presets.keys())}")
-except Exception as e:
-    logger.error(f"Failed to load game presets: {e}")
+_game_presets = _load_game_presets()
 
 
 class Plugin:
@@ -535,6 +574,8 @@ class Plugin:
             except Exception as e:
                 logger.error(f"Error reading settings from config: {e}")
 
+            global _game_presets
+            _game_presets = _load_game_presets()
             active_game = saved_config.get("game", "wow")
             active_preset = _game_presets.get(active_game, _game_presets.get("wow", {}))
             Plugin.active_preset = active_game
@@ -836,7 +877,9 @@ class Plugin:
     async def get_presets(self):
         """Get all available game presets"""
         try:
-            presets = [{"id": k, "name": v["name"]} for k, v in _game_presets.items()]
+            global _game_presets
+            _game_presets = _load_game_presets()
+            presets = [{"id": k, "name": v.get("name", k)} for k, v in _game_presets.items()]
             return {"success": True, "presets": presets}
         except Exception as e:
             logger.error(f"Error getting presets: {traceback.format_exc()}")
@@ -855,6 +898,8 @@ class Plugin:
     async def set_active_preset(self, game: str):
         """Switch to a different game preset"""
         try:
+            global _game_presets
+            _game_presets = _load_game_presets()
             if game not in _game_presets:
                 return {"success": False, "error": f"Unknown preset: {game}"}
 
