@@ -2,7 +2,7 @@
 Unit tests for game preset loading and switching.
 
 Covers: constructor preset wiring, set_preset live switching,
-and game_presets.json structural validity.
+game_presets.json structural validity, and user profile overrides.
 """
 
 import json
@@ -26,7 +26,7 @@ class TestPresetsFile:
         with open(PRESETS_FILE) as f:
             return json.load(f)
 
-    REQUIRED_KEYS = {"name", "chat_open_key", "chat_send_key", "default_channel", "channels", "whisper_prompt"}
+    REQUIRED_KEYS = {"name", "chat_open_key", "chat_send_key", "default_command", "commands", "whisper_prompt"}
 
     def test_file_is_valid_json(self, presets):
         assert isinstance(presets, dict)
@@ -41,17 +41,17 @@ class TestPresetsFile:
         missing = self.REQUIRED_KEYS - presets[preset_id].keys()
         assert not missing, f"Preset '{preset_id}' missing keys: {missing}"
 
-    def test_wow_default_channel_in_channels(self, presets):
+    def test_wow_default_command_in_commands(self, presets):
         wow = presets["wow"]
-        assert wow["default_channel"] in wow["channels"]
+        assert wow["default_command"] in wow["commands"]
 
-    def test_generic_default_channel_in_channels(self, presets):
+    def test_generic_default_command_in_commands(self, presets):
         generic = presets["generic"]
-        assert generic["default_channel"] in generic["channels"]
+        assert generic["default_command"] in generic["commands"]
 
-    def test_guildwars2_default_channel_in_channels(self, presets):
+    def test_guildwars2_default_command_in_commands(self, presets):
         guildwars2 = presets["guildwars2"]
-        assert guildwars2["default_channel"] in guildwars2["channels"]
+        assert guildwars2["default_command"] in guildwars2["commands"]
 
     def test_wow_has_enter_keys(self, presets):
         wow = presets["wow"]
@@ -64,15 +64,15 @@ class TestPresetsFile:
         assert guildwars2["chat_send_key"] == "enter"
 
     def test_guildwars2_chat_commands(self, presets):
-        channels = presets["guildwars2"]["channels"]
-        assert channels["say"] == "/s "
-        assert channels["map"] == "/m "
-        assert channels["party"] == "/p "
-        assert channels["squad"] == "/d "
-        assert channels["team"] == "/t "
-        assert channels["guild"] == "/g "
-        assert channels["guild_six"] == "/g6 "
-        assert channels["whisper"] == "/w "
+        commands = presets["guildwars2"]["commands"]
+        assert commands["/s "] == "say"
+        assert commands["/m "] == "map"
+        assert commands["/p "] == "party"
+        assert commands["/d "] == ["squad", "raid"]
+        assert commands["/t "] == "team"
+        assert commands["/g "] == "guild"
+        assert commands["/g6 "] == ["guild six", "guild 6"]
+        assert commands["/w "] == "whisper"
 
     def test_generic_has_null_keys(self, presets):
         generic = presets["generic"]
@@ -91,31 +91,31 @@ class TestPresetsFile:
 # ---------------------------------------------------------------------------
 
 class TestConstructorPreset:
-    def test_wow_preset_sets_default_channel(self):
-        preset = {"default_channel": "say", "channels": {"say": "/s "}, "whisper_prompt": ""}
+    def test_wow_preset_sets_default_command(self):
+        preset = {"default_command": "/s ", "commands": {"/s ": "say"}, "whisper_prompt": ""}
         svc = WoWVoiceChat(preset=preset, lazy_load=True)
-        assert svc.default_channel == "say"
+        assert svc.default_command == "/s "
 
-    def test_generic_preset_sets_default_channel(self):
-        preset = {"default_channel": "type", "channels": {"type": ""}, "whisper_prompt": ""}
+    def test_generic_preset_sets_default_command(self):
+        preset = {"default_command": "", "commands": {"": "type"}, "whisper_prompt": ""}
         svc = WoWVoiceChat(preset=preset, lazy_load=True)
-        assert svc.default_channel == "type"
+        assert svc.default_command == ""
 
-    def test_preset_channel_commands_used(self):
-        channels = {"say": "/s ", "party": "/p "}
-        preset = {"default_channel": "say", "channels": channels, "whisper_prompt": ""}
+    def test_preset_commands_used(self):
+        commands = {"/s ": "say", "/p ": "party"}
+        preset = {"default_command": "/s ", "commands": commands, "whisper_prompt": ""}
         svc = WoWVoiceChat(preset=preset, lazy_load=True)
-        assert svc.channel_commands == channels
+        assert svc.commands == commands
 
     def test_no_preset_falls_back_to_wow_defaults(self):
         svc = WoWVoiceChat(lazy_load=True)
-        # Should have WoW channels in fallback
-        assert "say" in svc.channel_commands
-        assert "party" in svc.channel_commands
-        assert "raid" in svc.channel_commands
+        # Should have WoW commands in fallback
+        assert "/s " in svc.command_prefixes
+        assert "/p " in svc.command_prefixes
+        assert "/raid " in svc.command_prefixes
 
     def test_preset_stored_on_instance(self):
-        preset = {"default_channel": "type", "channels": {"type": ""}, "whisper_prompt": "test"}
+        preset = {"default_command": "", "commands": {"": "type"}, "whisper_prompt": "test"}
         svc = WoWVoiceChat(preset=preset, lazy_load=True)
         assert svc.preset is preset
 
@@ -125,58 +125,58 @@ class TestConstructorPreset:
 # ---------------------------------------------------------------------------
 
 class TestSetPreset:
-    def test_switch_updates_default_channel(self):
-        wow_preset = {"default_channel": "say", "channels": {"say": "/s ", "type": ""}, "whisper_prompt": ""}
-        generic_preset = {"default_channel": "type", "channels": {"type": ""}, "whisper_prompt": ""}
+    def test_switch_updates_default_command(self):
+        wow_preset = {"default_command": "/s ", "commands": {"/s ": "say", "": "type"}, "whisper_prompt": ""}
+        generic_preset = {"default_command": "", "commands": {"": "type"}, "whisper_prompt": ""}
 
         svc = WoWVoiceChat(preset=wow_preset, lazy_load=True)
-        assert svc.default_channel == "say"
+        assert svc.default_command == "/s "
 
         svc.set_preset(generic_preset)
-        assert svc.default_channel == "type"
+        assert svc.default_command == ""
 
-    def test_switch_updates_channel_commands(self):
-        wow_channels = {"say": "/s ", "party": "/p ", "type": ""}
-        generic_channels = {"type": ""}
+    def test_switch_updates_commands(self):
+        wow_commands = {"/s ": "say", "/p ": "party", "": "type"}
+        generic_commands = {"": "type"}
 
-        wow_preset = {"default_channel": "say", "channels": wow_channels, "whisper_prompt": ""}
-        generic_preset = {"default_channel": "type", "channels": generic_channels, "whisper_prompt": ""}
+        wow_preset = {"default_command": "/s ", "commands": wow_commands, "whisper_prompt": ""}
+        generic_preset = {"default_command": "", "commands": generic_commands, "whisper_prompt": ""}
 
         svc = WoWVoiceChat(preset=wow_preset, lazy_load=True)
         svc.set_preset(generic_preset)
 
-        assert svc.channel_commands == generic_channels
-        assert "party" not in svc.channel_commands
+        assert svc.commands == generic_commands
+        assert "/p " not in svc.command_prefixes
 
-    def test_switch_back_restores_channels(self):
-        wow_preset = {"default_channel": "say", "channels": {"say": "/s ", "party": "/p ", "type": ""}, "whisper_prompt": ""}
-        generic_preset = {"default_channel": "type", "channels": {"type": ""}, "whisper_prompt": ""}
+    def test_switch_back_restores_commands(self):
+        wow_preset = {"default_command": "/s ", "commands": {"/s ": "say", "/p ": "party", "": "type"}, "whisper_prompt": ""}
+        generic_preset = {"default_command": "", "commands": {"": "type"}, "whisper_prompt": ""}
 
         svc = WoWVoiceChat(preset=wow_preset, lazy_load=True)
         svc.set_preset(generic_preset)
         svc.set_preset(wow_preset)
 
-        assert svc.default_channel == "say"
-        assert "party" in svc.channel_commands
+        assert svc.default_command == "/s "
+        assert "/p " in svc.command_prefixes
 
-    def test_switch_affects_channel_parsing(self):
+    def test_switch_affects_command_parsing(self):
         wow_preset = {
-            "default_channel": "say",
-            "channels": {"say": "/s ", "party": "/p ", "type": ""},
+            "default_command": "/s ",
+            "commands": {"/s ": "say", "/p ": "party", "": "type"},
             "whisper_prompt": "",
         }
         generic_preset = {
-            "default_channel": "type",
-            "channels": {"type": ""},
+            "default_command": "",
+            "commands": {"": "type"},
             "whisper_prompt": "",
         }
 
         svc = WoWVoiceChat(preset=wow_preset, lazy_load=True)
-        ch, _ = svc.parse_channel_and_text("party hello")
-        assert ch == "party"
+        cmd, _ = svc.parse_channel_and_text("party hello")
+        assert cmd == "/p "
 
         svc.set_preset(generic_preset)
-        # "party" is no longer a channel; falls back to default "type"
-        ch, text = svc.parse_channel_and_text("party hello")
-        assert ch == "type"
+        # "party" is no longer a trigger; falls back to default command ""
+        cmd, text = svc.parse_channel_and_text("party hello")
+        assert cmd == ""
         assert text == "party hello"

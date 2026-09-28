@@ -64,82 +64,60 @@ class WoWVoiceChat:
         # Context cache
         self.context = {}
 
-        # Load language config for channel detection
-        self._load_language_config()
-
-        # Chat channel mappings - from preset or loaded config
-        self.channel_commands = self.preset.get("channels") or self.default_channel_commands
-        if self.last_channel not in self.channel_commands:
-            self.last_channel = None
+        # Load commands and trigger mappings
+        self._load_commands(lang=self.transcription_language or "en")
+        self.last_channel = last_channel if (last_channel and last_channel in self.command_prefixes) else None
 
     def _report_diagnostic(self, name, error=None):
         if self.diagnostic_reporter:
             self.diagnostic_reporter(name, error)
 
-    def _load_language_config(self):
-        """Load language configuration for multi-language channel detection"""
-        # Default fallback configuration
-        self.default_channel_commands = {
-            "say": "/s ",
-            "party": "/p ",
-            "raid": "/raid ",
-            "guild": "/g ",
-            "officer": "/o ",
-            "yell": "/y ",
-            "instance": "/i ",
-            "whisper": "/w ",
-            "type": "",
-        }
+    def _load_commands(self, lang="en"):
+        """Load command prefixes and triggers from the active preset."""
+        commands_dict = self.preset.get("commands") if self.preset else None
+        if commands_dict is None:
+            # Fallback default configuration
+            commands_dict = {
+                "/s ": "say",
+                "/p ": ["party", "group"],
+                "/raid ": "raid",
+                "/g ": "guild",
+                "/o ": "officer",
+                "/y ": "yell",
+                "/i ": "instance",
+                "/w ": "whisper",
+                "/": "slash",
+                "": "type",
+                "/rw ": "alert",
+            }
 
-        self.channel_triggers = {}  # Maps trigger word -> channel name
+        self.default_command = self.preset.get("default_command", "/s ") if self.preset else "/s "
+        self.commands = commands_dict
+        self.command_prefixes = set(commands_dict.keys())
+        self.command_triggers = {}  # trigger_word -> command_prefix
 
-        # Try to load language config file
-        plugin_root = Path(
-            os.environ.get("DECKY_PLUGIN_DIR", Path(__file__).parents[2])
-        )
-        config_file = plugin_root / "channel_languages.json"
-        if not config_file.exists():
-            # Decky's builder flattens defaults/ into the installed plugin root.
-            config_file = plugin_root / "defaults" / "channel_languages.json"
-        if not config_file.exists():
-            # Fallback: build English-only triggers
-            fallback_channels = self.preset.get("channels") or self.default_channel_commands
-            for channel in fallback_channels:
-                # Preset keys use underscores where the spoken form uses spaces.
-                self.channel_triggers[channel.replace("_", " ")] = channel
-            return
+        for cmd_prefix, definition in commands_dict.items():
+            if isinstance(definition, str):
+                self.command_triggers[definition.lower()] = cmd_prefix
+                self.command_triggers[definition.replace("_", " ").lower()] = cmd_prefix
+            elif isinstance(definition, list):
+                for word in definition:
+                    w = str(word).lower()
+                    self.command_triggers[w] = cmd_prefix
+                    self.command_triggers[w.replace("_", " ")] = cmd_prefix
+            elif isinstance(definition, dict):
+                lang_words = definition.get(lang) or definition.get("en", [])
+                if isinstance(lang_words, str):
+                    lang_words = [lang_words]
+                for word in lang_words:
+                    w = str(word).lower()
+                    self.command_triggers[w] = cmd_prefix
+                    self.command_triggers[w.replace("_", " ")] = cmd_prefix
 
-        try:
-            with open(config_file) as f:
-                config = json.load(f)
-
-            # Load channel commands
-            self.default_channel_commands = config.get("channel_commands", self.default_channel_commands)
-
-            # Build trigger lookup from all enabled languages
-            enabled_languages = config.get("enabled_languages", ["en"])
-            languages = config.get("languages", {})
-
-            for lang_code in enabled_languages:
-                if lang_code not in languages:
-                    continue
-
-                lang_data = languages[lang_code]
-                channels = lang_data.get("channels", {})
-
-                # For each channel, map all its triggers to the channel name
-                for channel_name, triggers in channels.items():
-                    for trigger in triggers:
-                        # Store lowercase for case-insensitive matching
-                        self.channel_triggers[trigger.lower()] = channel_name
-
-            print(f"Loaded {len(enabled_languages)} languages with {len(self.channel_triggers)} channel triggers")
-        except Exception as e:
-            print(f"Warning: Could not load language config: {e}")
-            # Use default English-only triggers
-            fallback_channels = self.preset.get("channels") or self.default_channel_commands
-            for channel in fallback_channels:
-                self.channel_triggers[channel.replace("_", " ")] = channel
+        # Convenience aliases
+        self.channel_commands = {k: k for k in self.command_prefixes}
+        self.channel_triggers = self.command_triggers
+        self.default_channel = self.default_command
 
     def _load_model(self):
         """Load the Whisper model (can be called lazily)"""
@@ -177,40 +155,44 @@ class WoWVoiceChat:
     def set_preset(self, preset: dict):
         """Update the active game preset without restarting the service"""
         self.preset = preset
-        self.default_channel = preset.get("default_channel", "say")
-        self.channel_commands = preset.get("channels") or {"say": "", "type": ""}
-        if self.last_channel not in self.channel_commands:
+        self._load_commands(lang=self.transcription_language or "en")
+        if self.last_channel not in self.command_prefixes:
             self.last_channel = None
 
     def set_remember_last_channel(self, enabled, last_channel=None):
-        """Configure whether unprefixed messages reuse the last spoken channel."""
+        """Configure whether unprefixed messages reuse the last spoken command prefix."""
         self.remember_last_channel = bool(enabled)
         self.last_channel = (
-            last_channel if self.remember_last_channel and last_channel in self.channel_commands
+            last_channel if self.remember_last_channel and last_channel in self.command_prefixes
             else None
         )
 
     def _parse_channel_and_text(self, text):
-        """Return the parsed channel, message, and whether a channel was spoken."""
+        """Return the parsed command prefix, message, and whether a trigger prefix was spoken."""
         text = text.strip()
         text_lower = text.lower()
 
-        for trigger, channel_name in sorted(
-            self.channel_triggers.items(), key=lambda item: len(item[0]), reverse=True
+        for trigger, cmd_prefix in sorted(
+            self.command_triggers.items(), key=lambda item: len(item[0]), reverse=True
         ):
             prefixes = [f"{trigger}:", f"{trigger},", f"{trigger}.", f"{trigger} "]
             for prefix in prefixes:
-                if text_lower.startswith(prefix) and channel_name in self.channel_commands:
-                    return channel_name, text[len(prefix):].strip(), True
+                if text_lower.startswith(prefix):
+                    return cmd_prefix, text[len(prefix):].strip(), True
 
-        channel = self.last_channel if (
-            self.remember_last_channel and self.last_channel in self.channel_commands
-        ) else self.default_channel
-        return channel, text, False
+        cmd_prefix = self.last_channel if (
+            self.remember_last_channel and self.last_channel in self.command_prefixes
+        ) else self.default_command
+        return cmd_prefix, text, False
+
+    def parse_channel_and_text(self, text):
+        """Public parsing helper."""
+        return self._parse_channel_and_text(text)
 
     def set_transcription_options(self, language=None):
-        """Update faster-whisper transcription options without reloading the model."""
+        """Update faster-whisper transcription options and reload command triggers for language."""
         self.transcription_language = language or None
+        self._load_commands(lang=self.transcription_language or "en")
 
     def set_model_size(self, model_size):
         """Update the selected model size and reload if a model is already active."""
@@ -298,16 +280,20 @@ class WoWVoiceChat:
         # Add dynamic context to the prompt
         dynamic_parts = []
         if zone:
-            dynamic_parts.append(f"Currently in {zone}")
+            dynamic_parts.append(f"in {zone}")
         if subzone:
-            dynamic_parts.append(f"at {subzone}")
+            dynamic_parts.append(f"{subzone}")
         if boss:
             dynamic_parts.append(f"fighting {boss}")
         if party:
-            dynamic_parts.append(f"with party members {', '.join(party[:5])}")
+            dynamic_parts.append(f"party: {', '.join(party[:5])}")
 
         if dynamic_parts:
-            initial_prompt = base_prompt + " " + " ".join(dynamic_parts) + "."
+            context_str = ", ".join(dynamic_parts)
+            if base_prompt:
+                initial_prompt = f"{base_prompt.rstrip(', .')}, {context_str},"
+            else:
+                initial_prompt = f"{context_str},"
         else:
             initial_prompt = base_prompt
 
@@ -530,37 +516,36 @@ class WoWVoiceChat:
 
     def send_to_wow_chat(self, text, channel=None):
         """
-        Send text to WoW chat by simulating keyboard input using xdotool
+        Send text to game chat by simulating keyboard input using ydotool
 
         Args:
             text: The text to send
-            channel: Optional channel override (say, party, raid, guild, etc.)
-                    If None, will parse from text or use default
+            channel: Optional command prefix override (e.g. "/s ", "/p ", "").
+                    If None, will parse from text or use default_command.
         """
         if not text:
             return
 
-        # Parse channel from text if not explicitly provided
+        # Parse command prefix from text if not explicitly provided
         if channel is None:
-            channel, text, explicitly_selected = self._parse_channel_and_text(text)
+            cmd_prefix, text, explicitly_selected = self._parse_channel_and_text(text)
             if explicitly_selected and self.remember_last_channel:
-                self.last_channel = channel
+                self.last_channel = cmd_prefix
                 if self.channel_rememberer:
-                    self.channel_rememberer(channel)
+                    self.channel_rememberer(cmd_prefix)
+        else:
+            cmd_prefix = self.command_triggers.get(channel.lower(), channel)
 
-        # Get the channel command
-        channel_cmd = self.channel_commands.get(channel, "/s ")
-
-        # For raw typing, strip trailing punctuation added by Whisper
-        if channel == "type":
+        # For raw typing (empty prefix), strip trailing punctuation added by Whisper
+        if cmd_prefix == "":
             text = text.rstrip(".!?,;:")
 
         # Build full message
-        full_message = f"{channel_cmd}{text}"
+        full_message = f"{cmd_prefix}{text}"
 
         import logging
         logger = logging.getLogger()
-        logger.info(f"Sending to {channel}: {text}")
+        logger.info(f"Sending prefix '{cmd_prefix}': {text}")
         logger.info(f"Full message: {full_message}")
 
         # Find ydotool binary - check bundled first, then fallback to system paths
@@ -599,8 +584,8 @@ class WoWVoiceChat:
         env["YDOTOOL_SOCKET"] = "/tmp/decktation-ydotool.sock"
 
         # Determine open/send keys from preset.
-        # The "type" channel always skips both (pure typing into focused window).
-        if channel == "type":
+        # Empty command prefix (raw typing) always skips both (pure typing into focused window).
+        if cmd_prefix == "":
             open_key = None
             send_key = None
         else:

@@ -1,5 +1,5 @@
 """
-Unit tests for parse_channel_and_text.
+Unit tests for parse_channel_and_text with unified commands schema.
 
 This is the most critical logic in the voice service: if parsing is wrong,
 messages silently land in the wrong chat channel in-game.
@@ -13,18 +13,22 @@ WOW_PRESET = {
     "name": "World of Warcraft",
     "chat_open_key": "enter",
     "chat_send_key": "enter",
-    "default_channel": "say",
-    "channels": {
-        "say": "/s ",
-        "party": "/p ",
-        "raid": "/raid ",
-        "guild": "/g ",
-        "officer": "/o ",
-        "yell": "/y ",
-        "instance": "/i ",
-        "whisper": "/w ",
-        "type": "",
-        "alert": "/rw ",
+    "default_command": "/s ",
+    "commands": {
+        "/s ": "say",
+        "/p ": ["party", "group"],
+        "/raid ": "raid",
+        "/g ": "guild",
+        "/o ": "officer",
+        "/y ": "yell",
+        "/i ": "instance",
+        "/1 ": "general",
+        "/2 ": "trade",
+        "/3 ": "local defense",
+        "/w ": "whisper",
+        "/": "slash",
+        "": "type",
+        "/rw ": "alert",
     },
     "whisper_prompt": "World of Warcraft gameplay.",
     "context_file": "wow_context.json",
@@ -34,8 +38,8 @@ GENERIC_PRESET = {
     "name": "Generic",
     "chat_open_key": None,
     "chat_send_key": None,
-    "default_channel": "type",
-    "channels": {"type": ""},
+    "default_command": "",
+    "commands": {"": "type"},
     "whisper_prompt": "",
 }
 
@@ -58,34 +62,44 @@ class TestWoWChannelSeparators:
     """All four separator styles should work for each channel."""
 
     def test_space_separator(self, wow_svc):
-        ch, text = wow_svc.parse_channel_and_text("party let's go")
-        assert ch == "party"
+        cmd, text = wow_svc.parse_channel_and_text("party let's go")
+        assert cmd == "/p "
         assert text == "let's go"
 
     def test_colon_separator(self, wow_svc):
-        ch, text = wow_svc.parse_channel_and_text("party: pull boss")
-        assert ch == "party"
+        cmd, text = wow_svc.parse_channel_and_text("party: pull boss")
+        assert cmd == "/p "
         assert text == "pull boss"
 
     def test_comma_separator(self, wow_svc):
-        ch, text = wow_svc.parse_channel_and_text("party, I need mana")
-        assert ch == "party"
+        cmd, text = wow_svc.parse_channel_and_text("party, I need mana")
+        assert cmd == "/p "
         assert text == "I need mana"
 
     def test_period_separator(self, wow_svc):
-        ch, text = wow_svc.parse_channel_and_text("party. ready?")
-        assert ch == "party"
+        cmd, text = wow_svc.parse_channel_and_text("party. ready?")
+        assert cmd == "/p "
         assert text == "ready?"
 
     def test_case_insensitive(self, wow_svc):
-        ch, text = wow_svc.parse_channel_and_text("Party: hello")
-        assert ch == "party"
+        cmd, text = wow_svc.parse_channel_and_text("Party: hello")
+        assert cmd == "/p "
         assert text == "hello"
 
     def test_mixed_case(self, wow_svc):
-        ch, text = wow_svc.parse_channel_and_text("RAID pull now")
-        assert ch == "raid"
+        cmd, text = wow_svc.parse_channel_and_text("RAID pull now")
+        assert cmd == "/raid "
         assert text == "pull now"
+
+    def test_alias_group(self, wow_svc):
+        cmd, text = wow_svc.parse_channel_and_text("group let's go")
+        assert cmd == "/p "
+        assert text == "let's go"
+
+    def test_slash_command(self, wow_svc):
+        cmd, text = wow_svc.parse_channel_and_text("slash dance")
+        assert cmd == "/"
+        assert text == "dance"
 
 
 # ---------------------------------------------------------------------------
@@ -93,46 +107,51 @@ class TestWoWChannelSeparators:
 # ---------------------------------------------------------------------------
 
 class TestWoWChannels:
-    @pytest.mark.parametrize("prefix,expected_channel", [
-        ("say", "say"),
-        ("party", "party"),
-        ("raid", "raid"),
-        ("guild", "guild"),
-        ("officer", "officer"),
-        ("yell", "yell"),
-        ("instance", "instance"),
-        ("whisper", "whisper"),
-        ("type", "type"),
-        ("alert", "alert"),
+    @pytest.mark.parametrize("prefix,expected_cmd", [
+        ("say", "/s "),
+        ("party", "/p "),
+        ("group", "/p "),
+        ("raid", "/raid "),
+        ("guild", "/g "),
+        ("officer", "/o "),
+        ("yell", "/y "),
+        ("instance", "/i "),
+        ("general", "/1 "),
+        ("trade", "/2 "),
+        ("local defense", "/3 "),
+        ("whisper", "/w "),
+        ("slash", "/"),
+        ("type", ""),
+        ("alert", "/rw "),
     ])
-    def test_channel_prefix_recognized(self, wow_svc, prefix, expected_channel):
-        ch, text = wow_svc.parse_channel_and_text(f"{prefix} hello")
-        assert ch == expected_channel
+    def test_channel_prefix_recognized(self, wow_svc, prefix, expected_cmd):
+        cmd, text = wow_svc.parse_channel_and_text(f"{prefix} hello")
+        assert cmd == expected_cmd
+        assert text == "hello"
 
     def test_message_preserved(self, wow_svc):
         _, text = wow_svc.parse_channel_and_text("raid: focus adds first please")
         assert text == "focus adds first please"
 
     def test_leading_whitespace_stripped(self, wow_svc):
-        # parse_channel_and_text strips the input, so leading whitespace is ignored
-        ch, text = wow_svc.parse_channel_and_text("  party let's go")
-        assert ch == "party"
+        cmd, text = wow_svc.parse_channel_and_text("  party let's go")
+        assert cmd == "/p "
         assert text == "let's go"
 
     def test_no_prefix_uses_default(self, wow_svc):
-        ch, text = wow_svc.parse_channel_and_text("hello everyone")
-        assert ch == "say"
+        cmd, text = wow_svc.parse_channel_and_text("hello everyone")
+        assert cmd == "/s "
         assert text == "hello everyone"
 
     def test_partial_channel_name_not_matched(self, wow_svc):
         # "par" is not a valid channel; should fall through to default
-        ch, _ = wow_svc.parse_channel_and_text("par hello")
-        assert ch == "say"
+        cmd, _ = wow_svc.parse_channel_and_text("par hello")
+        assert cmd == "/s "
 
     def test_channel_name_alone_no_separator(self, wow_svc):
-        # "party" with a trailing space is stripped to "party" (no separator) → default channel
-        ch, text = wow_svc.parse_channel_and_text("party ")
-        assert ch == "say"
+        # "party" with a trailing space is stripped to "party" (no separator) -> default command
+        cmd, text = wow_svc.parse_channel_and_text("party ")
+        assert cmd == "/s "
         assert text == "party"
 
 
@@ -141,16 +160,37 @@ class TestWoWChannels:
 # ---------------------------------------------------------------------------
 
 class TestGenericPreset:
-    def test_default_channel_is_type(self, generic_svc):
-        assert generic_svc.default_channel == "type"
+    def test_default_command_is_empty(self, generic_svc):
+        assert generic_svc.default_command == ""
 
     def test_no_channel_keywords(self, generic_svc):
-        # "party" is not a channel in the generic preset, treated as plain text
-        ch, text = generic_svc.parse_channel_and_text("party let's go")
-        assert ch == "type"
+        # "party" is not a command in the generic preset, treated as plain text
+        cmd, text = generic_svc.parse_channel_and_text("party let's go")
+        assert cmd == ""
         assert text == "party let's go"
 
     def test_plain_text_routed_to_type(self, generic_svc):
-        ch, text = generic_svc.parse_channel_and_text("hello world")
-        assert ch == "type"
+        cmd, text = generic_svc.parse_channel_and_text("hello world")
+        assert cmd == ""
         assert text == "hello world"
+
+
+class TestMultiLanguageCommands:
+    def test_french_triggers_loaded_when_selected(self):
+        preset = {
+            "default_command": "/s ",
+            "commands": {
+                "/s ": {"en": ["say"], "fr": ["dis", "dire"]},
+                "/p ": {"en": ["party"], "fr": ["groupe"]},
+                "/y ": {"en": ["yell"], "fr": ["crie"]},
+            },
+        }
+        svc_fr = WoWVoiceChat(preset=preset, transcription_language="fr", lazy_load=True)
+        cmd, text = svc_fr.parse_channel_and_text("groupe on y va")
+        assert cmd == "/p "
+        assert text == "on y va"
+
+        cmd, text = svc_fr.parse_channel_and_text("dis salut")
+        assert cmd == "/s "
+        assert text == "salut"
+
