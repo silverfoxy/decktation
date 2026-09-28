@@ -32,6 +32,7 @@ WOW_PRESET = {
     },
     "whisper_prompt": "World of Warcraft gameplay.",
     "context_file": "wow_context.json",
+    "casual_case": True,
 }
 
 GENERIC_PRESET = {
@@ -41,6 +42,7 @@ GENERIC_PRESET = {
     "default_command": "",
     "commands": {"": "type"},
     "whisper_prompt": "",
+    "casual_case": False,
 }
 
 
@@ -74,7 +76,7 @@ class TestWoWChannelSeparators:
     def test_comma_separator(self, wow_svc):
         cmd, text = wow_svc.parse_channel_and_text("party, I need mana")
         assert cmd == "/p "
-        assert text == "I need mana"
+        assert text == "i need mana"
 
     def test_period_separator(self, wow_svc):
         cmd, text = wow_svc.parse_channel_and_text("party. ready?")
@@ -193,4 +195,44 @@ class TestMultiLanguageCommands:
         cmd, text = svc_fr.parse_channel_and_text("dis salut")
         assert cmd == "/s "
         assert text == "salut"
+
+
+class TestCasualCase:
+    def test_trailing_period_stripped_for_casual_chat(self, wow_svc):
+        cmd, text = wow_svc.parse_channel_and_text("party haha.")
+        assert cmd == "/p "
+        assert text == "haha"
+
+    def test_initial_letter_lowercased_for_casual_chat(self, wow_svc):
+        cmd, text = wow_svc.parse_channel_and_text("party Thanks")
+        assert cmd == "/p "
+        assert text == "thanks"
+
+    def test_exclamation_and_question_marks_preserved(self, wow_svc):
+        cmd, text = wow_svc.parse_channel_and_text("party ready?")
+        assert cmd == "/p "
+        assert text == "ready?"
+
+        cmd, text = wow_svc.parse_channel_and_text("party let's go!")
+        assert cmd == "/p "
+        assert text == "let's go!"
+
+    def test_all_caps_acronyms_preserved(self, wow_svc):
+        cmd, text = wow_svc.parse_channel_and_text("trade WTB silk cloth")
+        assert cmd == "/2 "
+        assert text == "WTB silk cloth"
+
+    def test_slash_commands_formatted_casually(self, wow_svc):
+        cmd, text = wow_svc.parse_channel_and_text("slash reload.")
+        assert cmd == "/"
+        assert text == "reload"
+
+        cmd, text = wow_svc.parse_channel_and_text("slash Sit.")
+        assert cmd == "/"
+        assert text == "sit"
+
+    def test_generic_preset_does_not_modify_casing(self, generic_svc):
+        cmd, text = generic_svc.parse_channel_and_text("Hello World. I am here.")
+        assert cmd == ""
+        assert text == "Hello World. I am here."
 

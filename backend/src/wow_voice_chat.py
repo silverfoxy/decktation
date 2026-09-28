@@ -12,6 +12,23 @@ import threading
 import subprocess
 from pathlib import Path
 from faster_whisper import WhisperModel
+def _format_casual_message(text: str) -> str:
+    """Format text for casual gaming chat: lowercase first word, strip trailing periods."""
+    if not text:
+        return text
+    # Strip trailing periods (preserve ! and ?)
+    if text.endswith("."):
+        text = text.rstrip(".")
+
+    # Lowercase initial letter unless all-caps acronym (e.g., WTB, LFG)
+    words = text.split(" ")
+    if words:
+        first = words[0]
+        if not (len(first) > 1 and first.isupper()):
+            words[0] = first[:1].lower() + first[1:]
+        text = " ".join(words)
+
+    return text
 
 import sounddevice as sd
 import numpy as np
@@ -67,6 +84,7 @@ class WoWVoiceChat:
         # Load commands and trigger mappings
         self._load_commands(lang=self.transcription_language or "en")
         self.last_channel = last_channel if (last_channel and last_channel in self.command_prefixes) else None
+        self.casual_case = bool(self.preset.get("casual_case", False))
 
     def _report_diagnostic(self, name, error=None):
         if self.diagnostic_reporter:
@@ -155,6 +173,7 @@ class WoWVoiceChat:
     def set_preset(self, preset: dict):
         """Update the active game preset without restarting the service"""
         self.preset = preset
+        self.casual_case = bool(preset.get("casual_case", False))
         self._load_commands(lang=self.transcription_language or "en")
         if self.last_channel not in self.command_prefixes:
             self.last_channel = None
@@ -178,12 +197,21 @@ class WoWVoiceChat:
             prefixes = [f"{trigger}:", f"{trigger},", f"{trigger}.", f"{trigger} "]
             for prefix in prefixes:
                 if text_lower.startswith(prefix):
-                    return cmd_prefix, text[len(prefix):].strip(), True
+                    msg = text[len(prefix):].strip()
+                    if self.casual_case:
+                        msg = _format_casual_message(msg)
+                    return cmd_prefix, msg, True
 
         cmd_prefix = self.last_channel if (
             self.remember_last_channel and self.last_channel in self.command_prefixes
         ) else self.default_command
-        return cmd_prefix, text, False
+
+        if self.casual_case:
+            msg = _format_casual_message(text)
+        else:
+            msg = text
+
+        return cmd_prefix, msg, False
 
     def parse_channel_and_text(self, text):
         """Public parsing helper."""
