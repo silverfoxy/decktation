@@ -11,6 +11,7 @@ import time
 import json
 import glob
 import selectors
+import struct
 import tempfile
 from deck_hid import STEAM_DECK_BUTTON_BITS, raw_button_states, triton_button_states
 from gamepad_evdev import EvdevGamepad
@@ -19,6 +20,8 @@ STATE_FILE = "/tmp/decktation_l5"
 PREVIEW_FILE = "/tmp/decktation_button_preview"
 PID_FILE = "/tmp/decktation_listener.pid"
 CONTROLLER_TYPE_FILE = "/tmp/decktation_controller_type"
+HAPTIC_SOURCE_FILE = "/tmp/decktation_haptic_source.json"
+RECENT_SOURCE_FILE = "/tmp/decktation_recent_controller.json"
 STATUS_FILE = "/tmp/decktation_controller_status"
 # The Decky backend passes its user-owned settings directory. The fallback is
 # retained for standalone development runs.
@@ -39,11 +42,21 @@ STEAM_HID_INTERFACES = {
     # appeared as input1 and input2 across hid-steam/kernel versions.
     "0003:000028DE:00001102": ("/input2",),
     "0003:000028DE:00001142": ("/input1", "/input2"),
+    # 2026 Steam Controller Puck: four independent wireless controller slots.
+    "0003:000028DE:00001304": ("/input2", "/input3", "/input4", "/input5"),
 }
 STEAM_CONTROLLER_TYPES = {
     "0003:000028DE:00001205": "steam_deck",
     "0003:000028DE:00001102": "steam_controller_wired",
     "0003:000028DE:00001142": "steam_controller_wireless",
+    "0003:000028DE:00001304": "steam_controller_2026",
+}
+
+TRITON_BUTTON_BITS = {
+    'A': 0x00000001, 'B': 0x00000002, 'X': 0x00000004,
+    'Y': 0x00000008, 'R1': 0x00000200, 'L1': 0x00080000,
+    'R4': 0x00000080, 'R5': 0x00000100,
+    'L4': 0x00020000, 'L5': 0x00040000,
 }
 for product, kind, suffixes, bus in (
     (0x1304, 'steam_controller_2026_puck', tuple(f'/input{i}' for i in range(2, 6)), 3),
@@ -90,6 +103,19 @@ def write_button_preview(states):
         f.write(value)
     try:
         os.replace(temporary, PREVIEW_FILE)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def write_source(path, value):
+    """Publish a source before the recording state becomes visible."""
+    with tempfile.NamedTemporaryFile(mode='w', dir=os.path.dirname(path),
+                                     prefix='.decktation-source-', delete=False) as f:
+        temporary = f.name
+        json.dump(value, f)
+    try:
+        os.replace(temporary, path)
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)
@@ -239,9 +265,21 @@ def main():
         nonlocal combo_active
         if tracker.active != combo_active:
             combo_active = tracker.active
+            if combo_active:
+                # The source completing the combo is selected in publish(),
+                # before the backend can observe STATE_FILE=1.
+                write_source(HAPTIC_SOURCE_FILE, source_snapshot(active_source))
             print(f"{combo_str} COMBO: {'pressed' if combo_active else 'released'}", flush=True)
             with open(STATE_FILE, 'w') as f:
                 f.write("1" if combo_active else "0")
+
+    def source_snapshot(path):
+        if path not in details:
+            return None
+        return {'path': path, 'kind': devices[path][1],
+                'identity': {key: details[path].get(key) for key in
+                             ('bus', 'vendor_id', 'product_id')},
+                'time': time.time()}
 
     def publish(path, states, controller_type):
         nonlocal active_source
@@ -266,6 +304,8 @@ def main():
                 f.write(details[path]['controller_type'])
             if changed_source:
                 diagnostic('active_changed')
+        if changed and any(states.values()):
+            write_source(RECENT_SOURCE_FILE, source_snapshot(path))
         tracker.update(path, states)
         if changed:
             write_button_preview(tracker.sources.get(active_source, {}))
@@ -360,7 +400,8 @@ def main():
         for device, _ in devices.values():
             device.close()
         selector.close()
-        for path in (STATE_FILE, PID_FILE, PREVIEW_FILE, CONTROLLER_TYPE_FILE, STATUS_FILE):
+        for path in (STATE_FILE, PID_FILE, PREVIEW_FILE, CONTROLLER_TYPE_FILE, STATUS_FILE,
+                     HAPTIC_SOURCE_FILE, RECENT_SOURCE_FILE):
             try:
                 os.remove(path)
             except FileNotFoundError:

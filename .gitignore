@@ -11,6 +11,7 @@ package-lock.json
 .venv/
 venv/
 __pycache__/
+.venv/
 *.pyc
 *.pyo
 *.pyd

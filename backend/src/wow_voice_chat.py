@@ -43,9 +43,10 @@ def _normalize_transcription_text(text):
 
 
 class WoWVoiceChat:
-    def __init__(self, context_file="wow_context.json", sample_rate=44100, default_channel="say", lazy_load=False, test_mode=False, test_audio_file=None, preset=None, confirm_delay=0, manual_send=False, transcription_language=None, model_size="base", diagnostic_reporter=None, remember_last_channel=False, last_channel=None, channel_rememberer=None):
+    def __init__(self, context_file="wow_context.json", sample_rate=44100, default_channel="say", lazy_load=False, test_mode=False, test_audio_file=None, preset=None, confirm_delay=0, manual_send=False, transcription_language=None, model_size="base", diagnostic_reporter=None, remember_last_channel=False, last_channel=None, channel_rememberer=None, recording_state_callback=None):
         self.preset = preset or {}
         self.diagnostic_reporter = diagnostic_reporter
+        self.recording_state_callback = recording_state_callback
         self.context_file = Path(context_file)
         self.sample_rate = sample_rate  # Recording sample rate
         self.whisper_sample_rate = 16000  # Whisper expects 16kHz
@@ -101,6 +102,14 @@ class WoWVoiceChat:
     def _report_diagnostic(self, name, error=None):
         if self.diagnostic_reporter:
             self.diagnostic_reporter(name, error)
+
+    def _recording_transition(self, state):
+        if self.recording_state_callback:
+            try:
+                self.recording_state_callback(state)
+            except Exception:
+                # Feedback must never interrupt recording or transcription.
+                pass
 
     def _load_language_config(self):
         """Load language configuration for multi-language channel detection"""
@@ -749,6 +758,7 @@ class WoWVoiceChat:
             # TEST MODE: Skip actual recording
             if self.test_mode:
                 self.is_recording = True
+                self._recording_transition("started")
                 print(f"[TEST MODE] Recording started (will use {self.test_audio_file})")
                 return
 
@@ -763,6 +773,7 @@ class WoWVoiceChat:
                 raise
             self.recording_stream = stream
             self.is_recording = True
+            self._recording_transition("started")
 
     def stop_recording(self, send=True):
         """Stop recording and process audio (for push-to-talk)"""
@@ -774,6 +785,7 @@ class WoWVoiceChat:
 
             # TEST MODE: Use static audio file instead of recorded audio
             if self.test_mode:
+                self._recording_transition("stopped")
                 print(f"[TEST MODE] Recording stopped, using {self.test_audio_file}")
                 if self.test_audio_file and Path(self.test_audio_file).exists():
                     try:
@@ -802,6 +814,8 @@ class WoWVoiceChat:
                 self.recording_stream.stop()
                 self.recording_stream.close()
                 self.recording_stream = None
+
+            self._recording_transition("stopped")
 
             # Collect all audio
             audio_data = []

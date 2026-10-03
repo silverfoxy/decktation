@@ -133,6 +133,7 @@
     const setManualSendRpc = callable("set_manual_send");
     const setRememberLastChannelRpc = callable("set_remember_last_channel");
     const setShareDiagnosticsRpc = callable("set_share_diagnostics");
+    const setHapticFeedbackRpc = callable("set_haptic_feedback");
     const setRecordingIndicatorRpc = callable("set_recording_indicator");
     const setActivePresetRpc = callable("set_active_preset");
     const setModelSizeRpc = callable("set_model_size");
@@ -378,6 +379,7 @@
         const [controllerStatus, setControllerStatus] = React.useState("Waiting for input");
         const [controllerComboSupported, setControllerComboSupported] = React.useState(true);
         const [buttons, setButtons] = React.useState(["L1", "R1"]);
+        const [hapticFeedback, setHapticFeedback] = React.useState(false);
         const [recordingIndicator, setRecordingIndicator] = React.useState("toast");
         const [activePreset, setActivePreset] = React.useState("wow");
         const [presets, setPresets] = React.useState([]);
@@ -401,6 +403,8 @@
                         if (config.buttons) {
                             setButtons(config.buttons);
                         }
+                        if (config.hapticFeedback !== undefined)
+                            setHapticFeedback(config.hapticFeedback);
                         const indicator = config.recordingIndicator ||
                             (config.showNotifications === false ? "none" : "toast");
                         setRecordingIndicator(indicator);
@@ -649,6 +653,14 @@
                             }
                         } }))),
             React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: "Input" },
+                React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                    React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: "Haptic feedback", description: "Brief cues when recording starts and stops on Steam Deck", checked: hapticFeedback, onChange: async (enabled) => {
+                            const result = await setHapticFeedbackRpc(enabled);
+                            if (result.success)
+                                setHapticFeedback(enabled);
+                            else
+                                setRpcError(result.error || "Could not update haptic feedback");
+                        } })),
                 React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                     React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: "Recording cue", menuLabel: "Recording cue", rgOptions: RECORDING_INDICATOR_OPTIONS, selectedOption: recordingIndicator, onChange: async (option) => {
                             const mode = option.data;

@@ -27,7 +27,7 @@ if [ "$CLEANUP_ONLY" != "true" ]; then
 fi
 
 normalize_ref() {
-  printf '%s' "$1" | python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.stdin.read(), safe=""))'
+  python3 "$WORKSPACE_DIR/scripts/branch-slug.py" "$1"
 }
 
 encode_url_path() {
@@ -251,7 +251,32 @@ checkout_pages_branch() {
   }
 }
 
+migrate_branch_dirs() {
+  python3 - "$PAGES_DIR/branches" "$WORKSPACE_DIR/scripts/branch-slug.py" <<'PY_MIGRATE'
+import importlib.util, json, sys
+from pathlib import Path
+root = Path(sys.argv[1])
+spec = importlib.util.spec_from_file_location("branch_slug", sys.argv[2])
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+planned = {}
+for metadata in sorted(root.glob("*/metadata.json")):
+    ref = json.loads(metadata.read_text())["ref"]
+    slug = module.branch_slug(ref)
+    if slug in planned and planned[slug][1] != ref:
+        raise SystemExit(f"Branch URL collision: {ref} and {planned[slug][1]}")
+    planned[slug] = (metadata.parent, ref)
+for slug, (source, ref) in planned.items():
+    target = root / slug
+    if source != target:
+        if target.exists():
+            raise SystemExit(f"Migration target already exists: {target}")
+        source.rename(target)
+PY_MIGRATE
+}
+
 render_pages_content() {
+  migrate_branch_dirs
   if [ "$CLEANUP_ONLY" != "true" ]; then
     local branch_key
     branch_key="$(normalize_ref "$REF_NAME")"

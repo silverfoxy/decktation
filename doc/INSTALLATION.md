@@ -35,10 +35,10 @@ For details about the optional Decktation Custom Store and its effect on the sel
 When GitHub Pages is enabled for a repository, branch packages use this URL pattern:
 
 ```text
-https://<owner>.github.io/decktation/branches/<encoded-branch-name>/decktation.zip
+https://<owner>.github.io/decktation/branches/<branch-slug>/decktation.zip
 ```
 
-The branch name is encoded for its storage folder and the percent signs are encoded again in the URL. For example, `feature/chat polish` uses `feature%252Fchat%2520polish` as the URL path segment. Prefer the exact URL shown in the workflow run summary or branch page.
+Branch names use readable ASCII slugs. For example, `feat/haptic-feedback` uses `feat-haptic-feedback`. Names containing other punctuation or Unicode also receive a stable hash suffix. Prefer the exact URL shown in the workflow run summary or branch page.
 
 Every GitHub Actions build also uploads a `decktation.zip` artifact. Open the run for the branch or pull request and use the download link in its summary. This works without GitHub Pages, but downloading the artifact requires signing in and is subject to GitHub’s artifact retention period.
 

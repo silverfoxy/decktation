@@ -254,7 +254,8 @@ def test_listener_hotplug_evdev_while_raw_is_idle_and_disconnect(listener, monke
     """An idle Deck must not block a newly attached Xbox or its release."""
     from types import SimpleNamespace
 
-    for name in ('STATE_FILE', 'PID_FILE', 'PREVIEW_FILE', 'CONTROLLER_TYPE_FILE', 'STATUS_FILE'):
+    for name in ('STATE_FILE', 'PID_FILE', 'PREVIEW_FILE', 'CONTROLLER_TYPE_FILE', 'STATUS_FILE',
+                 'HAPTIC_SOURCE_FILE', 'RECENT_SOURCE_FILE'):
         monkeypatch.setattr(listener, name, str(tmp_path / name))
     monkeypatch.setattr(listener, 'load_button_config', lambda: ['L1', 'R1'])
     monkeypatch.setattr(listener, 'find_steam_hidraw', lambda: iter([('/dev/hidraw0', 'steam_deck')]))
@@ -305,6 +306,11 @@ def test_listener_hotplug_evdev_while_raw_is_idle_and_disconnect(listener, monke
                 return []
             if self.calls in (2, 3):
                 assert state == ('0' if self.calls == 2 else '1')
+                if self.calls == 3:
+                    import json
+                    captured = json.loads((tmp_path / 'HAPTIC_SOURCE_FILE').read_text())
+                    assert captured['path'] == '/dev/input/event0'
+                    assert captured['identity']['vendor_id'] == 0x045e
                 return [(SimpleNamespace(data=self.registered[11]), 1)]
             assert state == '0'
             raise KeyboardInterrupt
@@ -326,3 +332,20 @@ def test_listener_hotplug_evdev_while_raw_is_idle_and_disconnect(listener, monke
     disconnected = next(event for event in events if event['event'] == 'disconnected')
     assert disconnected['current_controller'] == {}
     assert disconnected['affected_controller']['vendor_id'] == 0x045e
+
+
+def test_triton_puck_reports_buttons_and_disconnect(listener, monkeypatch):
+    packets = []
+    state = bytearray(64)
+    state[0] = 0x42
+    struct.pack_into('<I', state, 2, listener.TRITON_BUTTON_BITS['L1'] |
+                     listener.TRITON_BUTTON_BITS['R1'])
+    packets.extend((bytes(state), b'\x79\x01'))
+    monkeypatch.setattr(listener.os, 'open', lambda *args: 42)
+    monkeypatch.setattr(listener.os, 'read', lambda *args: packets.pop(0))
+    device = listener.TritonGamepad('/dev/hidraw4')
+    assert list(device.read_states())[0]['L1']
+    assert list(device.read_states())[0]['R1'] is False
+    details = listener.controller_details(device, 'steam_controller_2026_puck')
+    assert details['product_id'] == 0x1304
+    assert {'L1', 'R1'}.issubset(details['supported_buttons'])

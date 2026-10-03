@@ -34,6 +34,7 @@ const setConfirmModeRpc = callable<[enabled: boolean], RpcResponse>("set_confirm
 const setManualSendRpc = callable<[enabled: boolean], RpcResponse>("set_manual_send");
 const setRememberLastChannelRpc = callable<[enabled: boolean], RpcResponse>("set_remember_last_channel");
 const setShareDiagnosticsRpc = callable<[enabled: boolean], RpcResponse>("set_share_diagnostics");
+const setHapticFeedbackRpc = callable<[enabled: boolean], RpcResponse>("set_haptic_feedback");
 const setRecordingIndicatorRpc = callable<[mode: string], RpcResponse>("set_recording_indicator");
 const setActivePresetRpc = callable<[game: string], RpcResponse>("set_active_preset");
 const setModelSizeRpc = callable<[modelSize: string], RpcResponse>("set_model_size");
@@ -294,6 +295,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [controllerStatus, setControllerStatus] = useState<string>("Waiting for input");
 	const [controllerComboSupported, setControllerComboSupported] = useState<boolean>(true);
 	const [buttons, setButtons] = useState<string[]>(["L1", "R1"]);
+	const [hapticFeedback, setHapticFeedback] = useState<boolean>(false);
 	const [recordingIndicator, setRecordingIndicator] = useState<string>("toast");
 	const [activePreset, setActivePreset] = useState<string>("wow");
 	const [presets, setPresets] = useState<DropdownOption[]>([]);
@@ -319,6 +321,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					if (config.buttons) {
 						setButtons(config.buttons);
 					}
+					if (config.hapticFeedback !== undefined) setHapticFeedback(config.hapticFeedback);
 					const indicator = config.recordingIndicator ||
 						(config.showNotifications === false ? "none" : "toast");
 					setRecordingIndicator(indicator);
@@ -651,6 +654,18 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 			</PanelSection>
 
 			<PanelSection title="Input">
+				<PanelSectionRow>
+					<ToggleField
+						label="Haptic feedback"
+						description="Brief cues when recording starts and stops on Steam Deck"
+						checked={hapticFeedback}
+						onChange={async (enabled: boolean) => {
+							const result = await setHapticFeedbackRpc(enabled);
+							if (result.success) setHapticFeedback(enabled);
+							else setRpcError(result.error || "Could not update haptic feedback");
+						}}
+					/>
+				</PanelSectionRow>
 				<PanelSectionRow>
 					<DropdownItem
 						label="Recording cue"
