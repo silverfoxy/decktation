@@ -377,6 +377,8 @@
         const [buttonState, setButtonState] = React.useState("None");
         const [controllerReady, setControllerReady] = React.useState(false);
         const [recordingMode, setRecordingMode] = React.useState("hold");
+        const [controllerStatus, setControllerStatus] = React.useState("Waiting for input");
+        const [controllerComboSupported, setControllerComboSupported] = React.useState(true);
         const [buttons, setButtons] = React.useState(["L1", "R1"]);
         const [recordingIndicator, setRecordingIndicator] = React.useState("toast");
         const [hapticFeedback, setHapticFeedback] = React.useState(false);
@@ -466,6 +468,9 @@
                         setStatusError("");
                         setButtonState(result.detected_button || "None");
                         setControllerReady(result.controller_ready === true);
+                        setControllerStatus(result.controller_status || "Waiting for input");
+                        setControllerComboSupported(result.controller_combo_supported !== false);
+                        setStatusError("");
                         setServiceReady(result.service_ready);
                         setModelReady(result.model_ready);
                         setModelLoading(result.model_loading);
@@ -476,11 +481,13 @@
                     }
                     else {
                         setControllerReady(false);
+                        setControllerStatus("Status unavailable");
                         setStatusError(result.error || "Backend status request failed");
                     }
                 }
                 catch (error) {
                     setControllerReady(false);
+                    setControllerStatus("Status unavailable");
                     setStatusError(String(error));
                 }
                 finally {
@@ -777,7 +784,11 @@
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement("div", null,
                                 "Controller: ",
-                                controllerReady ? "Ready" : "Unavailable")),
+                                controllerStatus)),
+                        React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement("div", null,
+                                "Binding supported: ",
+                                controllerComboSupported ? "Yes" : "No")),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement("div", null,
                                 "Held buttons: ",

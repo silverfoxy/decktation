@@ -135,6 +135,7 @@ STATE_FILE = "/tmp/decktation_l5"
 PREVIEW_FILE = "/tmp/decktation_button_preview"
 PID_FILE = "/tmp/decktation_listener.pid"
 CONTROLLER_TYPE_FILE = "/tmp/decktation_controller_type"
+CONTROLLER_STATUS_FILE = "/tmp/decktation_controller_status"
 # Decktation owns this socket and never modifies a system ydotool service.
 YDOTOOL_SOCKET = "/tmp/decktation-ydotool.sock"
 
@@ -1242,6 +1243,20 @@ class Plugin:
             except Exception:
                 pass
 
+            listener_running = Plugin.listener_process is not None and Plugin.listener_process.poll() is None
+            controller_sources = []
+            try:
+                with open(CONTROLLER_STATUS_FILE) as status_file:
+                    controller_sources = json.load(status_file).get('sources', [])
+            except (OSError, ValueError, AttributeError):
+                pass
+            receiving_sources = [source for source in controller_sources if source.get('input_received')]
+            controller_status = ('Listener stopped' if not listener_running else
+                                 'No controller found' if not controller_sources else
+                                 'Waiting for input' if not receiving_sources else
+                                 'Receiving input')
+            combo_supported = any(source.get('combo_supported') for source in receiving_sources)
+
             return {
                 "success": True,
                 "service_ready": Plugin.voice_service is not None,
@@ -1250,7 +1265,9 @@ class Plugin:
                 "recording": Plugin.voice_service.is_recording if Plugin.voice_service else False,
                 "recording_start_count": Plugin.recording_start_count,
                 "detected_button": detected_button,
-                "controller_ready": Plugin.listener_process is not None and Plugin.listener_process.poll() is None,
+                "controller_ready": listener_running and bool(receiving_sources),
+                "controller_status": controller_status,
+                "controller_combo_supported": combo_supported,
                 "pending_text": Plugin.voice_service.pending_text or "" if Plugin.voice_service else "",
                 "pending_delay": Plugin.voice_service._confirm_delay_for(Plugin.voice_service.pending_text) if Plugin.voice_service and Plugin.voice_service.pending_text else 0,
                 "confirm_mode": Plugin.voice_service.confirm_delay > 0 if Plugin.voice_service else False,

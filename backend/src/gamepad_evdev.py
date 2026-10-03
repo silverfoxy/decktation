@@ -20,6 +20,7 @@ KEY_BUTTONS = {
 # Prefer dedicated GAS/BRAKE axes: Xbox Bluetooth can expose Z/RZ for
 # the right stick alongside these trigger axes.
 TRIGGER_AXES = {'L2': (0x0a, 0x02, 0x15), 'R2': (0x09, 0x05, 0x14)}
+SELECTABLE_BUTTONS = set(KEY_BUTTONS.values()) | {'L4', 'R4', 'L5', 'R5'}
 
 
 def button_mapping(identity):
@@ -50,7 +51,7 @@ def configured_button_mapping(identity):
         validated = {}
         for code, name in overrides.items():
             key = int(code, 0)
-            if not 0x120 <= key <= 0x2ff or name not in set(KEY_BUTTONS.values()):
+            if not 0x120 <= key <= 0x2ff or name not in SELECTABLE_BUTTONS:
                 raise ValueError(f'invalid button mapping: {code}={name}')
             validated[key] = name
         mapping.update(validated)
@@ -76,7 +77,11 @@ class EvdevGamepad:
         self.fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
         try:
             keys = bits(ioctl_read(self.fd, 0x21, 96))
-            if not {0x130, 0x131}.issubset(keys):
+            # A keyboard helper can advertise every key, including BTN_GAMEPAD.
+            # Require gamepad buttons and two actual stick axes as Linux's
+            # joystick classification does; do not treat that helper as a pad.
+            axes = bits(ioctl_read(self.fd, 0x23, 8))
+            if not {0x130, 0x131}.issubset(keys) or not {0, 1}.issubset(axes):
                 raise ValueError('not a gamepad')
             self.identity = {}
             try:
@@ -87,7 +92,6 @@ class EvdevGamepad:
                 pass  # Diagnostics must not prevent controller input.
             self.key_buttons = configured_button_mapping(self.identity)
             self.supported_buttons = {name for code, name in self.key_buttons.items() if code in keys}
-            axes = bits(ioctl_read(self.fd, 0x23, 8))
             self.axes = {}
             for name, candidates in TRIGGER_AXES.items():
                 for code in candidates:
@@ -118,7 +122,7 @@ class EvdevGamepad:
         self.values = {code: self.absinfo(code)[0] for code in set(self.axes) | self.hat_axes}
 
     def states(self):
-        states = {name: False for name in KEY_BUTTONS.values()}
+        states = {name: False for name in self.key_buttons.values()}
         for code, name in self.key_buttons.items():
             states[name] |= code in self.keys
         for code, (name, low, high) in self.axes.items():

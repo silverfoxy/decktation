@@ -29,7 +29,15 @@ Enable Decktation and wait for **Ready**, then select **Test Recording (3s)** an
 
 ## Push-to-talk is not detected
 
-- Open the plugin panel and check **Input**. It should show **OK** and display held buttons while you press them.
+- Open the plugin panel and check **Input**. **Receiving input** confirms decoded
+  controller reports have arrived; held buttons should appear as you press them.
+  **No controller found** means no supported input device was opened;
+  **Waiting for input** means devices were opened but no decoded report arrived.
+- Steam Deck and both generations of Steam Controller use physical HID reports,
+  including the new Controller's Puck, so detection does not rely on Steam Input
+  producing a virtual gamepad event. Other Linux gamepads use evdev; their
+  controls must be exposed by the driver. Rear grips require distinct driver
+  codes and a per-device mapping if they are not supported directly.
 - Confirm the configured combination is held on one controller; buttons from different devices cannot be combined.
 - Try a different combination, reconnect the controller, and check the latest log for controller-listener errors.
 - Some Steam Input keyboard-and-mouse layouts do not expose gamepad controls. Third-party paddles may not appear as distinct buttons.

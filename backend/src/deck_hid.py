@@ -59,6 +59,33 @@ STEAM_CONTROLLER_TRIGGER_OFFSETS = {
 }
 STEAM_CONTROLLER_TRIGGER_THRESHOLD = 128
 
+# Steam Controller (2026 / Triton). Wire layout and button masks are documented
+# by SDL's steam/controller_structs.h and SDL_hidapi_steam_triton.c.
+TRITON_BUTTON_MASKS = {
+    'A': 0x1, 'B': 0x2, 'X': 0x4, 'Y': 0x8,
+    'R4': 0x80, 'R5': 0x100, 'R1': 0x200,
+    'L4': 0x20000, 'L5': 0x40000, 'L1': 0x80000,
+    'R2': 0x800000, 'L2': 0x8000000,
+}
+
+
+def triton_button_states(report):
+    """Decode USB/Puck, BLE and timestamped state; ignore other reports.
+
+    All three formats share the sequence byte, 32-bit buttons and triggers.
+    Accept extended packets, but require the complete 46-byte base state.
+    Wireless disconnect reports release held controls even with the Puck present.
+    """
+    if len(report) >= 2 and report[0] in (0x46, 0x79):
+        return {name: False for name in TRITON_BUTTON_MASKS} if report[1] == 1 else None
+    if len(report) < 46 or report[0] not in (0x42, 0x45, 0x47):
+        return None
+    buttons = int.from_bytes(report[2:6], 'little')
+    states = {name: bool(buttons & mask) for name, mask in TRITON_BUTTON_MASKS.items()}
+    for name, offset in (('L2', 6), ('R2', 8)):
+        states[name] |= int.from_bytes(report[offset:offset + 2], 'little', signed=True) >= 16384
+    return states
+
 
 def raw_button_states(report):
     """Return physical button states from a Valve controller report.
