@@ -21,7 +21,7 @@ jobs:
       - run: node --test cloudflare/tests/*.test.js
       - run: pip install pytest sentry-sdk==2.66.0
       - run: pytest tests/ -v
-      - run: python -m py_compile main.py backend/src/decktation_backend.py backend/src/wow_voice_chat.py backend/src/controller_listener.py backend/src/deck_hid.py backend/src/gamepad_evdev.py backend/src/telemetry.py
+      - run: python -m py_compile main.py backend/src/decktation_backend.py backend/src/wow_voice_chat.py backend/src/controller_listener.py backend/src/deck_hid.py backend/src/gamepad_evdev.py backend/src/telemetry.py backend/src/haptic_feedback.py
 
   build:
     if: github.event_name != 'delete'
@@ -68,6 +68,7 @@ jobs:
           unzip -l build-output/decktation.zip | grep -q 'decktation/bin/telemetry.py'
           unzip -l build-output/decktation.zip | grep -q 'decktation/bin/decktation_backend.py'
           unzip -l build-output/decktation.zip | grep -q 'decktation/bin/controller_listener.py'
+          unzip -l build-output/decktation.zip | grep -q 'decktation/bin/haptic_feedback.py'
           unzip -l build-output/decktation.zip | grep -q 'decktation/game_presets.json'
           unzip -l build-output/decktation.zip | grep -q 'decktation/channel_languages.json'
           unzip -l build-output/decktation.zip | grep -q 'cpython-311'
@@ -108,7 +109,7 @@ jobs:
             echo "- Commit: \`$GITHUB_SHA\`"
             echo "- [Download the ready-to-install plugin ZIP]($ARTIFACT_URL) from this Actions run. GitHub sign-in is required."
             if [ "$EVENT_NAME" != "pull_request" ] && [ "$REF_TYPE" = "branch" ]; then
-              BRANCH_PATH="$(python3 -c 'import sys, urllib.parse; key = urllib.parse.quote(sys.argv[1], safe=""); print(urllib.parse.quote(key, safe=""))' "$REF_NAME")"
+              BRANCH_PATH="$(python3 scripts/branch-slug.py "$REF_NAME")"
               echo "- Public branch URL (when GitHub Pages is enabled): [$PAGES_BASE_URL/branches/$BRANCH_PATH/decktation.zip]($PAGES_BASE_URL/branches/$BRANCH_PATH/decktation.zip)"
             fi
           } >> "$GITHUB_STEP_SUMMARY"

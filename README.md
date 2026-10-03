@@ -36,6 +36,15 @@ Download the [latest packaged Decktation ZIP](https://silverfoxy.github.io/deckt
 
 > **Do not install GitHub’s automatically generated “Source code (zip)” or “Source code (tar.gz)” archives.** They are not Decktation plugin packages and do not include its bundled dependencies.
 
+### Feature branch test builds
+
+Each Actions build uploads a packaged `decktation.zip`; downloading Actions
+artifacts requires signing in to GitHub. Forks with GitHub Pages enabled also
+publish branch builds at `https://<owner>.github.io/decktation/branches/<branch-slug>/decktation.zip`.
+For example, `feat/settings-ux` uses `feat-settings-ux`. The Actions summary and
+branch page provide the exact download link. Enable **Settings → Pages → Build
+and deployment → Source → GitHub Actions** in the fork to publish previews.
+
 ### Optional / Advanced: Decktation Custom Store
 
 The [Decktation Custom Store](doc/DECKY_STORE.md) can list Decktation in Decky’s plugin browser:

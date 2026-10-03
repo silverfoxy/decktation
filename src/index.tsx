@@ -5,9 +5,12 @@ import {
 	quickAccessMenuClasses,
 	ToggleField,
 	ButtonItem,
-	DropdownItem,
 	DropdownOption,
 	Focusable,
+	Menu,
+	MenuItem,
+	showContextMenu,
+	gamepadContextMenuClasses,
 } from "decky-frontend-lib";
 
 import { callable, toaster } from "@decky/api";
@@ -15,14 +18,19 @@ import { callable, toaster } from "@decky/api";
 import React, {
 	VFC,
 	useEffect,
+	useRef,
 	useState,
 } from "react";
 
-import { FaMicrophone, FaTrash, FaCircle } from "react-icons/fa";
+import { FaMicrophone } from "react-icons/fa";
 
 type RpcResponse = { success: boolean; error?: string; [key: string]: any };
 
 const getStatus = callable<[], RpcResponse>("get_status");
+const startBindingCapture = callable<[], RpcResponse>("start_binding_capture");
+const getBindingCapture = callable<[session: string], RpcResponse>("get_binding_capture");
+const cancelBindingCapture = callable<[session: string], RpcResponse>("cancel_binding_capture");
+const setRecordingModeRpc = callable<[mode: string], RpcResponse>("set_recording_mode");
 const getButtonConfig = callable<[], RpcResponse>("get_button_config");
 const getPresets = callable<[], RpcResponse>("get_presets");
 const setEnabledRpc = callable<[enabled: boolean], RpcResponse>("set_enabled");
@@ -35,6 +43,7 @@ const setManualSendRpc = callable<[enabled: boolean], RpcResponse>("set_manual_s
 const setRememberLastChannelRpc = callable<[enabled: boolean], RpcResponse>("set_remember_last_channel");
 const setShareDiagnosticsRpc = callable<[enabled: boolean], RpcResponse>("set_share_diagnostics");
 const setRecordingIndicatorRpc = callable<[mode: string], RpcResponse>("set_recording_indicator");
+const setHapticFeedbackRpc = callable<[enabled: boolean], RpcResponse>("set_haptic_feedback");
 const setActivePresetRpc = callable<[game: string], RpcResponse>("set_active_preset");
 const setModelSizeRpc = callable<[modelSize: string], RpcResponse>("set_model_size");
 const setTranscriptionOptionsRpc = callable<
@@ -119,51 +128,36 @@ class DecktationLogic {
 		} catch (_e) {}
 	}
 
-	testRecording = async (onComplete?: (text: string, time: string) => void) => {
-		await startRecording();
+	testRecording = async (
+		onComplete: (text: string, time: string) => void,
+		onPhase: (phase: "recording" | "transcribing" | "idle") => void,
+	) => {
+		onPhase("recording");
+		try {
+			if (this.recordingIndicator === "toast") this.notify("Decktation", 1000, "Recording for 3 seconds...");
+			const started = await startRecording();
+			if (!started.success) throw new Error(started.error || "Could not start test recording");
 
-		// Wait 3 seconds
-		await new Promise(resolve => setTimeout(resolve, 3000));
+			await new Promise(resolve => setTimeout(resolve, 3000));
+			// Keep the no-send argument: test text must never reach the active game.
+			onPhase("transcribing");
+			const transcription = stopRecording(false);
+			if (this.recordingIndicator === "toast") this.notify("Decktation", 1500, "Transcribing...");
+			const stopped = await transcription;
+			if (!stopped.success) throw new Error(stopped.error || "Could not transcribe test recording");
 
-		// Test recordings display their result in the panel but must never type
-		// into the active application. Change the UI state at exactly 3 seconds,
-		// then wait only for transcription to finish.
-		const transcription = stopRecording(false);
-		await transcription;
-
-		if (onComplete) {
-			const transcriptionResult = await getLastTranscription();
-			if (transcriptionResult.success && transcriptionResult.transcription) {
-				const data = transcriptionResult.transcription;
-				const text = data.text || "";
-				const time = data.timestamp ? new Date(data.timestamp * 1000).toLocaleTimeString() : "";
-				onComplete(text, time);
-			}
+			const result = await getLastTranscription();
+			if (!result.success) throw new Error(result.error || "Could not read test transcription");
+			const data = result.transcription;
+			onComplete(
+				data?.text || "",
+				data?.timestamp ? new Date(data.timestamp * 1000).toLocaleTimeString() : "",
+			);
+		} finally {
+			onPhase("idle");
 		}
 	}
 }
-
-// Available button options
-const BUTTON_OPTIONS: DropdownOption[] = [
-	{ data: "L1", label: "L1 Bumper" },
-	{ data: "R1", label: "R1 Bumper" },
-	{ data: "L2", label: "L2 Trigger" },
-	{ data: "R2", label: "R2 Trigger" },
-	{ data: "L4", label: "L4 Grip" },
-	{ data: "R4", label: "R4 Grip" },
-	{ data: "L5", label: "L5 Grip" },
-	{ data: "R5", label: "R5 Grip" },
-	{ data: "A", label: "A" },
-	{ data: "B", label: "B" },
-	{ data: "X", label: "X" },
-	{ data: "Y", label: "Y" },
-];
-
-const RECORDING_INDICATOR_OPTIONS: DropdownOption[] = [
-	{ data: "toast", label: "Toast" },
-	{ data: "overlay", label: "Overlay" },
-	{ data: "none", label: "None" },
-];
 
 const WHISPER_LANGUAGE_OPTIONS: DropdownOption[] = [
 	{ data: "auto", label: "Auto Detect" },
@@ -270,18 +264,33 @@ const WHISPER_LANGUAGE_OPTIONS: DropdownOption[] = [
 ];
 
 const MODEL_SIZE_OPTIONS: DropdownOption[] = [
-	{ data: "base", label: "Base" },
-	{ data: "small", label: "Small" },
-	{ data: "medium", label: "Medium" },
+	{ data: "base", label: "Base · Fast" },
+	{ data: "small", label: "Small · Balanced" },
+	{ data: "medium", label: "Medium · More accurate" },
 ];
 
+const POPULAR_STEAM_LANGUAGE_CODES = new Set(["en", "zh", "ru", "es", "pt", "de", "ja", "fr", "pl", "ko"]);
+const byLanguageName = (left: DropdownOption, right: DropdownOption) => String(left.label).localeCompare(String(right.label));
+const POPULAR_LANGUAGE_OPTIONS = WHISPER_LANGUAGE_OPTIONS.filter(option => POPULAR_STEAM_LANGUAGE_CODES.has(String(option.data))).sort(byLanguageName);
+const OTHER_LANGUAGE_OPTIONS = WHISPER_LANGUAGE_OPTIONS.filter(option => option.data !== "auto" && !POPULAR_STEAM_LANGUAGE_CODES.has(String(option.data))).sort(byLanguageName);
+
 const PRESET_DISPLAY_NAMES: Record<string, string> = {
-	wow: "WoW",
-	guildwars2: "GW2",
+	wow: "World of Warcraft",
+	guildwars2: "Guild Wars 2",
 	generic: "Generic",
 };
 
+type PanelPage = "main" | "advanced" | "diagnostics" | "help" | "game" | "model" | "recording-mode";
+
 const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
+	const [page, setPage] = useState<PanelPage>("main");
+	const panelRef = useRef<HTMLDivElement>(null);
+	const languageMenuAnchorRef = useRef<HTMLSpanElement>(null);
+	const advancedModelRowRef = useRef<HTMLDivElement>(null);
+	const [capture, setCapture] = useState<{ session: string; phase: string; buttons: string[] } | null>(null);
+	const captureRef = useRef<string | null>(null);
+	const captureFocusRef = useRef<HTMLDivElement>(null);
+	const [bindingMessage, setBindingMessage] = useState("");
 	const [enabled, setEnabled] = useState<boolean>(false);
 	const [recording, setRecording] = useState<boolean>(false);
 	const [serviceReady, setServiceReady] = useState<boolean>(false);
@@ -291,10 +300,12 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [inputReady, setInputReady] = useState<boolean>(true);
 	const [buttonState, setButtonState] = useState<string>("None");
 	const [controllerReady, setControllerReady] = useState<boolean>(false);
+	const [recordingMode, setRecordingMode] = useState<"hold" | "tap">("hold");
 	const [controllerStatus, setControllerStatus] = useState<string>("Waiting for input");
 	const [controllerComboSupported, setControllerComboSupported] = useState<boolean>(true);
 	const [buttons, setButtons] = useState<string[]>(["L1", "R1"]);
 	const [recordingIndicator, setRecordingIndicator] = useState<string>("toast");
+	const [hapticFeedback, setHapticFeedback] = useState<boolean>(false);
 	const [activePreset, setActivePreset] = useState<string>("wow");
 	const [presets, setPresets] = useState<DropdownOption[]>([]);
 	const [confirmMode, setConfirmMode] = useState<boolean>(false);
@@ -306,6 +317,9 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [lastTranscription, setLastTranscription] = useState<string>("");
 	const [lastTranscriptionTime, setLastTranscriptionTime] = useState<string>("");
 	const [rpcError, setRpcError] = useState<string>("");
+	const [statusError, setStatusError] = useState<string>("");
+	const [testPhase, setTestPhase] = useState<"idle" | "recording" | "transcribing">("idle");
+	const [hasTestResult, setHasTestResult] = useState<boolean>(false);
 
 	useEffect(() => {
 		setEnabled(logic.enabled);
@@ -316,13 +330,16 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 			if (result.success) {
 				const config = result.config;
 				if (config) {
+					setRecordingMode(config.recordingMode === "tap" ? "tap" : "hold");
 					if (config.buttons) {
 						setButtons(config.buttons);
 					}
-					const indicator = config.recordingIndicator ||
-						(config.showNotifications === false ? "none" : "toast");
+					const indicator = config.recordingIndicator || (config.showNotifications === false ? "none" : "toast");
 					setRecordingIndicator(indicator);
 					logic.recordingIndicator = indicator;
+					if (config.hapticFeedback !== undefined) {
+						setHapticFeedback(config.hapticFeedback);
+					}
 					if (config.game) {
 						setActivePreset(config.game);
 					}
@@ -375,11 +392,12 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 				const result = await getStatus();
 				if (cancelled) return;
 				if (result.success) {
+					setStatusError("");
 					setButtonState(result.detected_button || "None");
 					setControllerReady(result.controller_ready === true);
 					setControllerStatus(result.controller_status || "Waiting for input");
 					setControllerComboSupported(result.controller_combo_supported !== false);
-					setRpcError("");
+					setStatusError("");
 					setServiceReady(result.service_ready);
 					setModelReady(result.model_ready);
 					setModelLoading(result.model_loading);
@@ -390,12 +408,12 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 				} else {
 					setControllerReady(false);
 					setControllerStatus("Status unavailable");
-					setRpcError(result.error || "Backend status request failed");
+					setStatusError(result.error || "Backend status request failed");
 				}
 			} catch (error) {
 				setControllerReady(false);
 				setControllerStatus("Status unavailable");
-				setRpcError(String(error));
+				setStatusError(String(error));
 			} finally {
 				if (!cancelled) timeout = setTimeout(poll, 100);
 			}
@@ -407,477 +425,340 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 		};
 	}, [logic.enabled]);
 
+	useEffect(() => {
+		// Steam's QAM keeps its scroll position when the content changes in place.
+		const resetScroll = () => {
+			let node = panelRef.current?.parentElement;
+			while (node) {
+				if (node.scrollHeight > node.clientHeight) node.scrollTop = 0;
+				node = node.parentElement;
+			}
+		};
+		resetScroll();
+		const frame = requestAnimationFrame(() => {
+			resetScroll();
+			if (page === "advanced") {
+				(advancedModelRowRef.current?.querySelector('[role="button"], button') as HTMLElement | null)?.focus();
+			}
+		});
+		return () => cancelAnimationFrame(frame);
+	}, [page]);
+
+	useEffect(() => {
+        if (!capture) return;
+        let disposed = false;
+        let timer: ReturnType<typeof setTimeout>;
+        const pollCapture = async () => {
+            try {
+                const result = await getBindingCapture(capture.session);
+                if (disposed) return;
+                if (!result.success || result.phase === "cancelled" || result.phase === "saved") {
+                    if (result.phase === "saved") {
+                        setButtons(result.buttons);
+                        setBindingMessage(`Binding saved: ${result.buttons.join(" + ")}`);
+                    } else setRpcError(result.error || "Binding cancelled. Your previous binding is unchanged.");
+                    captureRef.current = null;
+                    setCapture(null);
+                    return;
+                }
+                setCapture({ session: capture.session, phase: result.phase, buttons: result.buttons || [] });
+            } catch (error) {
+                if (!disposed) { setRpcError(String(error)); void cancelCapture(); }
+                return;
+            }
+            if (!disposed) timer = setTimeout(pollCapture, 80);
+        };
+        captureFocusRef.current?.focus();
+        void pollCapture();
+        return () => { disposed = true; clearTimeout(timer); };
+    }, [capture?.session]);
+    useEffect(() => () => {
+        if (captureRef.current) void cancelBindingCapture(captureRef.current);
+    }, []);
+    const beginCapture = async () => {
+        setRpcError(""); setBindingMessage("");
+        try {
+            const result = await startBindingCapture();
+            if (!result.success) { setRpcError(result.error || "Could not start binding capture"); return; }
+            captureRef.current = result.session;
+            setCapture({ session: result.session, phase: "release", buttons: [] });
+        } catch (error) { setRpcError(String(error)); }
+    };
+    const cancelCapture = async () => {
+        const session = captureRef.current;
+        captureRef.current = null;
+        setCapture(null);
+        if (session) await cancelBindingCapture(session);
+    };
+
+	const goBack = () => setPage(page === "diagnostics" || page === "help" || page === "model" ? "advanced" : "main");
+	const chooseLanguage = async (language: string) => {
+		const result = await setTranscriptionOptionsRpc(language);
+		if (result.success) {
+			setTranscriptionLanguage(language);
+			setRpcError("");
+		} else {
+			setRpcError(result.error || "Could not update language setting");
+		}
+	};
+	const runTest = async () => {
+		if (testPhase !== "idle") return;
+		setRpcError("");
+		setHasTestResult(false);
+		try {
+			await logic.testRecording((text, time) => {
+				setLastTranscription(text);
+				setLastTranscriptionTime(time);
+				setHasTestResult(true);
+			}, setTestPhase);
+		} catch (error) {
+			setRpcError(String(error));
+		}
+	};
+	const statusMessage = statusError ? `Backend unavailable: ${statusError}`
+		: rpcError ? rpcError
+		: !serviceReady ? "Connecting to Decktation..."
+		: !inputReady ? "Keyboard helper unavailable. Reload or reinstall Decktation."
+		: recording ? "Recording..."
+		: modelLoading ? "Loading transcription model..."
+		: !enabled ? "Decktation is off"
+		: !modelReady ? "Model not ready"
+		: !controllerReady ? "Controller unavailable"
+		: "Ready";
+	const statusProblem = !!(statusError || rpcError || (serviceReady && !inputReady) || (enabled && serviceReady && !controllerReady));
+
+    if (capture) {
+        const swallow = (event: CustomEvent) => { event.preventDefault(); event.stopPropagation(); };
+        return <Focusable ref={captureFocusRef} tabIndex={0} onButtonDown={swallow} onButtonUp={swallow}
+            onOKButton={swallow} onCancelButton={swallow} onGamepadDirection={swallow}
+            onActivate={swallow} onCancel={swallow}>
+            <PanelSection title="Recording binding">
+                <PanelSectionRow><div role="status">{capture.phase === "release"
+                    ? "Release all buttons to start listening."
+                    : "Hold your new combination together. Release to save."}</div></PanelSectionRow>
+                <PanelSectionRow><div>Detected: <strong>{capture.buttons.join(" + ") || "Listening…"}</strong></div></PanelSectionRow>
+                <PanelSectionRow><div style={{ fontSize: "12px", opacity: 0.85 }}>One to five buttons. Steam and Quick Access are excluded. Capture times out after 20 seconds.</div></PanelSectionRow>
+                <PanelSectionRow><button tabIndex={-1} onClick={() => { void cancelCapture(); }} style={{ padding: "10px 20px", color: "white", background: "#3b4252", border: 0, borderRadius: "4px" }}>Cancel (touch)</button></PanelSectionRow>
+            </PanelSection>
+        </Focusable>;
+    }
+
 	return (
-		<div>
-			<PanelSection title="Status">
-				{!serviceReady && (
-					<PanelSectionRow>
-						<div style={{
-							padding: '10px',
-							backgroundColor: '#2196f3',
-							borderRadius: '8px',
-							textAlign: 'center',
-							fontWeight: 'bold'
-						}}>
-							{rpcError ? `Backend connection failed: ${rpcError}` : "Initializing service..."}
-						</div>
-					</PanelSectionRow>
+		<Focusable onCancel={page === "main" ? undefined : (event) => {
+			event.stopPropagation();
+			goBack();
+		}} onCancelActionDescription={page === "main" ? undefined : "Back"}>
+			<div ref={panelRef}>
+				<style>{`.decktation-trash-focused { outline: 3px solid #66c0f4 !important; outline-offset: 2px; background-color: #456b90 !important; box-shadow: 0 0 0 2px rgba(102, 192, 244, 0.38) !important; }`}</style>
+				{page !== "main" && (
+					<PanelSectionRow><ButtonItem layout="below" onClick={goBack}>Back</ButtonItem></PanelSectionRow>
 				)}
-				{serviceReady && modelLoading && (
-					<PanelSectionRow>
-						<div style={{
-							padding: '10px',
-							backgroundColor: '#2196f3',
-							borderRadius: '8px',
-							textAlign: 'center',
-							fontWeight: 'bold'
-						}}>
-							Loading Whisper model...
-						</div>
-					</PanelSectionRow>
-				)}
-				{serviceReady && !inputReady && (
-					<PanelSectionRow>
-						<div style={{
-							padding: '10px',
-							backgroundColor: '#8b2d2d',
-							borderRadius: '8px',
-							textAlign: 'center',
-							fontWeight: 'bold'
-						}}>
-							Keyboard helper unavailable. Reload the plugin or reinstall Decktation.
-						</div>
-					</PanelSectionRow>
-				)}
-				<PanelSectionRow>
-					<ToggleField
-						label="Enable"
-						checked={enabled}
-						disabled={!serviceReady || modelLoading || isToggling}
-						onChange={async (e) => {
-							if (isToggling) return;
-							setIsToggling(true);
-							setEnabled(e);
-							logic.enabled = e;
-							if (!e) {
-								setModelReady(false);
-								logic.recording = false;
-								setRecording(false);
-							}
-							try {
-								const result = await setEnabledRpc(e);
-								if (!result.success) {
-									setEnabled(!e);
-									logic.enabled = !e;
-									setRpcError(result.error || "Could not update enabled state");
-									return;
-								}
-								if (e && logic.enabled) {
-									setModelLoading(true);
-									const modelResult = await loadModel();
-									if (!modelResult.success) {
-										setRpcError(modelResult.error || "Could not load Whisper model");
-									}
-								}
-							} catch (error) {
-								setEnabled(!e);
-								logic.enabled = !e;
-								setRpcError(String(error));
-							} finally {
-								setIsToggling(false);
-							}
-						}}
-					/>
-				</PanelSectionRow>
-
-				{enabled && modelReady && (
-					<PanelSectionRow>
-						<div style={{
-							padding: '12px',
-							backgroundColor: recording ? '#4ade80' : '#3b4252',
-							borderRadius: '8px',
-							textAlign: 'center',
-							fontWeight: 'bold',
-							fontSize: '14px',
-							border: recording ? '2px solid #22c55e' : '2px solid #4c566a',
-							transition: 'all 0.3s ease'
-						}}>
-							{recording ? '🎤 Recording...' : '✓ Ready'}
-						</div>
-					</PanelSectionRow>
-				)}
-
-					<PanelSectionRow>
-						<div style={{ marginTop: '4px', marginBottom: '8px' }}>
-							<ButtonItem
-								layout="below"
-								onClick={() => logic.testRecording((text, time) => {
-									setLastTranscription(text);
-									setLastTranscriptionTime(time);
-								})}
-								disabled={!enabled || !modelReady || modelLoading || recording}
-							>
-								<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-									<span style={{ position: 'relative', display: 'inline-flex' }}>
-										<FaMicrophone size={14} />
-										<FaCircle size={6} style={{ position: 'absolute', bottom: '-1px', right: '-3px', color: '#e05f5f' }} />
-									</span>
-									<span>Test Recording (3s)</span>
-								</div>
-							</ButtonItem>
-						</div>
-					</PanelSectionRow>
-
-				<PanelSectionRow>
-					<Focusable
-						tabIndex={0}
-						role="textbox"
-						aria-label="Last transcription"
-						aria-readonly="true"
-						onActivate={() => {}}
-						focusWithinClassName="gpfocuswithin"
-						style={{
-							padding: '12px',
-							backgroundColor: '#1a2f1a',
-							borderRadius: '8px',
-							marginTop: '12px',
-							border: '1px solid #2d5a2d'
-						}}
-					>
-						<div style={{
-							fontWeight: 'bold',
-							marginBottom: '8px',
-							color: '#4ade80',
-							fontSize: '14px'
-						}}>
-							Last Transcription:
-						</div>
-						<div style={{
-							backgroundColor: '#0f1f0f',
-							padding: '10px',
-							borderRadius: '6px',
-							fontFamily: 'monospace',
-							fontSize: '13px',
-							wordWrap: 'break-word',
-							minHeight: '40px',
-							lineHeight: '1.4',
-							border: '1px solid #1a3a1a'
-						}}>
-							{lastTranscription || <span style={{ color: '#666', fontStyle: 'italic' }}>No transcription yet</span>}
-						</div>
-						{lastTranscriptionTime && (
-							<div style={{
-								fontSize: '11px',
-								marginTop: '8px',
-								color: '#888',
-								textAlign: 'right'
-							}}>
-								{lastTranscriptionTime}
-							</div>
-						)}
-					</Focusable>
-				</PanelSectionRow>
-			</PanelSection>
-
-			<PanelSection title="Transcription">
-				{presets.length > 0 && (
-					<PanelSectionRow>
-						<DropdownItem
-							label="Game"
-							menuLabel="Game"
-							rgOptions={presets}
-							selectedOption={activePreset}
-							onChange={async (option) => {
-								const game = option.data as string;
-								setActivePreset(game);
-								await setActivePresetRpc(game);
-							}}
-						/>
-					</PanelSectionRow>
-				)}
-
-				<PanelSectionRow>
-					<DropdownItem
-						label="Model"
-						menuLabel="Model"
-						rgOptions={MODEL_SIZE_OPTIONS}
-						selectedOption={modelSize}
-						onChange={async (option) => {
-							const nextModelSize = option.data as string;
-							const previousModelSize = modelSize;
-							setModelSize(nextModelSize);
-							if (enabled && modelReady) {
-								setModelLoading(true);
-							}
-							const result = await setModelSizeRpc(nextModelSize);
-							if (!result.success) {
-								setModelSize(previousModelSize);
-								setModelLoading(false);
-								setRpcError(result.error || "Could not update model size");
-							}
-						}}
-					/>
-				</PanelSectionRow>
-
-				<PanelSectionRow>
-					<div style={{
-						padding: '10px',
-						backgroundColor: '#2a2a2a',
-						borderRadius: '6px',
-						fontSize: '12px',
-						lineHeight: '1.5',
-						border: '1px solid #444',
-					}}>
-						Base is fastest. Small is the balanced choice. Medium is more accurate but slower and may download on first use.
-					</div>
-				</PanelSectionRow>
-
-				<PanelSectionRow>
-					<DropdownItem
-						label="Lang"
-						menuLabel="Language"
-						rgOptions={WHISPER_LANGUAGE_OPTIONS}
-						selectedOption={transcriptionLanguage}
-						onChange={async (option) => {
-							const language = option.data as string;
-							setTranscriptionLanguage(language);
-							const result = await setTranscriptionOptionsRpc(language);
-							if (!result.success) {
-								setRpcError(result.error || "Could not update language setting");
-							}
-						}}
-					/>
-				</PanelSectionRow>
-			</PanelSection>
-
-			<PanelSection title="Input">
-				<PanelSectionRow>
-					<DropdownItem
-						label="Recording cue"
-						menuLabel="Recording cue"
-						rgOptions={RECORDING_INDICATOR_OPTIONS}
-						selectedOption={recordingIndicator}
-						onChange={async (option) => {
-							const mode = option.data as string;
-							setRecordingIndicator(mode);
-							logic.recordingIndicator = mode;
-							const result = await setRecordingIndicatorRpc(mode);
-							if (!result.success) {
-								setRpcError(result.error || "Could not update recording cue");
-							}
-						}}
-					/>
-				</PanelSectionRow>
-
-				<PanelSectionRow>
-					<ToggleField
-						label="Confirm"
-						description="Delay before send"
-						checked={confirmMode}
-						onChange={async (e) => {
-							setConfirmMode(e);
-							await setConfirmModeRpc(e);
-						}}
-					/>
-				</PanelSectionRow>
-
-				<PanelSectionRow>
-					<ToggleField
-						label="Manual"
-						description="You press Enter"
-						checked={manualSend}
-						onChange={async (e) => {
-							setManualSend(e);
-							await setManualSendRpc(e);
-						}}
-					/>
-				</PanelSectionRow>
-
-				<PanelSectionRow>
-					<ToggleField
-						label="Remember channel"
-						description="Reuse the last spoken channel"
-						checked={rememberLastChannel}
-						onChange={async (e) => {
-							setRememberLastChannel(e);
-							const result = await setRememberLastChannelRpc(e);
-							if (!result.success) {
-								setRememberLastChannel(!e);
-								setRpcError(result.error || "Could not update channel setting");
-							}
-						}}
-					/>
-				</PanelSectionRow>
-
-				<PanelSectionRow>
-					<div style={{
-						padding: '10px',
-						backgroundColor: '#2a2a2a',
-						borderRadius: '6px',
-						fontSize: '13px',
-						textAlign: 'center',
-						border: '1px solid #444',
-						marginBottom: '8px'
-					}}>
-						Hold <strong>{buttons.join('+')}</strong> to record
-					</div>
-				</PanelSectionRow>
-
-				{buttons.map((button, index) => (
-					<div key={index}>
+				{page === "main" && <>
+					<PanelSection title="Decktation">
 						<PanelSectionRow>
-							<DropdownItem
-								label={`Button ${index + 1}`}
-								menuLabel={`Button ${index + 1}`}
-								rgOptions={BUTTON_OPTIONS}
-								selectedOption={button}
-								onChange={async (option) => {
-									const newButtons = [...buttons];
-									newButtons[index] = option.data as string;
-									setButtons(newButtons);
-									await setButtonConfig(newButtons);
-								}}
-							/>
-						</PanelSectionRow>
-						{buttons.length > 1 && (
-							<div style={{ display: 'flex', justifyContent: 'flex-end', paddingRight: '16px' }}>
-								<div
-									onClick={async () => {
-										const newButtons = buttons.filter((_, i) => i !== index);
-										setButtons(newButtons);
-										await setButtonConfig(newButtons);
-									}}
-									style={{
-										color: '#e05f5f',
-										cursor: 'pointer',
-										padding: '5px 8px',
-										display: 'flex',
-										alignItems: 'center',
-										gap: '6px',
-										backgroundColor: 'rgba(224, 95, 95, 0.12)',
-										borderRadius: '4px',
-										textDecoration: 'none',
-										userSelect: 'none',
-									}}
-								>
-									<FaTrash size={13} />
-									<span style={{ fontSize: '12px', textDecoration: 'none' }}>Remove</span>
-								</div>
-							</div>
-						)}
-					</div>
-				))}
-
-				{buttons.length < 5 && (
-					<PanelSectionRow>
-						<div style={{ marginTop: '8px' }}>
-							<ButtonItem
-								layout="below"
-								onClick={async () => {
-									// Find first button not in current list
-									const availableButton = BUTTON_OPTIONS.find(
-										opt => !buttons.includes(opt.data as string)
-									);
-									if (availableButton) {
-										const newButtons = [...buttons, availableButton.data as string];
-										setButtons(newButtons);
-										await setButtonConfig(newButtons);
+							<ToggleField label="Enable" checked={enabled} disabled={!serviceReady || modelLoading || isToggling}
+								onChange={async (next) => {
+									if (isToggling) return;
+									setIsToggling(true);
+									setEnabled(next);
+									logic.enabled = next;
+									if (!next) {
+										setModelReady(false);
+										logic.recording = false;
+										setRecording(false);
 									}
-								}}
-							>
-								Add Button
-							</ButtonItem>
-						</div>
-					</PanelSectionRow>
-				)}
+									try {
+										const result = await setEnabledRpc(next);
+										if (!result.success) {
+											setEnabled(!next);
+											logic.enabled = !next;
+											setRpcError(result.error || "Could not update enabled state");
+											return;
+										}
+										if (next && logic.enabled) {
+											setModelLoading(true);
+											const modelResult = await loadModel();
+											if (!modelResult.success) {
+												setRpcError(modelResult.error || "Could not load Whisper model");
+											}
+										}
+									} catch (error) {
+										setEnabled(!next);
+										logic.enabled = !next;
+										setRpcError(String(error));
+									} finally {
+										setIsToggling(false);
+									}
+								}} />
+						</PanelSectionRow>
+						<PanelSectionRow>
+							<div role="status" style={{ padding: statusProblem ? '10px' : '4px 0', borderRadius: '6px', backgroundColor: statusProblem ? '#713030' : undefined }}>
+								{statusMessage}
+							</div>
+						</PanelSectionRow>
+					</PanelSection>
+					<PanelSection title="Quick settings">
+						{presets.length > 0 && <PanelSectionRow><ButtonItem layout="below" onClick={() => setPage("game")}>
+							Game: {presets.find(option => option.data === activePreset)?.label || activePreset}
+						</ButtonItem></PanelSectionRow>}
+						<PanelSectionRow><div style={{ position: 'relative', width: '100%' }}>
+							<span ref={languageMenuAnchorRef} aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, width: '1px', height: '1px', pointerEvents: 'none' }} />
+							<ButtonItem layout="below" onClick={(event) => {
+							showContextMenu(
+								<Menu label="Language">
+									<MenuItem selected={transcriptionLanguage === "auto"} onSelected={() => { void chooseLanguage("auto"); }}>Auto Detect</MenuItem>
+									<div className={gamepadContextMenuClasses.ContextMenuSeparator} />
+									<div className={gamepadContextMenuClasses.MenuSectionHeader}>Popular Steam languages</div>
+									{POPULAR_LANGUAGE_OPTIONS.map(option => <MenuItem key={String(option.data)} selected={option.data === transcriptionLanguage}
+										onSelected={() => { void chooseLanguage(String(option.data)); }}>{option.label}</MenuItem>)}
+									<div className={gamepadContextMenuClasses.ContextMenuSeparator} />
+									<div className={gamepadContextMenuClasses.MenuSectionHeader}>Other languages</div>
+									{OTHER_LANGUAGE_OPTIONS.map(option => <MenuItem key={String(option.data)} selected={option.data === transcriptionLanguage}
+											onSelected={() => { void chooseLanguage(String(option.data)); }}>{option.label}</MenuItem>)}
+								</Menu>,
+								languageMenuAnchorRef.current || event.currentTarget,
+							);
+							}}>Language: {WHISPER_LANGUAGE_OPTIONS.find(option => option.data === transcriptionLanguage)?.label || transcriptionLanguage}</ButtonItem>
+						</div></PanelSectionRow>
 
-				<PanelSectionRow>
-					<div style={{
-						padding: '8px',
-						backgroundColor: controllerReady ? '#1a3a1a' : '#3a1a1a',
-						borderRadius: '4px',
-						fontSize: '12px',
-						textAlign: 'center',
-						fontFamily: 'monospace'
-					}}>
-						Input: {controllerStatus}
-						<br />
-						Held buttons: <strong>{buttonState}</strong>
-						{controllerReady && !controllerComboSupported && <div>Selected combo unavailable on detected input</div>}
-					</div>
-				</PanelSectionRow>
-
-			</PanelSection>
-
-			<PanelSection title="Diagnostics">
-				<PanelSectionRow>
-					<ToggleField
-						label="Share"
-						description="Optional scrubbed diagnostics sent to Sentry"
-						checked={shareDiagnostics}
-						onChange={async (e) => {
-							setShareDiagnostics(e);
-							const result = await setShareDiagnosticsRpc(e);
-							if (!result.success) {
-								setShareDiagnostics(!e);
-								setRpcError(result.error || "Could not update diagnostics setting");
-							}
-						}}
-					/>
-				</PanelSectionRow>
-			</PanelSection>
-
-			<PanelSection title="Permissions">
-				<PanelSectionRow>
-					<div style={{ fontSize: '13px', lineHeight: '1.5' }}>
-						Decktation uses Decky root access only to read raw Steam Deck
-						controller input and to create virtual keyboard events for dictated
-						text. Your transcription is passed to the bundled keyboard helper as
-						data, never as a shell command.
-					</div>
-				</PanelSectionRow>
-			</PanelSection>
-
-			<PanelSection title="How to use:">
-				<PanelSectionRow>
-					<Focusable
-						tabIndex={0}
-						role="region"
-						aria-label="How to use Decktation"
-						onActivate={() => {}}
-						focusWithinClassName="gpfocuswithin"
-						style={{ fontSize: '13px', lineHeight: '1.6' }}
-					>
-						<strong>Push-to-Talk:</strong>
-						<ul style={{ marginLeft: '15px', marginTop: '5px', marginBottom: '10px' }}>
-							<li>Hold <strong>{buttons.join('+')}</strong> {buttons.length > 1 ? 'together' : ''} to record</li>
-							<li>Release to transcribe and type into active window</li>
-							<li>Configure button combo above (1-5 buttons)</li>
-						</ul>
-
-						<strong>Tips:</strong>
-						<ul style={{ marginLeft: '15px', marginTop: '5px' }}>
-							<li>Make sure your game/app is the active window</li>
-							<li>Speak clearly for best results</li>
-							<li>Works great for in-game chat</li>
-						</ul>
-					</Focusable>
-				</PanelSectionRow>
-			</PanelSection>
-		</div>
+					</PanelSection>
+                    <PanelSection title="Recording binding">
+                        <PanelSectionRow><ButtonItem layout="below" disabled={recording || testPhase !== "idle"} onClick={() => setPage("recording-mode")}>Mode: {recordingMode === "hold" ? "Hold to record" : "Tap to start/stop"}</ButtonItem></PanelSectionRow>
+                        <PanelSectionRow><div>{recordingMode === "hold" ? "Hold " : "Tap "}<strong>{buttons.join(" + ")}</strong>{recordingMode === "hold" ? " to record" : " to start; tap again to stop"}</div></PanelSectionRow>
+                        {recordingMode === "tap" && <PanelSectionRow><div style={{ fontSize: "12px", opacity: 0.85 }}>You can also hold and release for a quick message.</div></PanelSectionRow>}
+                        <PanelSectionRow><ButtonItem layout="below" disabled={!controllerReady || recording || testPhase !== "idle"} onClick={beginCapture}>Change binding</ButtonItem></PanelSectionRow>
+                        {bindingMessage && <PanelSectionRow><div role="status">{bindingMessage}</div></PanelSectionRow>}
+                    </PanelSection>
+					<PanelSection title="Try it">
+						<PanelSectionRow><ButtonItem layout="below" onClick={runTest}
+							disabled={!enabled || !modelReady || modelLoading || recording || testPhase !== "idle"}>
+							<FaMicrophone size={14} /> {testPhase === "recording" ? "Recording..." : testPhase === "transcribing" ? "Transcribing..." : "Test Dictation (3s)"}
+						</ButtonItem></PanelSectionRow>
+						<PanelSectionRow><div style={{ fontSize: '12px', opacity: 0.85 }}>Shows a transcription here without sending text to your game.</div></PanelSectionRow>
+						{hasTestResult && <PanelSectionRow><div role="status" style={{ padding: '10px', backgroundColor: '#233829', borderRadius: '6px', overflowWrap: 'anywhere' }}>
+							<strong>Result</strong><div>{lastTranscription || "No speech detected"}</div><small>{lastTranscriptionTime}</small>
+						</div></PanelSectionRow>}
+					</PanelSection>
+					<PanelSectionRow><ButtonItem layout="below" onClick={() => setPage("advanced")}>Advanced settings</ButtonItem></PanelSectionRow>
+				</>}
+		{page === "advanced" && <>
+					<PanelSection title="Transcription model">
+						<PanelSectionRow><div ref={advancedModelRowRef}><ButtonItem layout="below" onClick={() => setPage("model")}>
+							Model: {MODEL_SIZE_OPTIONS.find(option => option.data === modelSize)?.label || modelSize}
+						</ButtonItem></div></PanelSectionRow>
+						<PanelSectionRow><div style={{ fontSize: '12px' }}>Base is fastest. Small balances speed and accuracy. Medium is more accurate but slower and may download on first use.</div></PanelSectionRow>
+					</PanelSection>
+					<PanelSection title="Sending">
+						<PanelSectionRow><ToggleField label="Confirm" description="Delay before send" checked={confirmMode}
+							onChange={async (next) => { setConfirmMode(next); await setConfirmModeRpc(next); }} /></PanelSectionRow>
+						<PanelSectionRow><ToggleField label="Manual" description="You press Enter" checked={manualSend}
+							onChange={async (next) => { setManualSend(next); await setManualSendRpc(next); }} /></PanelSectionRow>
+						<PanelSectionRow><ToggleField label="Remember channel" description="Reuse the last spoken channel" checked={rememberLastChannel}
+							onChange={async (next) => {
+								setRememberLastChannel(next);
+								const result = await setRememberLastChannelRpc(next);
+								if (!result.success) { setRememberLastChannel(!next); setRpcError(result.error || "Could not update channel setting"); }
+							}} /></PanelSectionRow>
+					</PanelSection>
+					<PanelSection title="Feedback">
+						<PanelSectionRow><DropdownItem label="Recording cue" menuLabel="Recording cue" rgOptions={[{data:"toast",label:"Toast"},{data:"overlay",label:"Overlay"},{data:"none",label:"None"}]} selectedOption={recordingIndicator} onChange={async (option) => { const mode = option.data as string; setRecordingIndicator(mode); logic.recordingIndicator = mode; const result = await setRecordingIndicatorRpc(mode); if (!result.success) setRpcError(result.error || "Could not update recording cue"); }} /></PanelSectionRow>
+						<PanelSectionRow><ToggleField label="Haptic feedback" description="Cues when recording starts and stops on Steam Deck"
+							checked={hapticFeedback} onChange={async (next) => {
+								const result = await setHapticFeedbackRpc(next);
+								if (result.success) setHapticFeedback(next);
+								else setRpcError(result.error || "Could not update haptic feedback");
+							}} /></PanelSectionRow>
+					</PanelSection>
+					<PanelSectionRow><ButtonItem layout="below" onClick={() => setPage("diagnostics")}>Diagnostics</ButtonItem></PanelSectionRow>
+					<PanelSectionRow><ButtonItem layout="below" onClick={() => setPage("help")}>Help & permissions</ButtonItem></PanelSectionRow>
+				</>}
+				{page === "diagnostics" && <>
+					<PanelSection title="Input and service">
+						<PanelSectionRow><div>Controller: {controllerStatus}</div></PanelSectionRow>
+						<PanelSectionRow><div>Binding supported: {controllerComboSupported ? "Yes" : "No"}</div></PanelSectionRow>
+						<PanelSectionRow><div>Held buttons: <strong>{buttonState}</strong></div></PanelSectionRow>
+						<PanelSectionRow><div>Keyboard helper: {inputReady ? "Ready" : "Unavailable"}</div></PanelSectionRow>
+						<PanelSectionRow><div>Backend: {serviceReady ? "Ready" : "Unavailable"}</div></PanelSectionRow>
+						<PanelSectionRow><div>Model: {modelLoading ? "Loading" : modelReady ? "Ready" : "Unavailable"}</div></PanelSectionRow>
+						{(statusError || rpcError) && <PanelSectionRow><div role="alert">{statusError || rpcError}</div></PanelSectionRow>}
+					</PanelSection>
+					<PanelSection title="Diagnostics sharing">
+						<PanelSectionRow><ToggleField label="Share" description="Optional scrubbed diagnostics sent to Sentry"
+							checked={shareDiagnostics} onChange={async (next) => {
+								setShareDiagnostics(next);
+								const result = await setShareDiagnosticsRpc(next);
+								if (!result.success) { setShareDiagnostics(!next); setRpcError(result.error || "Could not update diagnostics setting"); }
+							}} /></PanelSectionRow>
+					</PanelSection>
+				</>}
+				{page === "game" && <PanelSection title="Game">
+					{rpcError && <PanelSectionRow><div role="alert">{rpcError}</div></PanelSectionRow>}
+					{presets.map(option => <PanelSectionRow key={String(option.data)}><ButtonItem layout="below" onClick={async () => {
+						const next = option.data as string;
+						setRpcError("");
+						const result = await setActivePresetRpc(next);
+						if (result.success) { setActivePreset(next); setPage("main"); }
+						else setRpcError(result.error || "Could not update game");
+					}}>{option.data === activePreset ? "✓ " : ""}{option.label}</ButtonItem></PanelSectionRow>)}
+				</PanelSection>}
+                {page === "recording-mode" && <PanelSection title="Recording mode">
+                    {rpcError && <PanelSectionRow><div role="alert">{rpcError}</div></PanelSectionRow>}
+                    {(["hold", "tap"] as const).map(mode => <PanelSectionRow key={mode}>
+                        <ButtonItem layout="below" disabled={recording} onClick={async () => {
+                            setRpcError("");
+                            try {
+                                const result = await setRecordingModeRpc(mode);
+                                if (result.success) { setRecordingMode(mode); setPage("main"); }
+                                else setRpcError(result.error || "Could not change recording mode");
+                            } catch (error) { setRpcError(String(error)); }
+                        }}>{mode === recordingMode ? "✓ " : ""}{mode === "hold" ? "Hold to record" : "Tap to start/stop"}</ButtonItem>
+                        <div style={{ fontSize: "12px", padding: "6px 0", opacity: 0.85 }}>{mode === "hold"
+                            ? "Hold the binding to record. Release to stop and send."
+                            : "Tap once to start recording, then tap again to stop. You can also hold and release for a quick message."}</div>
+                    </PanelSectionRow>)}
+                </PanelSection>}
+				{page === "model" && <PanelSection title="Model">
+					{rpcError && <PanelSectionRow><div role="alert">{rpcError}</div></PanelSectionRow>}
+					{MODEL_SIZE_OPTIONS.map(option => <PanelSectionRow key={String(option.data)}><ButtonItem layout="below" onClick={async () => {
+						const next = option.data as string;
+						setRpcError("");
+						if (enabled && modelReady) setModelLoading(true);
+						const result = await setModelSizeRpc(next);
+						if (result.success) { setModelSize(next); setPage("advanced"); }
+						else { setModelLoading(false); setRpcError(result.error || "Could not update model size"); }
+					}}>{option.data === modelSize ? "✓ " : ""}{option.label}</ButtonItem></PanelSectionRow>)}
+				</PanelSection>}
+				{page === "help" && <>
+					<PanelSection title="How to use">
+						<PanelSectionRow><div style={{ fontSize: '13px', lineHeight: '1.6' }}>
+							{recordingMode === "hold" ? "Hold " : "Tap "}<strong>{buttons.join('+')}</strong> {recordingMode === "hold" ? "to record." : "to start recording; tap again to stop. Holding and releasing also works for quick messages."}
+							Stopping transcribes and types into the active game or app. Keep it in the foreground.
+						</div></PanelSectionRow>
+					</PanelSection>
+					<PanelSection title="Permissions">
+						<PanelSectionRow><div style={{ fontSize: '13px', lineHeight: '1.5' }}>
+							Decktation uses Decky root access only to read raw Steam Deck controller input and to create virtual keyboard events for dictated text.
+							Your transcription is passed to the bundled keyboard helper as data, never as a shell command.
+						</div></PanelSectionRow>
+					</PanelSection>
+				</>}
+			</div>
+		</Focusable>
 	);
 };
 
 
 export default definePlugin(() => {
 	let logic = new DecktationLogic();
-	// Seed the counter so loading the plugin does not replay an old recording cue.
+	// Seed the recording start count so we don't fire a spurious toast on load
 	getStatus().then((result) => {
 		if (result.success) {
 			logic.prevRecordingStartCount = result.recording_start_count || 0;
 		}
 	});
 
+	// Background notification polling — runs for the full plugin lifetime regardless
+	// of whether the Decky panel is open, so toasts appear while in-game.
 	let notifyPollInFlight = false;
 	const bgNotifyInterval = setInterval(async () => {
 		if (!logic.enabled || notifyPollInFlight) return;
@@ -885,25 +766,27 @@ export default definePlugin(() => {
 		try {
 			const result = await getStatus();
 			if (result.success) {
-				const startCount = result.recording_start_count || 0;
-				if (logic.recordingIndicator === "toast" && startCount > logic.prevRecordingStartCount) {
-					logic.notify("Recording", 1500, "🎤 Recording...");
-				}
-				logic.prevRecordingStartCount = startCount;
-
-				const pendingText: string = result.pending_text || "";
-				const pendingDelay: number = result.pending_delay || 0;
-				if (pendingText && !logic.prevPendingText) {
-					const secs = Math.round(pendingDelay);
-					logic.notify(`Sending in ${secs}s`, (pendingDelay + 0.5) * 1000, `"${pendingText}" — hold PTT to cancel`)
-						.then(id => { logic.lastPendingToastId = id; });
-				} else if (!pendingText && logic.prevPendingText) {
-					if (logic.lastPendingToastId >= 0) {
-						logic.dismissNotification(logic.lastPendingToastId);
-						logic.lastPendingToastId = -1;
+				if (logic.recordingIndicator !== "none") {
+					const startCount: number = result.recording_start_count || 0;
+					if (logic.recordingIndicator === "toast" && startCount > logic.prevRecordingStartCount) {
+						logic.notify("Recording", 1500, "🎤 Recording...");
 					}
+					logic.prevRecordingStartCount = startCount;
+
+					const pendingText: string = result.pending_text || "";
+					const pendingDelay: number = result.pending_delay || 0;
+					if (pendingText && !logic.prevPendingText) {
+						const secs = Math.round(pendingDelay);
+						logic.notify(`Sending in ${secs}s`, (pendingDelay + 0.5) * 1000, `"${pendingText}" — hold PTT to cancel`)
+							.then(id => { logic.lastPendingToastId = id; });
+					} else if (!pendingText && logic.prevPendingText) {
+						if (logic.lastPendingToastId >= 0) {
+							logic.dismissNotification(logic.lastPendingToastId);
+							logic.lastPendingToastId = -1;
+						}
+					}
+					logic.prevPendingText = pendingText;
 				}
-				logic.prevPendingText = pendingText;
 			}
 		} catch (_e) {
 		} finally {

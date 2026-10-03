@@ -9,6 +9,16 @@ mouse events instead of XInput events.
 
 # Physical digital button locations: button name -> (byte offset, bit offset).
 STEAM_DECK_BUTTON_BITS = {
+    "View": (9, 4),
+    "Menu": (9, 6),
+    "L3": (10, 6),
+    "R3": (11, 2),
+    "D-pad Up": (9, 0),
+    "D-pad Right": (9, 1),
+    "D-pad Left": (9, 2),
+    "D-pad Down": (9, 3),
+    "Left Trackpad": (10, 1),
+    "Right Trackpad": (10, 2),
     "R2": (8, 0),
     "L2": (8, 1),
     "R1": (8, 2),
@@ -41,7 +51,7 @@ STEAM_CONTROLLER_REPORT_TYPE = 1
 STEAM_CONTROLLER_BUTTON_BITS = {
     name: location
     for name, location in STEAM_DECK_BUTTON_BITS.items()
-    if name not in ("L4", "R4")
+    if name not in ("L4", "R4", "R3")
 }
 STEAM_CONTROLLER_TRIGGER_OFFSETS = {
     "L2": 11,
