@@ -346,6 +346,6 @@ def test_triton_puck_reports_buttons_and_disconnect(listener, monkeypatch):
     device = listener.TritonGamepad('/dev/hidraw4')
     assert list(device.read_states())[0]['L1']
     assert list(device.read_states())[0]['R1'] is False
-    details = listener.controller_details(device, 'steam_controller_2026')
+    details = listener.controller_details(device, 'steam_controller_2026_puck')
     assert details['product_id'] == 0x1304
     assert {'L1', 'R1'}.issubset(details['supported_buttons'])

@@ -147,7 +147,7 @@ class HapticFeedback:
                     and 0 <= time.time() - value['time'] <= max_age
                     and value.get('kind') in ('steam_deck', 'steam_controller_wired',
                                               'steam_controller_wireless',
-                                              'steam_controller_2026', 'evdev_gamepad')):
+                                              'steam_controller_2026_puck', 'evdev_gamepad')):
                 source = value
         except (OSError, ValueError, TypeError):
             pass
@@ -227,19 +227,19 @@ class HapticFeedback:
     def _play(self, event, source, generation):
         kind, path = source['kind'], source['path']
         if kind in ('steam_deck', 'steam_controller_wired',
-                    'steam_controller_wireless', 'steam_controller_2026'):
+                    'steam_controller_wireless', 'steam_controller_2026_puck'):
             if (path, kind) not in find_steam_hidraw():
                 self._info(f'{kind}: source disconnected; cue skipped')
                 return
             backend = ('deck-hid-rumble' if kind == 'steam_deck' else
-                       'triton-hid-rumble' if kind == 'steam_controller_2026' else
+                       'triton-hid-rumble' if kind == 'steam_controller_2026_puck' else
                        'legacy-controller-hid-pulse')
             self._info(f'{kind}: {backend}')
             fd = os.open(path, os.O_RDWR)
             try:
                 if kind == 'steam_deck':
                     self._deck_pattern(fd, event, generation)
-                elif kind == 'steam_controller_2026':
+                elif kind == 'steam_controller_2026_puck':
                     self._triton_pattern(fd, event, generation)
                 else:
                     self._legacy_pattern(fd, event, generation)

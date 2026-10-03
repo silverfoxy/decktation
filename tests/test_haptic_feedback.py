@@ -191,7 +191,7 @@ def test_recent_controller_expires_and_disabled_events_do_not_queue(tmp_path, mo
     ('steam_deck', '_deck_pattern'),
     ('steam_controller_wired', '_legacy_pattern'),
     ('steam_controller_wireless', '_legacy_pattern'),
-    ('steam_controller_2026', '_triton_pattern'),
+    ('steam_controller_2026_puck', '_triton_pattern'),
 ])
 def test_valve_backend_is_bound_to_exact_discovered_path(monkeypatch, kind, backend):
     feedback = haptic_feedback.HapticFeedback(enabled=True)
@@ -320,7 +320,7 @@ def test_switching_controllers_changes_next_session_only(tmp_path, monkeypatch):
     feedback = haptic_feedback.HapticFeedback(enabled=True)
     monkeypatch.setattr(feedback, '_run', lambda: None)
     deck = _source('steam_deck', '/dev/hidraw0')
-    controller = _source('steam_controller_2026', '/dev/hidraw3')
+    controller = _source('steam_controller_2026_puck', '/dev/hidraw3')
     source_file.write_text(json.dumps(deck))
     feedback.begin_session(str(source_file))
     feedback.emit('started')
@@ -329,7 +329,7 @@ def test_switching_controllers_changes_next_session_only(tmp_path, monkeypatch):
     feedback.begin_session(str(source_file))
     feedback.emit('started')
     sources = [feedback._events.get_nowait()[1]['kind'] for _ in range(3)]
-    assert sources == ['steam_deck', 'steam_deck', 'steam_controller_2026']
+    assert sources == ['steam_deck', 'steam_deck', 'steam_controller_2026_puck']
 
 
 def test_disconnected_controller_does_not_fall_back_to_other_valve_device(monkeypatch):
@@ -338,7 +338,7 @@ def test_disconnected_controller_does_not_fall_back_to_other_valve_device(monkey
                         lambda: iter([('/dev/hidraw0', 'steam_deck')]))
     opened = MagicMock()
     monkeypatch.setattr(haptic_feedback.os, 'open', opened)
-    feedback._play('stopped', _source('steam_controller_2026', '/dev/hidraw3'), 0)
+    feedback._play('stopped', _source('steam_controller_2026_puck', '/dev/hidraw3'), 0)
     opened.assert_not_called()
 
 
@@ -361,3 +361,13 @@ def test_evdev_identity_is_rechecked_after_open(monkeypatch):
     feedback._evdev_pattern('/dev/input/event7', 'started', 0, {'vendor_id': 1})
     write.assert_not_called()
     assert closed == [42]
+
+
+def test_puck_kind_is_accepted_for_haptic_session(tmp_path):
+    source = _source('steam_controller_2026_puck', '/dev/hidraw4',
+                     vendor_id=0x28de, product_id=0x1304)
+    file = tmp_path / 'source.json'
+    file.write_text(json.dumps(source))
+    feedback = haptic_feedback.HapticFeedback(enabled=True)
+    feedback.begin_session(str(file))
+    assert feedback._session == source
