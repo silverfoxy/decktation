@@ -7,6 +7,16 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Fixed
+
+- Read Steam Controller (2026) Puck input directly, including all four grips,
+  instead of depending on Steam's virtual gamepad emitting events in Gaming Mode.
+  Added decoding for USB, Bluetooth and timestamped controller reports, plus
+  receiver disconnect releases and Steam Machine receiver discovery.
+- Exclude keyboard helpers from gamepad discovery and show whether a controller
+  was found and has delivered input instead of treating a running listener as OK.
+- Allow per-device mappings for rear grips exposed by Linux gamepad drivers.
+
 ## [0.3.17] - 2026-09-27
 
 ### Fixed

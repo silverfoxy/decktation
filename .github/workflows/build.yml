@@ -38,8 +38,8 @@ jobs:
         run: |
           node scripts/release-version.mjs check "$RELEASE_TAG"
 
-      - name: Set development version for master builds
-        if: github.ref == 'refs/heads/master'
+      - name: Set development version for branch builds
+        if: startsWith(github.ref, 'refs/heads/')
         env:
           COMMIT_SHA: ${{ github.sha }}
         run: |

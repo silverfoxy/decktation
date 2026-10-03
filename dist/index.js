@@ -376,6 +376,8 @@
         const [inputReady, setInputReady] = React.useState(true);
         const [buttonState, setButtonState] = React.useState("None");
         const [controllerReady, setControllerReady] = React.useState(false);
+        const [controllerStatus, setControllerStatus] = React.useState("Waiting for input");
+        const [controllerComboSupported, setControllerComboSupported] = React.useState(true);
         const [buttons, setButtons] = React.useState(["L1", "R1"]);
         const [hapticFeedback, setHapticFeedback] = React.useState(false);
         const [recordingIndicator, setRecordingIndicator] = React.useState("toast");
@@ -460,6 +462,8 @@
                     if (result.success) {
                         setButtonState(result.detected_button || "None");
                         setControllerReady(result.controller_ready === true);
+                        setControllerStatus(result.controller_status || "Waiting for input");
+                        setControllerComboSupported(result.controller_combo_supported !== false);
                         setRpcError("");
                         setServiceReady(result.service_ready);
                         setModelReady(result.model_ready);
@@ -471,11 +475,13 @@
                     }
                     else {
                         setControllerReady(false);
+                        setControllerStatus("Status unavailable");
                         setRpcError(result.error || "Backend status request failed");
                     }
                 }
                 catch (error) {
                     setControllerReady(false);
+                    setControllerStatus("Status unavailable");
                     setRpcError(String(error));
                 }
                 finally {
@@ -745,10 +751,11 @@
                             fontFamily: 'monospace'
                         } },
                         "Input: ",
-                        controllerReady ? "OK" : "FAILED",
+                        controllerStatus,
                         React__default["default"].createElement("br", null),
                         "Held buttons: ",
-                        React__default["default"].createElement("strong", null, buttonState)))),
+                        React__default["default"].createElement("strong", null, buttonState),
+                        controllerReady && !controllerComboSupported && React__default["default"].createElement("div", null, "Selected combo unavailable on detected input")))),
             React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: "Diagnostics" },
                 React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                     React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: "Share", description: "Optional scrubbed diagnostics sent to Sentry", checked: shareDiagnostics, onChange: async (e) => {

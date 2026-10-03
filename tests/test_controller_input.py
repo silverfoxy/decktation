@@ -151,7 +151,7 @@ def test_capabilities_choose_trigger_axes_and_initial_state(monkeypatch):
             return bitmap([0x130, 0x131, 0x136], size)
         if number == 0x23:
             # Bluetooth Xbox exposes right-stick Z/RZ alongside GAS/BRAKE.
-            return bitmap([0x02, 0x05, 0x0a, 0x09], size)
+            return bitmap([0, 1, 0x02, 0x05, 0x0a, 0x09], size)
         if number == 0x18:
             return bitmap([0x136], size)
         return struct.pack('6i', 200, 0, 255, 0, 0, 0)
@@ -174,6 +174,53 @@ def test_non_gamepads_are_rejected_and_closed(monkeypatch):
     with pytest.raises(ValueError, match='not a gamepad'):
         EvdevGamepad('/dev/input/event42')
     assert closed == [123]
+
+
+def test_keyboard_helper_with_gamepad_key_bits_is_rejected(monkeypatch):
+    def ioctl(fd, number, size):
+        data = bytearray(size)
+        if number == 0x21:
+            for code in (0x130, 0x131):
+                data[code // 8] |= 1 << (code % 8)
+        return data
+    closed = []
+    monkeypatch.setattr('gamepad_evdev.os.open', lambda *args: 123)
+    monkeypatch.setattr('gamepad_evdev.os.close', closed.append)
+    monkeypatch.setattr('gamepad_evdev.ioctl_read', ioctl)
+    with pytest.raises(ValueError, match='not a gamepad'):
+        EvdevGamepad('/dev/input/event25')
+    assert closed == [123]
+
+
+def test_custom_grips_can_be_mapped_without_assuming_vendor_codes(monkeypatch, tmp_path):
+    monkeypatch.setenv('DECKTATION_CONFIG_DIR', str(tmp_path))
+    (tmp_path / 'controller_mappings.json').write_text('{"0003:1234:5678": {"0x2c0": "R4"}}')
+    device = gamepad()
+    device.key_buttons = configured_button_mapping({'bus': 3, 'vendor_id': 0x1234, 'product_id': 0x5678})
+    device.feed(1, 0x2c0, 1)
+    assert device.feed(0, 0, 0)['R4']
+    device.feed(1, 0x2c0, 0)
+    assert not device.feed(0, 0, 0)['R4']
+
+
+@pytest.mark.parametrize('product,suffix,expected', [
+    (0x1205, '/input2', 'steam_deck'),
+    (0x1142, '/input1', 'steam_controller_wireless'),
+    (0x1304, '/input2', 'steam_controller_2026_puck'),
+    (0x1304, '/input5', 'steam_controller_2026_puck'),
+    (0x1304, '/input6', None),
+    (0x1305, '/input3', 'steam_controller_2026_receiver'),
+    (0x1302, '/input1', 'steam_controller_2026_wired'),
+    (0x1303, '', 'steam_controller_2026_bluetooth'),
+    (0x9999, '/input2', None),
+])
+def test_valve_discovery_selects_controller_slots(listener, monkeypatch, product, suffix, expected):
+    import io
+    bus = 5 if product == 0x1303 else 3
+    monkeypatch.setattr(listener.glob, 'glob', lambda pattern: ['/dev/hidraw0'])
+    monkeypatch.setattr('builtins.open', lambda *args: io.StringIO(
+        f'HID_ID={bus:04X}:000028DE:{product:08X}\nHID_PHYS=usb-test{suffix}\n'))
+    assert list(listener.find_steam_hidraw()) == ([('/dev/hidraw0', expected)] if expected else [])
 
 
 def test_live_preview_shows_triggers_and_clears_on_release(listener, monkeypatch, tmp_path):
@@ -207,7 +254,7 @@ def test_listener_hotplug_evdev_while_raw_is_idle_and_disconnect(listener, monke
     """An idle Deck must not block a newly attached Xbox or its release."""
     from types import SimpleNamespace
 
-    for name in ('STATE_FILE', 'PID_FILE', 'PREVIEW_FILE', 'CONTROLLER_TYPE_FILE',
+    for name in ('STATE_FILE', 'PID_FILE', 'PREVIEW_FILE', 'CONTROLLER_TYPE_FILE', 'STATUS_FILE',
                  'HAPTIC_SOURCE_FILE', 'RECENT_SOURCE_FILE'):
         monkeypatch.setattr(listener, name, str(tmp_path / name))
     monkeypatch.setattr(listener, 'load_button_config', lambda: ['L1', 'R1'])

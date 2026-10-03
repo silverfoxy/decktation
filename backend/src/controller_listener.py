@@ -13,7 +13,7 @@ import glob
 import selectors
 import struct
 import tempfile
-from deck_hid import STEAM_DECK_BUTTON_BITS, raw_button_states
+from deck_hid import STEAM_DECK_BUTTON_BITS, raw_button_states, triton_button_states
 from gamepad_evdev import EvdevGamepad
 
 STATE_FILE = "/tmp/decktation_l5"
@@ -22,6 +22,7 @@ PID_FILE = "/tmp/decktation_listener.pid"
 CONTROLLER_TYPE_FILE = "/tmp/decktation_controller_type"
 HAPTIC_SOURCE_FILE = "/tmp/decktation_haptic_source.json"
 RECENT_SOURCE_FILE = "/tmp/decktation_recent_controller.json"
+STATUS_FILE = "/tmp/decktation_controller_status"
 # The Decky backend passes its user-owned settings directory. The fallback is
 # retained for standalone development runs.
 CONFIG_DIR = os.environ.get(
@@ -57,20 +58,34 @@ TRITON_BUTTON_BITS = {
     'R4': 0x00000080, 'R5': 0x00000100,
     'L4': 0x00020000, 'L5': 0x00040000,
 }
+for product, kind, suffixes, bus in (
+    (0x1304, 'steam_controller_2026_puck', tuple(f'/input{i}' for i in range(2, 6)), 3),
+    (0x1305, 'steam_controller_2026_receiver', tuple(f'/input{i}' for i in range(2, 6)), 3),
+    (0x1302, 'steam_controller_2026_wired', ('/input0', '/input1', '/input2'), 3),
+    (0x1303, 'steam_controller_2026_bluetooth', None, 5),
+):
+    hid_id = f'{bus:04X}:000028DE:{product:08X}'
+    STEAM_HID_INTERFACES[hid_id] = suffixes
+    STEAM_CONTROLLER_TYPES[hid_id] = kind
 
 DIAGNOSTIC_PREFIX = 'DECKTATION_CONTROLLER '
 
 
 def controller_details(device, controller_type):
     if controller_type != 'evdev_gamepad':
-        buttons = set(TRITON_BUTTON_BITS) | {'L2', 'R2'} if controller_type == 'steam_controller_2026' else set(RAW_BUTTON_BITS)
-        if controller_type not in ('steam_deck', 'steam_controller_2026'):
+        buttons = set(RAW_BUTTON_BITS)
+        if controller_type not in ('steam_deck',) and not controller_type.startswith('steam_controller_2026'):
             buttons -= {'L4', 'R4'}
         product = {'steam_deck': 0x1205, 'steam_controller_wired': 0x1102,
                    'steam_controller_wireless': 0x1142,
-                   'steam_controller_2026': 0x1304}.get(controller_type, 0)
+                   'steam_controller_2026_puck': 0x1304,
+                   'steam_controller_2026_receiver': 0x1305,
+                   'steam_controller_2026_wired': 0x1302,
+                   'steam_controller_2026_bluetooth': 0x1303}.get(controller_type, 0)
+        bluetooth = controller_type.endswith('_bluetooth')
         return {'controller_type': controller_type, 'input_backend': 'hidraw',
-                'vendor_id': 0x28de, 'product_id': product, 'connection': 'usb', 'bus': 3,
+                'vendor_id': 0x28de, 'product_id': product,
+                'connection': 'bluetooth' if bluetooth else 'usb', 'bus': 5 if bluetooth else 3,
                 'supported_buttons': sorted(buttons)}
     identity = getattr(device, 'identity', {})
     family = {0x045e: 'xbox', 0x054c: 'playstation', 0x057e: 'nintendo',
@@ -134,7 +149,8 @@ def find_steam_hidraw():
                 )
             hid_id = properties.get("HID_ID")
             interface_suffixes = STEAM_HID_INTERFACES.get(hid_id, ())
-            if properties.get("HID_PHYS", "").endswith(interface_suffixes):
+            if hid_id in STEAM_CONTROLLER_TYPES and (interface_suffixes is None or
+                    properties.get("HID_PHYS", "").endswith(interface_suffixes)):
                 yield path, STEAM_CONTROLLER_TYPES[hid_id]
         except (OSError, ValueError):
             continue
@@ -161,25 +177,13 @@ class RawGamepad:
             yield states
 
 
-class TritonGamepad:
-    """Read the 2026 controller's input state from one Puck slot."""
-    def __init__(self, path):
-        self.fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
-
-    def close(self):
-        os.close(self.fd)
-
+class TritonGamepad(RawGamepad):
     def read_states(self):
-        report = os.read(self.fd, 128)
+        report = os.read(self.fd, 64)
         if not report:
-            raise OSError('empty Triton HID report')
-        if len(report) >= 2 and report[0] in (0x46, 0x79) and report[1] == 1:
-            yield {name: False for name in (*TRITON_BUTTON_BITS, 'L2', 'R2')}
-        elif len(report) >= 18 and report[0] in (0x42, 0x45, 0x47):
-            mask = struct.unpack_from('<I', report, 2)[0]
-            states = {name: bool(mask & bit) for name, bit in TRITON_BUTTON_BITS.items()}
-            states['L2'] = struct.unpack_from('<h', report, 6)[0] >= 16384
-            states['R2'] = struct.unpack_from('<h', report, 8)[0] >= 16384
+            raise OSError('empty HID report')
+        states = triton_button_states(report)
+        if states is not None:
             yield states
 
 
@@ -249,6 +253,12 @@ def main():
             'current_controller': details.get(active_source, {}),
             **extra,
         }
+        # Publish discovery and receipt independently of process liveness.
+        with tempfile.NamedTemporaryFile(mode='w', dir=os.path.dirname(STATUS_FILE),
+                                         prefix='.decktation-status-', delete=False) as f:
+            json.dump(snapshot, f)
+            temporary = f.name
+        os.replace(temporary, STATUS_FILE)
         print(DIAGNOSTIC_PREFIX + json.dumps(snapshot), flush=True)
 
     def update_combo():
@@ -335,19 +345,20 @@ def main():
                         continue
                     device = None
                     try:
-                        device = (EvdevGamepad(path) if controller_type == 'evdev_gamepad'
-                                  else TritonGamepad(path) if controller_type == 'steam_controller_2026'
-                                  else RawGamepad(path))
+                        reader = (EvdevGamepad if controller_type == 'evdev_gamepad' else
+                                  TritonGamepad if controller_type.startswith('steam_controller_2026') else
+                                  RawGamepad)
+                        device = reader(path)
                         selector.register(device.fd, selectors.EVENT_READ, path)
                     except ValueError:
                         continue  # Not a gamepad; constructor closes its fd.
                     except OSError as e:
                         if device is not None:
                             device.close()
-                        print(f"Cannot open controller {path}: {e}", flush=True)
                         error_key = (path, e.errno)
                         if error_key not in open_errors:
                             open_errors.add(error_key)
+                            print(f"Cannot open controller {path}: {e}", flush=True)
                             diagnostic('open_failed', errno=e.errno,
                                        input_backend='evdev' if controller_type == 'evdev_gamepad' else 'hidraw')
                         continue
@@ -389,7 +400,7 @@ def main():
         for device, _ in devices.values():
             device.close()
         selector.close()
-        for path in (STATE_FILE, PID_FILE, PREVIEW_FILE, CONTROLLER_TYPE_FILE,
+        for path in (STATE_FILE, PID_FILE, PREVIEW_FILE, CONTROLLER_TYPE_FILE, STATUS_FILE,
                      HAPTIC_SOURCE_FILE, RECENT_SOURCE_FILE):
             try:
                 os.remove(path)
