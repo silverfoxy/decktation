@@ -2,7 +2,7 @@
   "plugin": "Decktation",
   "channel": "branch",
   "ref": "benchmark/whisper-vulkan-steam-deck",
-  "commit": "60f4220156e9a2a0f10021728c8e85031296f568",
+  "commit": "6d20d8ba991df31c0be37b1e1206bbaf878b772b",
   "zip_url": "https://silverfoxy.github.io/decktation/branches/benchmark-whisper-vulkan-steam-deck/decktation.zip",
-  "generated_at": "2026-10-04T14:21:26Z"
+  "generated_at": "2026-10-04T19:21:43Z"
 }
