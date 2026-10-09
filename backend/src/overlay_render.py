@@ -56,7 +56,7 @@ def draw_review(ctx, width, height, state, now=None):
     body_height = body.get_pixel_size()[1]
     error = state.get('error', '')
     note = ('Open Decktation to review all' if truncated else
-            'You press Enter to send' if state.get('manual') else '')
+            'After typing, press Enter in the game' if state.get('manual') else '')
     if error:
         note = 'Typing failed · Check game focus, then retry in Decktation'
     note_layout = layout_text(ctx, note, 16) if note else None
@@ -74,7 +74,7 @@ def draw_review(ctx, width, height, state, now=None):
     header = 'Sending…' if state.get('sending') else 'Review transcription'
     if state.get('mode') == 'countdown' and not state.get('sending'):
         remaining = max(0, (state.get('deadline') or now) - now)
-        header = f'Sending in {math.ceil(remaining)}s'
+        header = f'{"Typing" if state.get("manual") else "Sending"} in {math.ceil(remaining)}s'
     paint_text(ctx, layout_text(ctx, header, 18, 340, True), 28, 23, (0.65, 0.82, 0.98))
     destination = layout_text(ctx, state.get('destination', ''), 16, 170)
     destination.set_height(-1)

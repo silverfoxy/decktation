@@ -5,6 +5,48 @@
 
     var React__default = /*#__PURE__*/_interopDefaultLegacy(React);
 
+    // Read the actual QAM surface. Document visibility alone does not establish
+    // whether a persistent Steam sidebar is on screen.
+    function quickAccessVisibility(documents, classNames) {
+        let foundMenu = false;
+        for (const doc of documents) {
+            // Prefer the sidebar itself over its full-screen transparent container.
+            for (const name of classNames) {
+                if (!name)
+                    continue;
+                const menus = Array.from(doc.getElementsByClassName(name));
+                if (!menus.length)
+                    continue;
+                foundMenu = true;
+                if (doc.hidden)
+                    break;
+                const view = doc.defaultView;
+                if (!view)
+                    break;
+                for (const menu of menus) {
+                    if (!menu.isConnected)
+                        continue;
+                    const rect = menu.getBoundingClientRect();
+                    if (rect.width <= 0 || rect.height <= 0 || rect.right <= 0 || rect.bottom <= 0 || rect.left >= view.innerWidth || rect.top >= view.innerHeight)
+                        continue;
+                    let visible = true;
+                    for (let node = menu; node; node = node.parentElement) {
+                        const style = view.getComputedStyle(node);
+                        if (style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse" || Number(style.opacity) === 0) {
+                            visible = false;
+                            break;
+                        }
+                    }
+                    if (visible)
+                        return true;
+                }
+                break;
+            }
+        }
+        // Missing markup is unknown, rather than an assertion that QAM is open.
+        return foundMenu ? false : null;
+    }
+
     var _manifest = {"name":"Decktation","version":"0.3.19-dev.resident.4","author":"silverfoxy","flags":["root"],"api_version":1,"publish":{"tags":["voice","dictation","speech-to-text","input","chat","gaming","accessibility"],"description":"Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using whisper.cpp.","image":"https://raw.githubusercontent.com/silverfoxy/decktation/master/store-card.png"}};
 
     const manifest = _manifest;
@@ -151,6 +193,8 @@
             this.pendingSince = 0;
             this.announcedDraftId = "";
             this.qamVisible = false;
+            this.qamKnown = false;
+            this.readQamVisibility = null;
             this.qamClosedAt = Date.now();
             this.armedDraftId = "";
             this.lastPendingToastId = -1;
@@ -407,13 +451,40 @@
         const [pendingDraft, setPendingDraft] = React.useState(null);
         const reviewTextRef = React.useRef(null);
         const [draftBusy, setDraftBusy] = React.useState(false);
-        const qamVisible = deckyFrontendLib.useQuickAccessVisible();
+        const [qamVisible, setQamVisible] = React.useState(false);
         React.useEffect(() => {
-            logic.qamVisible = qamVisible;
-            if (!qamVisible)
-                logic.qamClosedAt = Date.now();
-            void setReviewContextRpc(qamVisible);
-        }, [qamVisible]);
+            const read = () => {
+                const documents = [];
+                if (panelRef.current)
+                    documents.push(panelRef.current.ownerDocument);
+                try {
+                    for (const tree of deckyFrontendLib.getGamepadNavigationTrees() || []) {
+                        if (!String(tree?.id || "").startsWith("QuickAccess"))
+                            continue;
+                        const doc = tree?.m_Root?.m_element?.ownerDocument;
+                        if (doc && !documents.includes(doc))
+                            documents.push(doc);
+                    }
+                }
+                catch (_error) { /* Inspect the mounted panel's document instead. */ }
+                return quickAccessVisibility(documents, [deckyFrontendLib.quickAccessMenuClasses.QuickAccessMenu, deckyFrontendLib.quickAccessMenuClasses.Menu]);
+            };
+            const update = () => {
+                const visible = read();
+                if (visible === false && logic.qamVisible)
+                    logic.qamClosedAt = Date.now();
+                const changed = logic.qamKnown !== (visible !== null) || logic.qamVisible !== (visible === true);
+                logic.qamKnown = visible !== null;
+                logic.qamVisible = visible === true;
+                setQamVisible(visible === true);
+                if (changed)
+                    void setReviewContextRpc(logic.qamVisible, logic.qamKnown).catch(() => { });
+            };
+            logic.readQamVisibility = read;
+            update();
+            const interval = setInterval(update, 200);
+            return () => { clearInterval(interval); logic.readQamVisibility = null; logic.qamKnown = false; };
+        }, []);
         const [manualSend, setManualSend] = React.useState(false);
         const [rememberLastChannel, setRememberLastChannel] = React.useState(false);
         const [shareDiagnostics, setShareDiagnostics] = React.useState(false);
@@ -630,14 +701,14 @@
                     React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                         React__default["default"].createElement("div", { style: { fontSize: '13px', color: '#adb8c4' } },
                             pendingDraft.destination,
-                            pendingDraft.manual ? " · You press Enter to send" : "")),
+                            pendingDraft.manual ? " · After typing, press Enter in the game" : "")),
                     pendingDraft.error && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                         React__default["default"].createElement("div", { role: "alert" }, pendingDraft.error)),
                     React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                         React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: draftBusy || pendingDraft.sending, onClick: async () => {
                                 setDraftBusy(true);
                                 try {
-                                    await setReviewContextRpc(true);
+                                    await setReviewContextRpc(true, true);
                                     const result = await armDraftRpc(pendingDraft.id);
                                     if (result.success) {
                                         logic.armedDraftId = pendingDraft.id;
@@ -968,8 +1039,13 @@
                 return;
             notifyPollInFlight = true;
             try {
-                await setReviewContextRpc(logic.qamVisible);
-                if (logic.armedDraftId && !logic.qamVisible && Date.now() - logic.qamClosedAt >= 500) {
+                const visible = logic.readQamVisibility?.() ?? null;
+                if (visible === false && logic.qamVisible)
+                    logic.qamClosedAt = Date.now();
+                logic.qamKnown = visible !== null;
+                logic.qamVisible = visible === true;
+                await setReviewContextRpc(logic.qamVisible, logic.qamKnown);
+                if (logic.armedDraftId && logic.qamKnown && !logic.qamVisible && Date.now() - logic.qamClosedAt >= 500) {
                     const draftId = logic.armedDraftId;
                     logic.armedDraftId = "";
                     const sent = await sendArmedDraftRpc(draftId);

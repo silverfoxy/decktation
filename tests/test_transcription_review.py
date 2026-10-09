@@ -184,6 +184,7 @@ def test_panel_confirmation_requires_approval_and_observed_qam_close(monkeypatch
     voice.send_to_wow_chat = MagicMock(return_value=True)
     monkeypatch.setattr(backend.Plugin, 'voice_service', voice)
     monkeypatch.setattr(backend.Plugin, 'review_qam_visible', True)
+    monkeypatch.setattr(backend.Plugin, 'review_context_known', True)
     monkeypatch.setattr(backend.Plugin, 'review_context_time', time.monotonic())
     monkeypatch.setattr(backend.Plugin, 'review_armed_id', None)
     voice.queue_transcription('hello')
@@ -261,3 +262,64 @@ def test_shutdown_discards_review_and_rejects_late_transcription():
     assert voice.pending_snapshot() is None
     assert not voice.confirm_pending(draft_id)
     voice.send_to_wow_chat.assert_not_called()
+
+
+def test_unknown_menu_state_does_not_replace_countdown(monkeypatch):
+    monkeypatch.setattr('wow_voice_chat.threading.Timer', MagicMock())
+    voice = service()
+    voice.review_mode = False
+    voice.confirm_delay = 2
+    voice.queue_transcription('hello')
+    monkeypatch.setattr(backend.Plugin, 'voice_service', voice)
+    monkeypatch.setattr(backend.Plugin, 'review_qam_visible', False)
+    monkeypatch.setattr(backend.Plugin, 'review_context_known', False)
+    asyncio.run(backend.Plugin().set_review_context(True, known=False))
+    assert voice.pending_snapshot()['mode'] == 'countdown'
+    assert voice.pending_snapshot()['deadline'] is not None
+
+
+def test_closed_menu_allows_tap_and_keeps_countdown(monkeypatch):
+    monkeypatch.setattr('wow_voice_chat.threading.Timer', MagicMock())
+    voice = service()
+    voice.review_mode = False
+    voice.confirm_delay = 2
+    voice.queue_transcription('hello')
+    monkeypatch.setattr(backend.Plugin, 'voice_service', voice)
+    monkeypatch.setattr(backend.Plugin, 'recording_overlay', SimpleNamespace(preview_ready=lambda _: True))
+    monkeypatch.setattr(backend.Plugin, 'review_qam_visible', False)
+    monkeypatch.setattr(backend.Plugin, 'review_context_known', True)
+    monkeypatch.setattr(backend.Plugin, 'review_closed_at', time.monotonic() - 1)
+    asyncio.run(backend.Plugin().set_review_context(False, known=True))
+    assert voice.pending_snapshot()['mode'] == 'countdown'
+    assert backend.Plugin._review_ready(voice.pending_snapshot())
+    voice.cancel_pending()
+    voice.review_mode = True
+    voice.queue_transcription('hello')
+    draft = voice.pending_snapshot()
+    gesture = ReviewGesture()
+    gesture.update(True, draft, backend.Plugin._review_ready(draft), 1)
+    assert gesture.update(False, draft, backend.Plugin._review_ready(draft), 1.2)[1] == 'send'
+
+
+def test_manual_review_confirmation_types_instead_of_blocking(monkeypatch):
+    voice = service(manual_send=True)
+    voice.send_to_wow_chat = MagicMock(return_value=True)
+    voice.queue_transcription('hello')
+    draft = voice.pending_snapshot()
+    assert draft['manual'] and draft['action'] == 'Type into chat'
+    gesture = ReviewGesture()
+    gesture.update(True, draft, True, 1)
+    assert gesture.update(False, draft, True, 1.2)[1] == 'send'
+    assert voice.confirm_pending(draft['id'])
+    voice.send_to_wow_chat.assert_called_once_with('hello', channel='say')
+
+
+def test_controller_confirmation_survives_throttled_frontend_heartbeat(monkeypatch):
+    monkeypatch.setattr(backend.Plugin, 'review_context_known', True)
+    monkeypatch.setattr(backend.Plugin, 'review_qam_visible', False)
+    monkeypatch.setattr(backend.Plugin, 'review_context_time', time.monotonic() - 60)
+    monkeypatch.setattr(backend.Plugin, 'review_closed_at', time.monotonic() - 60)
+    monkeypatch.setattr(backend.Plugin, 'recording_overlay', SimpleNamespace(preview_ready=lambda _: True))
+    assert backend.Plugin._review_ready({'id': 'draft'})
+    monkeypatch.setattr(backend.Plugin, 'review_qam_visible', True)
+    assert not backend.Plugin._review_ready({'id': 'draft'})

@@ -17,6 +17,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Fixed
 
+- Detect QAM from its actual visible surface so a missing navigation tree cannot
+  silently replace countdown with review or disable tap confirmation. Controller
+  confirmation no longer expires with a throttled frontend heartbeat.
+- Clarify that Enter is pressed in the game after manual-send text is typed.
+
 - Read Steam Controller (2026) Puck input directly, including all four grips,
   instead of depending on Steam's virtual gamepad emitting events in Gaming Mode.
   Added decoding for USB, Bluetooth and timestamped controller reports, plus

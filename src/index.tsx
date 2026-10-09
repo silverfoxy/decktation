@@ -1,7 +1,7 @@
 import {
 	definePlugin,
 	Router,
-	useQuickAccessVisible,
+	getGamepadNavigationTrees,
 	PanelSection,
 	PanelSectionRow,
 	quickAccessMenuClasses,
@@ -16,6 +16,8 @@ import {
 	showContextMenu,
 	gamepadContextMenuClasses,
 } from "decky-frontend-lib";
+
+import { quickAccessVisibility } from "./quickAccessVisibility";
 
 import { callable, toaster } from "@decky/api";
 
@@ -41,7 +43,7 @@ const getLastTranscription = callable<[], RpcResponse>("get_last_transcription")
 const setSendingModeRpc = callable<[mode: string], RpcResponse>("set_sending_mode");
 const cancelDraftRpc = callable<[draftId: string], RpcResponse>("cancel_draft");
 const armDraftRpc = callable<[draftId: string], RpcResponse>("arm_draft");
-const setReviewContextRpc = callable<[visible: boolean], RpcResponse>("set_review_context");
+const setReviewContextRpc = callable<[visible: boolean, known: boolean], RpcResponse>("set_review_context");
 const sendArmedDraftRpc = callable<[draftId: string], RpcResponse>("send_armed_draft");
 type PendingDraft = { id: string; text: string; destination: string; action: string; mode: string; error: string; sending: boolean; manual: boolean };
 const setManualSendRpc = callable<[enabled: boolean], RpcResponse>("set_manual_send");
@@ -69,6 +71,8 @@ class DecktationLogic {
 	pendingSince: number = 0;
 	announcedDraftId: string = "";
 	qamVisible: boolean = false;
+	qamKnown: boolean = false;
+	readQamVisibility: (() => boolean | null) | null = null;
 	qamClosedAt: number = Date.now();
 	armedDraftId: string = "";
 	lastPendingToastId: number = -1;
@@ -335,12 +339,34 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [pendingDraft, setPendingDraft] = useState<PendingDraft | null>(null);
 	const reviewTextRef = useRef<HTMLDivElement>(null);
 	const [draftBusy, setDraftBusy] = useState<boolean>(false);
-	const qamVisible = useQuickAccessVisible();
+	const [qamVisible, setQamVisible] = useState<boolean>(false);
 	useEffect(() => {
-		logic.qamVisible = qamVisible;
-		if (!qamVisible) logic.qamClosedAt = Date.now();
-		void setReviewContextRpc(qamVisible);
-	}, [qamVisible]);
+		const read = () => {
+			const documents: Document[] = [];
+			if (panelRef.current) documents.push(panelRef.current.ownerDocument);
+			try {
+				for (const tree of getGamepadNavigationTrees() || []) {
+					if (!String(tree?.id || "").startsWith("QuickAccess")) continue;
+					const doc = tree?.m_Root?.m_element?.ownerDocument as Document | undefined;
+					if (doc && !documents.includes(doc)) documents.push(doc);
+				}
+			} catch (_error) { /* Inspect the mounted panel's document instead. */ }
+			return quickAccessVisibility(documents, [quickAccessMenuClasses.QuickAccessMenu, quickAccessMenuClasses.Menu]);
+		};
+		const update = () => {
+			const visible = read();
+			if (visible === false && logic.qamVisible) logic.qamClosedAt = Date.now();
+			const changed = logic.qamKnown !== (visible !== null) || logic.qamVisible !== (visible === true);
+			logic.qamKnown = visible !== null;
+			logic.qamVisible = visible === true;
+			setQamVisible(visible === true);
+			if (changed) void setReviewContextRpc(logic.qamVisible, logic.qamKnown).catch(() => {});
+		};
+		logic.readQamVisibility = read;
+		update();
+		const interval = setInterval(update, 200);
+		return () => { clearInterval(interval); logic.readQamVisibility = null; logic.qamKnown = false; };
+	}, []);
 	const [manualSend, setManualSend] = useState<boolean>(false);
 	const [rememberLastChannel, setRememberLastChannel] = useState<boolean>(false);
 	const [shareDiagnostics, setShareDiagnostics] = useState<boolean>(false);
@@ -546,12 +572,12 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 						const direction = event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0;
 						if (direction && scrollReview(direction)) { event.preventDefault(); event.stopPropagation(); }
 					}}>{pendingDraft.text}</Focusable></PanelSectionRow>
-					<PanelSectionRow><div style={{ fontSize: '13px', color: '#adb8c4' }}>{pendingDraft.destination}{pendingDraft.manual ? " · You press Enter to send" : ""}</div></PanelSectionRow>
+					<PanelSectionRow><div style={{ fontSize: '13px', color: '#adb8c4' }}>{pendingDraft.destination}{pendingDraft.manual ? " · After typing, press Enter in the game" : ""}</div></PanelSectionRow>
 					{pendingDraft.error && <PanelSectionRow><div role="alert">{pendingDraft.error}</div></PanelSectionRow>}
 					<PanelSectionRow><ButtonItem layout="below" disabled={draftBusy || pendingDraft.sending} onClick={async () => {
 						setDraftBusy(true);
 						try {
-							await setReviewContextRpc(true);
+							await setReviewContextRpc(true, true);
 							const result = await armDraftRpc(pendingDraft.id);
 							if (result.success) {
 								logic.armedDraftId = pendingDraft.id;
@@ -815,8 +841,12 @@ export default definePlugin(() => {
 		if (!logic.enabled || notifyPollInFlight) return;
 		notifyPollInFlight = true;
 		try {
-			await setReviewContextRpc(logic.qamVisible);
-			if (logic.armedDraftId && !logic.qamVisible && Date.now() - logic.qamClosedAt >= 500) {
+			const visible = logic.readQamVisibility?.() ?? null;
+			if (visible === false && logic.qamVisible) logic.qamClosedAt = Date.now();
+			logic.qamKnown = visible !== null;
+			logic.qamVisible = visible === true;
+			await setReviewContextRpc(logic.qamVisible, logic.qamKnown);
+			if (logic.armedDraftId && logic.qamKnown && !logic.qamVisible && Date.now() - logic.qamClosedAt >= 500) {
 				const draftId = logic.armedDraftId;
 				logic.armedDraftId = "";
 				const sent = await sendArmedDraftRpc(draftId);

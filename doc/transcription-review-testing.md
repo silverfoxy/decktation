@@ -26,7 +26,8 @@ Review coverage includes frozen final text/channel, manual-send labeling, stale
 IDs, cancellation during transcription, duplicate/concurrent confirmation,
 failed typing and persistence, controller tap/hold timing, presses begun before
 preview readiness, fixed countdown deadlines, paused timer callbacks, QAM
-approval/closing, stale renderer acknowledgments, Unicode wrapping, and long
+approval/closing, actual menu visibility without a navigation tree, throttled
+frontend timers, stale renderer acknowledgments, Unicode wrapping, and long
 text preventing quick confirmation. Renderer tests skip on hosts without Cairo
 or PyGObject; they ran on this development host.
 

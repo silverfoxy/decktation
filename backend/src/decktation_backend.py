@@ -339,6 +339,7 @@ class Plugin:
     haptic_feedback = None
     recording_overlay = None
     review_qam_visible = False
+    review_context_known = False
     review_context_time = 0
     review_closed_at = 0
     review_armed_id = None
@@ -366,7 +367,7 @@ class Plugin:
 
     @staticmethod
     def _review_ready(draft):
-        if (Plugin.review_qam_visible or time.monotonic() - Plugin.review_context_time > 2 or
+        if (not Plugin.review_context_known or Plugin.review_qam_visible or
                 time.monotonic() - Plugin.review_closed_at < 0.5):
             return False
         return bool(Plugin.recording_overlay and Plugin.recording_overlay.preview_ready(draft["id"]))
@@ -1032,7 +1033,7 @@ class Plugin:
             draft = service.pending_draft
             if not draft or draft["id"] != draft_id or draft["sending"]:
                 return {"success": False, "error": "Draft is no longer available"}
-            if not Plugin.review_qam_visible or time.monotonic() - Plugin.review_context_time > 2:
+            if not Plugin.review_context_known or not Plugin.review_qam_visible or time.monotonic() - Plugin.review_context_time > 2:
                 return {"success": False, "error": "Open Decktation to review this draft"}
             Plugin.review_armed_id = draft_id
             if service._pending_timer:
@@ -1041,17 +1042,18 @@ class Plugin:
             draft["deadline"] = None
         return {"success": True}
 
-    async def set_review_context(self, qam_visible: bool):
+    async def set_review_context(self, qam_visible: bool, known: bool = True):
         if Plugin.review_qam_visible and not qam_visible:
             Plugin.review_closed_at = time.monotonic()
-        Plugin.review_qam_visible = bool(qam_visible)
+        Plugin.review_qam_visible = bool(qam_visible) if known else False
+        Plugin.review_context_known = bool(known)
         Plugin.review_context_time = time.monotonic()
-        if qam_visible and Plugin.voice_service:
+        if known and qam_visible and Plugin.voice_service:
             Plugin.voice_service.pause_countdown()
         return {"success": True}
 
     async def send_armed_draft(self, draft_id: str):
-        if (Plugin.review_armed_id != draft_id or Plugin.review_qam_visible or
+        if (Plugin.review_armed_id != draft_id or not Plugin.review_context_known or Plugin.review_qam_visible or
                 time.monotonic() - Plugin.review_context_time > 2 or
                 time.monotonic() - Plugin.review_closed_at < 0.5):
             return {"success": False, "error": "Close the Quick Access Menu before sending"}
@@ -1346,6 +1348,9 @@ class Plugin:
                 "success": True,
                 "pending_draft": draft,
                 "preview_overlay": overlay_status,
+                "review_menu_known": Plugin.review_context_known,
+                "review_menu_open": Plugin.review_qam_visible,
+                "manual_send": Plugin.voice_service.manual_send if Plugin.voice_service else False,
                 "service_ready": Plugin.voice_service is not None,
                 "model_ready": model_ready,
                 "inference_device": (
