@@ -1,5 +1,6 @@
 """Own the desktop user's Gamescope recording indicator process."""
 import os
+import json
 import pwd
 import shutil
 import subprocess
@@ -19,6 +20,7 @@ class RecordingOverlay:
         self.display = None
         self.session_user = self._resolve_session_user(decky_user_home)
         self.lock = threading.RLock()
+        self.preview = None
         self.desired_state = "hidden"
         self.discovery_thread = None
         self.next_discovery = 0
@@ -122,14 +124,15 @@ class RecordingOverlay:
                 self.next_discovery = time.monotonic() + 30
                 return
             self.display = display
-            if self.enabled and self.desired_state in ("compact", "transcribing"):
+            if self.enabled and self.desired_state in ("compact", "transcribing", "review", "countdown", "result"):
                 self._show_ready(self.desired_state)
 
     def _write_state(self, state):
         self.directory.mkdir(mode=0o755, exist_ok=True)
         state_file = self.directory / "state"
         temp_file = self.directory / "state.new"
-        temp_file.write_text(state + "\n")
+        payload = dict(self.preview) if self.preview and state in ("review", "countdown", "result") else {"mode": state}
+        temp_file.write_text(json.dumps(payload, ensure_ascii=False) + "\n")
         os.chmod(temp_file, 0o644)
         temp_file.replace(state_file)
 
@@ -137,7 +140,7 @@ class RecordingOverlay:
         with self.lock:
             try:
                 self.desired_state = state
-                if not self.enabled or state not in ("compact", "transcribing"):
+                if not self.enabled or state not in ("compact", "transcribing", "review", "countdown", "result"):
                     return
                 if self.display:
                     self._show_ready(state)
@@ -150,6 +153,10 @@ class RecordingOverlay:
         if self.directory is None:
             self.directory = Path(tempfile.mkdtemp(prefix="decktation-overlay-"))
             os.chmod(self.directory, 0o755)
+            status = self.directory / "status"
+            status.touch(mode=0o644)
+            if self.session_user:
+                os.chown(status, self.session_user.pw_uid, self.session_user.pw_gid)
         self._write_state(state)
         if self.process and self.process.poll() is None:
             return
@@ -172,10 +179,43 @@ class RecordingOverlay:
         except OSError as exc:
             self.logger.warning("Recording overlay failed to start: %s", exc)
 
+    def show_result(self, message):
+        with self.lock:
+            self.preview = {"mode": "result", "message": message, "expires": time.time() + 1.2}
+            self.show("result")
+
+    def show_preview(self, draft, binding):
+        with self.lock:
+            self.preview = dict(draft, binding=binding, cancel_progress=0)
+            self.show(draft["mode"])
+
+    def set_cancel_progress(self, progress):
+        with self.lock:
+            if self.preview and self.preview.get("cancel_progress") != progress:
+                self.preview["cancel_progress"] = progress
+                if self.directory:
+                    self._write_state(self.desired_state)
+
+    def preview_status(self, draft_id):
+        with self.lock:
+            if not self.process or self.process.poll() is not None or not self.directory:
+                return {"visible": False, "ready": False}
+            try:
+                status = json.loads((self.directory / "status").read_text())
+                current = (status.get("id") == draft_id and
+                           0 <= time.time() - status.get("time", 0) < 1.5)
+                return {"visible": current, "ready": current and status.get("ready") is True}
+            except (OSError, ValueError, TypeError):
+                return {"visible": False, "ready": False}
+
+    def preview_ready(self, draft_id):
+        return self.preview_status(draft_id).get("ready", False)
+
     def hide(self):
         with self.lock:
             try:
                 self.desired_state = "hidden"
+                self.preview = None
                 if self.directory:
                     self._write_state("hidden")
             except Exception as exc:

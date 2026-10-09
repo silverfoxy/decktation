@@ -6,8 +6,8 @@ Most settings can be changed in the Decktation panel. The source configuration f
 
 - **Model:** Base is fastest, Small is a balanced choice, and Medium is more accurate but slower. A model may download from Hugging Face the first time it is used.
 - **Language:** Choose a transcription language, or leave **Lang** on **Auto** for automatic detection.
-- **Confirm:** Adds a two-second delay before a message is sent. Hold push-to-talk during the countdown to cancel it.
-- **Manual:** Enters the message but leaves sending it to you; press Enter in the game to send.
+- **Transcription sending:** Choose Send immediately, Review before sending, or Send after countdown. Review stays visible until you tap your recording binding to send or hold it for 0.6 seconds to cancel. Long messages and typing failures require review in the Decktation panel. Countdown waits 3–6 seconds and a press of the recording binding cancels it; opening QAM pauses it for explicit review. Existing Confirm settings migrate to countdown.
+- **Press Enter yourself:** Types the message without submitting it. In review mode, the confirmation action is labeled Type into chat. Press Enter in the game to send.
 - **Remember channel:** Reuses the last channel you spoke when the next message has no channel prefix.
 - **Recording cue:** Selects a Steam toast, the in-game Gamescope overlay, or no recording indicator.
 

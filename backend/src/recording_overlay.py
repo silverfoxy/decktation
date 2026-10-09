@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Input-transparent Gamescope recording indicator for Decktation."""
 import math
+import json
 import os
 import signal
 import subprocess
@@ -9,6 +10,7 @@ import time
 from pathlib import Path
 
 import cairo
+from overlay_render import draw_review, draw_result
 import gi
 
 gi.require_version("Gtk", "3.0")
@@ -52,6 +54,7 @@ class Indicator(Gtk.Window):
         self.set_default_size(self.surface_width, self.surface_height)
         screen.connect("size-changed", self.sync_geometry)
         screen.connect("monitors-changed", self.sync_geometry)
+        self.state = {"mode": "hidden"}
         self.mode = "hidden"
         self.phase = time.monotonic()
         self.last_state = "hidden"
@@ -92,11 +95,19 @@ class Indicator(Gtk.Window):
             Gtk.main_quit()
             return False
         try:
-            mode = STATE.read_text().strip()
+            raw = STATE.read_text().strip()
+            try:
+                self.state = json.loads(raw)
+                mode = self.state.get("mode", "hidden")
+            except (ValueError, AttributeError):
+                self.state = {"mode": raw}
+                mode = raw
         except FileNotFoundError:
             Gtk.main_quit()
             return False
-        if mode not in {"compact", "transcribing", "hidden"}:
+        if mode == "result" and time.time() >= self.state.get("expires", 0):
+            mode = "hidden"
+        if mode not in {"compact", "transcribing", "review", "countdown", "result", "hidden"}:
             mode = "hidden"
         if mode != self.last_state:
             self.mode = mode
@@ -114,6 +125,18 @@ class Indicator(Gtk.Window):
         ctx.set_operator(cairo.OPERATOR_OVER)
         allocation = self.get_allocation()
         width, height = allocation.width, allocation.height
+        if self.mode == "result":
+            draw_result(ctx, width, height, self.state.get("message", ""))
+            return False
+        if self.mode in {"review", "countdown"}:
+            ready = draw_review(ctx, width, height, self.state)
+            try:
+                STATE.with_name("status").write_text(json.dumps({
+                    "id": self.state.get("id"), "ready": ready, "time": time.time(),
+                }))
+            except OSError:
+                pass
+            return False
         # Gamescope can scale this surface independently of the game resolution.
         # Use current allocation and proportional dimensions, including after docking.
         scale = min(height / REFERENCE_HEIGHT, width / (WIDTH + 32))

@@ -1,5 +1,7 @@
 import {
 	definePlugin,
+	Router,
+	useQuickAccessVisible,
 	PanelSection,
 	PanelSectionRow,
 	quickAccessMenuClasses,
@@ -8,6 +10,7 @@ import {
 	DropdownOption,
 	DropdownItem,
 	Focusable,
+	GamepadButton,
 	Menu,
 	MenuItem,
 	showContextMenu,
@@ -35,7 +38,12 @@ const loadModel = callable<[], RpcResponse>("load_model");
 const startRecording = callable<[], RpcResponse>("start_recording");
 const stopRecording = callable<[send?: boolean], RpcResponse>("stop_recording");
 const getLastTranscription = callable<[], RpcResponse>("get_last_transcription");
-const setConfirmModeRpc = callable<[enabled: boolean], RpcResponse>("set_confirm_mode");
+const setSendingModeRpc = callable<[mode: string], RpcResponse>("set_sending_mode");
+const cancelDraftRpc = callable<[draftId: string], RpcResponse>("cancel_draft");
+const armDraftRpc = callable<[draftId: string], RpcResponse>("arm_draft");
+const setReviewContextRpc = callable<[visible: boolean], RpcResponse>("set_review_context");
+const sendArmedDraftRpc = callable<[draftId: string], RpcResponse>("send_armed_draft");
+type PendingDraft = { id: string; text: string; destination: string; action: string; mode: string; error: string; sending: boolean; manual: boolean };
 const setManualSendRpc = callable<[enabled: boolean], RpcResponse>("set_manual_send");
 const setRememberLastChannelRpc = callable<[enabled: boolean], RpcResponse>("set_remember_last_channel");
 const setShareDiagnosticsRpc = callable<[enabled: boolean], RpcResponse>("set_share_diagnostics");
@@ -57,7 +65,12 @@ class DecktationLogic {
 	recording: boolean = false;
 	recordingIndicator: string = "toast";
 	prevRecordingStartCount: number = 0;
-	prevPendingText: string = "";
+	prevPendingId: string = "";
+	pendingSince: number = 0;
+	announcedDraftId: string = "";
+	qamVisible: boolean = false;
+	qamClosedAt: number = Date.now();
+	armedDraftId: string = "";
 	lastPendingToastId: number = -1;
 
 	notify = async (message: string, duration: number = 2000, body: string = ""): Promise<number> => {
@@ -318,7 +331,16 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [hapticFeedback, setHapticFeedback] = useState<boolean>(false);
 	const [activePreset, setActivePreset] = useState<string>("wow");
 	const [presets, setPresets] = useState<DropdownOption[]>([]);
-	const [confirmMode, setConfirmMode] = useState<boolean>(false);
+	const [sendingMode, setSendingMode] = useState<string>("immediate");
+	const [pendingDraft, setPendingDraft] = useState<PendingDraft | null>(null);
+	const reviewTextRef = useRef<HTMLDivElement>(null);
+	const [draftBusy, setDraftBusy] = useState<boolean>(false);
+	const qamVisible = useQuickAccessVisible();
+	useEffect(() => {
+		logic.qamVisible = qamVisible;
+		if (!qamVisible) logic.qamClosedAt = Date.now();
+		void setReviewContextRpc(qamVisible);
+	}, [qamVisible]);
 	const [manualSend, setManualSend] = useState<boolean>(false);
 	const [rememberLastChannel, setRememberLastChannel] = useState<boolean>(false);
 	const [shareDiagnostics, setShareDiagnostics] = useState<boolean>(false);
@@ -352,9 +374,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					if (config.game) {
 						setActivePreset(config.game);
 					}
-					if (config.confirmMode !== undefined) {
-						setConfirmMode(config.confirmMode);
-					}
+					setSendingMode(config.sendingMode || (config.confirmMode ? "countdown" : "immediate"));
 					if (config.manualSend !== undefined) {
 						setManualSend(config.manualSend);
 					}
@@ -406,6 +426,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					setControllerStatus(result.controller_status || "Waiting for input");
 					setControllerComboSupported(result.controller_combo_supported !== false);
 					setStatusError("");
+					setPendingDraft(result.pending_draft || null);
 					setServiceReady(result.service_ready);
 					setModelReady(result.model_ready);
 					setInferenceDevice(
@@ -455,8 +476,25 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 			}
 		});
 		return () => cancelAnimationFrame(frame);
-	}, [page]);
+	}, [page, pendingDraft?.id]);
 
+	useEffect(() => {
+		if (!qamVisible || !pendingDraft) return;
+		const frame = requestAnimationFrame(() => {
+			if (reviewTextRef.current) {
+				reviewTextRef.current.scrollTop = 0;
+				reviewTextRef.current.focus();
+			}
+		});
+		return () => cancelAnimationFrame(frame);
+	}, [qamVisible, pendingDraft?.id]);
+
+	const scrollReview = (direction: number) => {
+		const node = reviewTextRef.current;
+		if (!node || (direction < 0 ? node.scrollTop <= 0 : node.scrollTop + node.clientHeight >= node.scrollHeight - 1)) return false;
+		node.scrollTop += direction * 96;
+		return true;
+	};
 	const goBack = () => setPage(page === "diagnostics" || page === "help" || page === "model" || page === "binding-button" ? "advanced" : "main");
 	const chooseLanguage = async (language: string) => {
 		const result = await setTranscriptionOptionsRpc(language);
@@ -500,6 +538,39 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 		}} onCancelActionDescription={page === "main" ? undefined : "Back"}>
 			<div ref={panelRef}>
 				<style>{`.decktation-trash-focused { outline: 3px solid #66c0f4 !important; outline-offset: 2px; background-color: #456b90 !important; box-shadow: 0 0 0 2px rgba(102, 192, 244, 0.38) !important; }`}</style>
+				{pendingDraft && <PanelSection title="Review transcription">
+					<PanelSectionRow><Focusable ref={reviewTextRef} tabIndex={0} aria-label="Transcription. Use Up and Down to scroll." style={{ fontSize: '16px', lineHeight: '1.5', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: '260px', overflowY: 'auto', padding: '4px' }} onGamepadDirection={(event) => {
+						const direction = event.detail.button === GamepadButton.DIR_UP ? -1 : event.detail.button === GamepadButton.DIR_DOWN ? 1 : 0;
+						if (direction && scrollReview(direction)) { event.preventDefault(); event.stopPropagation(); }
+					}} onKeyDown={(event) => {
+						const direction = event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0;
+						if (direction && scrollReview(direction)) { event.preventDefault(); event.stopPropagation(); }
+					}}>{pendingDraft.text}</Focusable></PanelSectionRow>
+					<PanelSectionRow><div style={{ fontSize: '13px', color: '#adb8c4' }}>{pendingDraft.destination}{pendingDraft.manual ? " · You press Enter to send" : ""}</div></PanelSectionRow>
+					{pendingDraft.error && <PanelSectionRow><div role="alert">{pendingDraft.error}</div></PanelSectionRow>}
+					<PanelSectionRow><ButtonItem layout="below" disabled={draftBusy || pendingDraft.sending} onClick={async () => {
+						setDraftBusy(true);
+						try {
+							await setReviewContextRpc(true);
+							const result = await armDraftRpc(pendingDraft.id);
+							if (result.success) {
+								logic.armedDraftId = pendingDraft.id;
+								Router.CloseSideMenus();
+							} else setRpcError(result.error || "Could not approve draft");
+						} catch (error) { setRpcError(String(error)); }
+						finally { setDraftBusy(false); }
+					}}>{pendingDraft.action}</ButtonItem></PanelSectionRow>
+					<PanelSectionRow><div style={{ fontSize: '12px' }}>Closes this menu before typing into your game. Keep your game in the foreground.</div></PanelSectionRow>
+					<PanelSectionRow><ButtonItem layout="below" disabled={draftBusy || pendingDraft.sending} onClick={async () => {
+						setDraftBusy(true);
+						try {
+							const result = await cancelDraftRpc(pendingDraft.id);
+							if (result.success) setPendingDraft(null);
+							else setRpcError(result.error || "Could not cancel draft");
+						} catch (error) { setRpcError(String(error)); }
+						finally { setDraftBusy(false); }
+					}}>Cancel</ButtonItem></PanelSectionRow>
+				</PanelSection>}
 				{page !== "main" && (
 					<PanelSectionRow><ButtonItem layout="below" onClick={goBack}>Back</ButtonItem></PanelSectionRow>
 				)}
@@ -566,7 +637,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 									{OTHER_LANGUAGE_OPTIONS.map(option => <MenuItem key={String(option.data)} selected={option.data === transcriptionLanguage}
 											onSelected={() => { void chooseLanguage(String(option.data)); }}>{option.label}</MenuItem>)}
 								</Menu>,
-								languageMenuAnchorRef.current || event.currentTarget,
+								languageMenuAnchorRef.current || event.currentTarget || undefined,
 							);
 							}}>Language: {WHISPER_LANGUAGE_OPTIONS.find(option => option.data === transcriptionLanguage)?.label || transcriptionLanguage}</ButtonItem>
 						</div></PanelSectionRow>
@@ -629,9 +700,14 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 						}}>Add Button</ButtonItem></PanelSectionRow>}
 					</PanelSection>
 					<PanelSection title="Sending">
-						<PanelSectionRow><ToggleField label="Confirm" description="Delay before send" checked={confirmMode}
-							onChange={async (next) => { setConfirmMode(next); await setConfirmModeRpc(next); }} /></PanelSectionRow>
-						<PanelSectionRow><ToggleField label="Manual" description="You press Enter" checked={manualSend}
+						<PanelSectionRow><DropdownItem label="Transcription sending" menuLabel="Transcription sending" rgOptions={[{data:"immediate",label:"Send immediately"},{data:"review",label:"Review before sending"},{data:"countdown",label:"Send after countdown"}]} selectedOption={sendingMode} onChange={async (option) => {
+							const next = option.data as string;
+							const result = await setSendingModeRpc(next);
+							if (result.success) { setSendingMode(next); setRpcError(""); }
+							else setRpcError(result.error || "Could not update sending mode");
+						}} /></PanelSectionRow>
+						{sendingMode === "review" && <PanelSectionRow><div style={{ fontSize: '13px', lineHeight: '1.5' }}>Review stays visible until you decide. Tap {buttons.join('+')} to send; hold it to cancel. Open Decktation to review longer text.</div></PanelSectionRow>}
+						<PanelSectionRow><ToggleField label="Press Enter yourself" description="Type into chat without submitting" checked={manualSend}
 							onChange={async (next) => { setManualSend(next); await setManualSendRpc(next); }} /></PanelSectionRow>
 						<PanelSectionRow><ToggleField label="Remember channel" description="Reuse the last spoken channel" checked={rememberLastChannel}
 							onChange={async (next) => {
@@ -739,29 +815,38 @@ export default definePlugin(() => {
 		if (!logic.enabled || notifyPollInFlight) return;
 		notifyPollInFlight = true;
 		try {
+			await setReviewContextRpc(logic.qamVisible);
+			if (logic.armedDraftId && !logic.qamVisible && Date.now() - logic.qamClosedAt >= 500) {
+				const draftId = logic.armedDraftId;
+				logic.armedDraftId = "";
+				const sent = await sendArmedDraftRpc(draftId);
+				if (!sent.success) void logic.notify("Review transcription", 5000, sent.error || "Open Decktation to retry");
+			}
 			const result = await getStatus();
 			if (result.success) {
-				if (logic.recordingIndicator !== "none") {
-					const startCount: number = result.recording_start_count || 0;
-					if (logic.recordingIndicator === "toast" && startCount > logic.prevRecordingStartCount) {
-						logic.notify("Recording", 1500, "🎤 Recording...");
-					}
-					logic.prevRecordingStartCount = startCount;
-
-					const pendingText: string = result.pending_text || "";
-					const pendingDelay: number = result.pending_delay || 0;
-					if (pendingText && !logic.prevPendingText) {
-						const secs = Math.round(pendingDelay);
-						logic.notify(`Sending in ${secs}s`, (pendingDelay + 0.5) * 1000, `"${pendingText}" — hold PTT to cancel`)
-							.then(id => { logic.lastPendingToastId = id; });
-					} else if (!pendingText && logic.prevPendingText) {
-						if (logic.lastPendingToastId >= 0) {
-							logic.dismissNotification(logic.lastPendingToastId);
-							logic.lastPendingToastId = -1;
-						}
-					}
-					logic.prevPendingText = pendingText;
+				const startCount: number = result.recording_start_count || 0;
+				if (logic.recordingIndicator === "toast" && startCount > logic.prevRecordingStartCount) {
+					logic.notify("Recording", 1500, "🎤 Recording...");
 				}
+				logic.prevRecordingStartCount = startCount;
+
+				const draft = result.pending_draft as PendingDraft | null;
+				const draftId = draft?.id || "";
+				if (draftId !== logic.prevPendingId) {
+					logic.pendingSince = Date.now();
+					logic.announcedDraftId = "";
+					if (logic.lastPendingToastId >= 0) {
+						logic.dismissNotification(logic.lastPendingToastId);
+						logic.lastPendingToastId = -1;
+					}
+				}
+				// Allow the native renderer time to start; notify on later failure too.
+				if (draft && !result.preview_overlay?.visible && logic.announcedDraftId !== draftId && Date.now() - logic.pendingSince >= 2000) {
+					logic.announcedDraftId = draftId;
+					logic.lastPendingToastId = await logic.notify("Review transcription", 6000,
+						`“${draft.text}” — open Decktation to ${draft.action.toLowerCase()} or cancel`);
+				}
+				logic.prevPendingId = draftId;
 			}
 		} catch (_e) {
 		} finally {

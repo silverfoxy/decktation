@@ -16,6 +16,7 @@ import queue
 import threading
 import subprocess
 import tempfile
+import uuid
 import urllib.request
 import certifi
 from pathlib import Path
@@ -84,7 +85,7 @@ def _format_casual_message(text: str) -> str:
 
 
 class WoWVoiceChat:
-    def __init__(self, context_file="wow_context.json", sample_rate=44100, default_channel="say", lazy_load=False, test_mode=False, test_audio_file=None, preset=None, confirm_delay=0, manual_send=False, transcription_language=None, model_size="base", diagnostic_reporter=None, remember_last_channel=False, last_channel=None, channel_rememberer=None, recording_state_callback=None):
+    def __init__(self, context_file="wow_context.json", sample_rate=44100, default_channel="say", lazy_load=False, test_mode=False, test_audio_file=None, preset=None, confirm_delay=0, manual_send=False, transcription_language=None, model_size="base", diagnostic_reporter=None, remember_last_channel=False, last_channel=None, channel_rememberer=None, recording_state_callback=None, review_mode=False, pending_callback=None):
         self.preset = preset or {}
         self.diagnostic_reporter = diagnostic_reporter
         self.recording_state_callback = recording_state_callback
@@ -92,6 +93,10 @@ class WoWVoiceChat:
         self.sample_rate = sample_rate  # Recording sample rate
         self.whisper_sample_rate = 16000  # Whisper expects 16kHz
         self.default_channel = self.preset.get("default_channel", default_channel)
+        self.review_mode = review_mode
+        self.pending_callback = pending_callback
+        self.pending_draft = None
+        self._draft_generation = 0
         self.confirm_delay = confirm_delay  # seconds to wait before auto-sending (0 = disabled)
         self.manual_send = manual_send  # if True, skip final Enter press (user sends manually)
         self.remember_last_channel = remember_last_channel
@@ -101,7 +106,7 @@ class WoWVoiceChat:
         self.model_size = model_size
         self.pending_text = None
         self._pending_timer = None
-        self._pending_lock = threading.Lock()
+        self._pending_lock = threading.RLock()
 
         # Test mode: use static audio file instead of recording
         self.test_mode = test_mode
@@ -393,6 +398,7 @@ class WoWVoiceChat:
 
     def set_preset(self, preset: dict):
         """Update the active game preset without restarting the service"""
+        self.cancel_pending()
         self.preset = preset
         self.default_channel = preset.get("default_channel", "say")
         self.channel_commands = preset.get("channels") or {"say": "", "type": ""}
@@ -455,25 +461,122 @@ class WoWVoiceChat:
         words = len(text.split())
         return min(3.0 + words * 0.4, 6.0)
 
-    def cancel_pending(self):
-        """Cancel a pending send. Returns True if there was text waiting to be sent."""
+    def pending_snapshot(self):
         with self._pending_lock:
+            return dict(self.pending_draft) if self.pending_draft else None
+
+    def _publish_pending(self, outcome=None):
+        if self.pending_callback:
+            try:
+                self.pending_callback(self.pending_snapshot() or ({"mode": "result", "message": outcome} if outcome else None))
+            except Exception:
+                logger.exception("Could not update transcription preview")
+
+    def queue_transcription(self, text, generation=None):
+        """Freeze the final message and destination before presenting a draft."""
+        with self._pending_lock:
+            if self._closing.is_set():
+                return
+            if generation is not None and generation != self._draft_generation:
+                return
+            if not self.review_mode and not self.confirm_delay:
+                self.send_to_wow_chat(text)
+                return
+            self.cancel_pending()
+            channel, message, explicit = self._parse_channel_and_text(text)
+            if not message:
+                return
+            draft_id = uuid.uuid4().hex
+            delay = self._confirm_delay_for(message) if not self.review_mode else 0
+            self.pending_text = message
+            self.pending_draft = {
+                "id": draft_id, "text": message, "channel": channel,
+                "destination": channel.title() if channel != "type" else "Active app",
+                "mode": "review" if self.review_mode else "countdown",
+                "deadline": time.time() + delay if delay else None,
+                "action": "Type into chat" if self.manual_send or channel == "type" else "Send",
+                "manual": self.manual_send, "explicit_channel": explicit,
+                "error": "", "sending": False,
+            }
+            self._publish_pending()
+            if delay:
+                self._pending_timer = threading.Timer(delay, self._send_pending, args=(draft_id,))
+                self._pending_timer.start()
+
+    def cancel_pending(self, draft_id=None, feedback=False):
+        """Cancel only the specified draft; invalidate transcription in flight."""
+        with self._pending_lock:
+            if draft_id is not None and (
+                not self.pending_draft or self.pending_draft["id"] != draft_id
+            ):
+                return False
+            if self.pending_draft and self.pending_draft["sending"]:
+                return False
+            self._draft_generation += 1
             if self._pending_timer:
                 self._pending_timer.cancel()
                 self._pending_timer = None
-            if self.pending_text:
-                self.pending_text = None
-                return True
-            return False
-
-    def _send_pending(self):
-        """Timer callback: auto-send the pending text after the delay."""
-        with self._pending_lock:
-            text = self.pending_text
+            had_pending = bool(self.pending_text)
             self.pending_text = None
-            self._pending_timer = None
-        if text:
-            self.send_to_wow_chat(text)
+            self.pending_draft = None
+            if had_pending:
+                self._publish_pending("Cancelled" if feedback else None)
+            return had_pending
+
+    def pause_countdown(self):
+        """Opening QAM converts this draft to explicit review; never type into it."""
+        with self._pending_lock:
+            draft = self.pending_draft
+            if not draft or draft["mode"] != "countdown" or draft["sending"]:
+                return
+            if self._pending_timer:
+                self._pending_timer.cancel()
+                self._pending_timer = None
+            draft["mode"] = "review"
+            draft["deadline"] = None
+            self._publish_pending()
+
+    def confirm_pending(self, draft_id, countdown=False):
+        """Serialize confirmation and preserve a failed draft for explicit retry."""
+        with self._pending_lock:
+            draft = self.pending_draft
+            if not draft or draft["id"] != draft_id or draft["sending"]:
+                return False
+            if countdown and (draft["mode"] != "countdown" or not draft["deadline"]):
+                return False
+            if self._pending_timer:
+                self._pending_timer.cancel()
+                self._pending_timer = None
+            draft["sending"] = True
+            self._publish_pending()
+            try:
+                success = self.send_to_wow_chat(draft["text"], channel=draft["channel"])
+            except Exception as exc:
+                logger.error("Draft injection failed (%s)", type(exc).__name__)
+                success = False
+            if success:
+                if draft["explicit_channel"] and self.remember_last_channel:
+                    self.last_channel = draft["channel"]
+                    if self.channel_rememberer:
+                        try:
+                            self.channel_rememberer(self.last_channel)
+                        except Exception as exc:
+                            logger.warning("Could not remember channel (%s)", type(exc).__name__)
+                self.pending_text = None
+                self.pending_draft = None
+            else:
+                draft["id"] = uuid.uuid4().hex
+                draft["sending"] = False
+                draft["deadline"] = None
+                draft["mode"] = "review"
+                draft["error"] = "Typing failed. Check game focus before retrying; some input may already have been typed."
+            self._publish_pending(("Typed into chat" if draft["manual"] or draft["channel"] == "type" else "Sent") if success else None)
+            return bool(success)
+
+    def _send_pending(self, draft_id=None):
+        snapshot = self.pending_snapshot()
+        if snapshot and snapshot["mode"] == "countdown" and snapshot.get("deadline"):
+            self.confirm_pending(draft_id or snapshot["id"], countdown=True)
 
     def load_context(self):
         """Load WoW context from addon-generated file"""
@@ -710,7 +813,7 @@ class WoWVoiceChat:
     def send_to_wow_chat(self, text, channel=None):
         """Paste a transcription into the focused game using the clipboard."""
         if not text or self._closing.is_set():
-            return
+            return False
 
         # Parse channel from text if not explicitly provided.
         if channel is None:
@@ -725,7 +828,7 @@ class WoWVoiceChat:
         full_message = f"{channel_cmd}{text}"
         if any(ord(char) < 32 or ord(char) == 127 for char in full_message):
             self._report_diagnostic("text_injection.failed")
-            return
+            return False
 
         import logging
 
@@ -750,7 +853,7 @@ class WoWVoiceChat:
         if not ydotool:
             logger.error("ydotool not found; text injection was not attempted")
             self._report_diagnostic("text_injection.failed")
-            return
+            return False
 
         env = os.environ.copy()
         env["YDOTOOL_SOCKET"] = "/tmp/decktation-ydotool.sock"
@@ -813,9 +916,11 @@ class WoWVoiceChat:
                     raise RuntimeError(
                         f"ydotool chat-send key failed (exit {result.returncode})"
                     )
+            return True
         except Exception as exc:
             logger.error("Text injection failed (%s)", type(exc).__name__)
             self._report_diagnostic("text_injection.failed", exc)
+            return False
 
     def run_once(self, duration=5):
         """Record, transcribe, and send to chat once"""
@@ -892,6 +997,8 @@ class WoWVoiceChat:
                 return
 
             self.is_recording = False
+            with self._pending_lock:
+                generation = self._draft_generation
 
             # TEST MODE: Use static audio file instead of recorded audio
             if self.test_mode:
@@ -902,14 +1009,10 @@ class WoWVoiceChat:
                         print("[TEST MODE] Transcribing...")
                         text = self.transcribe_audio(self.test_audio_file)
                         print(f"[TEST MODE] Transcribed: {text}")
+                        self.last_transcription = text
+                        self.last_transcription_time = time.time()
                         if text and send:
-                            if self.confirm_delay > 0:
-                                with self._pending_lock:
-                                    self.pending_text = text
-                                    self._pending_timer = threading.Timer(self._confirm_delay_for(text), self._send_pending)
-                                    self._pending_timer.start()
-                            else:
-                                self.send_to_wow_chat(text)
+                            self.queue_transcription(text, generation)
                     except Exception as e:
                         print(f"[TEST MODE] Error: {e}")
                         self._report_diagnostic("transcription.failed", e)
@@ -947,16 +1050,11 @@ class WoWVoiceChat:
             self.last_transcription_time = time.time()
 
             if text and send:
-                if self.confirm_delay > 0:
-                    with self._pending_lock:
-                        self.pending_text = text
-                        self._pending_timer = threading.Timer(self._confirm_delay_for(text), self._send_pending)
-                        self._pending_timer.start()
-                else:
-                    self.send_to_wow_chat(text)
+                self.queue_transcription(text, generation)
 
     def abort_recording(self):
         """Stop recording and discard audio instead of transcribing or sending it."""
+        self.cancel_pending()
         with self.recording_lock:
             was_recording = self.is_recording
             self.is_recording = False

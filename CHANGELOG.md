@@ -7,6 +7,14 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- Persistent transcription review with tap-to-send and hold-to-cancel using the
+  configured recording binding, plus full-text review and Send/Cancel in QAM.
+  Review works independently of recording cues. Existing Confirm settings retain
+  countdown behavior; opening QAM pauses the countdown for explicit review.
+- An offline interactive review preview generated from the actual overlay renderer.
+
 ### Fixed
 
 - Read Steam Controller (2026) Puck input directly, including all four grips,

@@ -16,7 +16,7 @@ def test_settings_rpc_functions_are_not_shadowed_by_react_state_setters():
 
     expected_calls = {
         "set_enabled": "setEnabledRpc",
-        "set_confirm_mode": "setConfirmModeRpc",
+        "set_sending_mode": "setSendingModeRpc",
         "set_manual_send": "setManualSendRpc",
         "set_remember_last_channel": "setRememberLastChannelRpc",
         "set_active_preset": "setActivePresetRpc",

@@ -62,6 +62,8 @@ sudo cp "$SOURCE_DIR/backend/src/gamepad_evdev.py" "$PLUGIN_DIR/bin/"
 sudo cp "$SOURCE_DIR/backend/src/haptic_feedback.py" "$PLUGIN_DIR/bin/"
 sudo cp "$SOURCE_DIR/backend/src/recording_overlay.py" "$PLUGIN_DIR/bin/"
 sudo cp "$SOURCE_DIR/backend/src/recording_overlay_manager.py" "$PLUGIN_DIR/bin/"
+sudo cp "$SOURCE_DIR/backend/src/overlay_render.py" "$PLUGIN_DIR/bin/"
+sudo cp "$SOURCE_DIR/backend/src/review_gesture.py" "$PLUGIN_DIR/bin/"
 
 # Install the same slim Python runtime used by marketplace artifacts.
 echo "  → Python runtime..."

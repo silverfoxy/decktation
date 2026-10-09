@@ -127,7 +127,11 @@
     const startRecording = callable("start_recording");
     const stopRecording = callable("stop_recording");
     const getLastTranscription = callable("get_last_transcription");
-    const setConfirmModeRpc = callable("set_confirm_mode");
+    const setSendingModeRpc = callable("set_sending_mode");
+    const cancelDraftRpc = callable("cancel_draft");
+    const armDraftRpc = callable("arm_draft");
+    const setReviewContextRpc = callable("set_review_context");
+    const sendArmedDraftRpc = callable("send_armed_draft");
     const setManualSendRpc = callable("set_manual_send");
     const setRememberLastChannelRpc = callable("set_remember_last_channel");
     const setShareDiagnosticsRpc = callable("set_share_diagnostics");
@@ -143,7 +147,12 @@
             this.recording = false;
             this.recordingIndicator = "toast";
             this.prevRecordingStartCount = 0;
-            this.prevPendingText = "";
+            this.prevPendingId = "";
+            this.pendingSince = 0;
+            this.announcedDraftId = "";
+            this.qamVisible = false;
+            this.qamClosedAt = Date.now();
+            this.armedDraftId = "";
             this.lastPendingToastId = -1;
             this.notify = async (message, duration = 2000, body = "") => {
                 if (!body) {
@@ -394,7 +403,17 @@
         const [hapticFeedback, setHapticFeedback] = React.useState(false);
         const [activePreset, setActivePreset] = React.useState("wow");
         const [presets, setPresets] = React.useState([]);
-        const [confirmMode, setConfirmMode] = React.useState(false);
+        const [sendingMode, setSendingMode] = React.useState("immediate");
+        const [pendingDraft, setPendingDraft] = React.useState(null);
+        const reviewTextRef = React.useRef(null);
+        const [draftBusy, setDraftBusy] = React.useState(false);
+        const qamVisible = deckyFrontendLib.useQuickAccessVisible();
+        React.useEffect(() => {
+            logic.qamVisible = qamVisible;
+            if (!qamVisible)
+                logic.qamClosedAt = Date.now();
+            void setReviewContextRpc(qamVisible);
+        }, [qamVisible]);
         const [manualSend, setManualSend] = React.useState(false);
         const [rememberLastChannel, setRememberLastChannel] = React.useState(false);
         const [shareDiagnostics, setShareDiagnostics] = React.useState(false);
@@ -426,9 +445,7 @@
                         if (config.game) {
                             setActivePreset(config.game);
                         }
-                        if (config.confirmMode !== undefined) {
-                            setConfirmMode(config.confirmMode);
-                        }
+                        setSendingMode(config.sendingMode || (config.confirmMode ? "countdown" : "immediate"));
                         if (config.manualSend !== undefined) {
                             setManualSend(config.manualSend);
                         }
@@ -479,6 +496,7 @@
                         setControllerStatus(result.controller_status || "Waiting for input");
                         setControllerComboSupported(result.controller_combo_supported !== false);
                         setStatusError("");
+                        setPendingDraft(result.pending_draft || null);
                         setServiceReady(result.service_ready);
                         setModelReady(result.model_ready);
                         setInferenceDevice(result.inference_device === "gpu" || result.inference_device === "cpu"
@@ -531,7 +549,25 @@
                 }
             });
             return () => cancelAnimationFrame(frame);
-        }, [page]);
+        }, [page, pendingDraft?.id]);
+        React.useEffect(() => {
+            if (!qamVisible || !pendingDraft)
+                return;
+            const frame = requestAnimationFrame(() => {
+                if (reviewTextRef.current) {
+                    reviewTextRef.current.scrollTop = 0;
+                    reviewTextRef.current.focus();
+                }
+            });
+            return () => cancelAnimationFrame(frame);
+        }, [qamVisible, pendingDraft?.id]);
+        const scrollReview = (direction) => {
+            const node = reviewTextRef.current;
+            if (!node || (direction < 0 ? node.scrollTop <= 0 : node.scrollTop + node.clientHeight >= node.scrollHeight - 1))
+                return false;
+            node.scrollTop += direction * 96;
+            return true;
+        };
         const goBack = () => setPage(page === "diagnostics" || page === "help" || page === "model" || page === "binding-button" ? "advanced" : "main");
         const chooseLanguage = async (language) => {
             const result = await setTranscriptionOptionsRpc(language);
@@ -576,6 +612,66 @@
             }, onCancelActionDescription: page === "main" ? undefined : "Back" },
             React__default["default"].createElement("div", { ref: panelRef },
                 React__default["default"].createElement("style", null, `.decktation-trash-focused { outline: 3px solid #66c0f4 !important; outline-offset: 2px; background-color: #456b90 !important; box-shadow: 0 0 0 2px rgba(102, 192, 244, 0.38) !important; }`),
+                pendingDraft && React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: "Review transcription" },
+                    React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                        React__default["default"].createElement(deckyFrontendLib.Focusable, { ref: reviewTextRef, tabIndex: 0, "aria-label": "Transcription. Use Up and Down to scroll.", style: { fontSize: '16px', lineHeight: '1.5', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: '260px', overflowY: 'auto', padding: '4px' }, onGamepadDirection: (event) => {
+                                const direction = event.detail.button === deckyFrontendLib.GamepadButton.DIR_UP ? -1 : event.detail.button === deckyFrontendLib.GamepadButton.DIR_DOWN ? 1 : 0;
+                                if (direction && scrollReview(direction)) {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                }
+                            }, onKeyDown: (event) => {
+                                const direction = event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0;
+                                if (direction && scrollReview(direction)) {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                }
+                            } }, pendingDraft.text)),
+                    React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                        React__default["default"].createElement("div", { style: { fontSize: '13px', color: '#adb8c4' } },
+                            pendingDraft.destination,
+                            pendingDraft.manual ? " · You press Enter to send" : "")),
+                    pendingDraft.error && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                        React__default["default"].createElement("div", { role: "alert" }, pendingDraft.error)),
+                    React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                        React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: draftBusy || pendingDraft.sending, onClick: async () => {
+                                setDraftBusy(true);
+                                try {
+                                    await setReviewContextRpc(true);
+                                    const result = await armDraftRpc(pendingDraft.id);
+                                    if (result.success) {
+                                        logic.armedDraftId = pendingDraft.id;
+                                        deckyFrontendLib.Router.CloseSideMenus();
+                                    }
+                                    else
+                                        setRpcError(result.error || "Could not approve draft");
+                                }
+                                catch (error) {
+                                    setRpcError(String(error));
+                                }
+                                finally {
+                                    setDraftBusy(false);
+                                }
+                            } }, pendingDraft.action)),
+                    React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                        React__default["default"].createElement("div", { style: { fontSize: '12px' } }, "Closes this menu before typing into your game. Keep your game in the foreground.")),
+                    React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                        React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: draftBusy || pendingDraft.sending, onClick: async () => {
+                                setDraftBusy(true);
+                                try {
+                                    const result = await cancelDraftRpc(pendingDraft.id);
+                                    if (result.success)
+                                        setPendingDraft(null);
+                                    else
+                                        setRpcError(result.error || "Could not cancel draft");
+                                }
+                                catch (error) {
+                                    setRpcError(String(error));
+                                }
+                                finally {
+                                    setDraftBusy(false);
+                                }
+                            } }, "Cancel"))),
                 page !== "main" && (React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                     React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: goBack }, "Back"))),
                 page === "main" && React__default["default"].createElement(React__default["default"].Fragment, null,
@@ -635,7 +731,7 @@
                                             POPULAR_LANGUAGE_OPTIONS.map(option => React__default["default"].createElement(deckyFrontendLib.MenuItem, { key: String(option.data), selected: option.data === transcriptionLanguage, onSelected: () => { void chooseLanguage(String(option.data)); } }, option.label)),
                                             React__default["default"].createElement("div", { className: deckyFrontendLib.gamepadContextMenuClasses.ContextMenuSeparator }),
                                             React__default["default"].createElement("div", { className: deckyFrontendLib.gamepadContextMenuClasses.MenuSectionHeader }, "Other languages"),
-                                            OTHER_LANGUAGE_OPTIONS.map(option => React__default["default"].createElement(deckyFrontendLib.MenuItem, { key: String(option.data), selected: option.data === transcriptionLanguage, onSelected: () => { void chooseLanguage(String(option.data)); } }, option.label))), languageMenuAnchorRef.current || event.currentTarget);
+                                            OTHER_LANGUAGE_OPTIONS.map(option => React__default["default"].createElement(deckyFrontendLib.MenuItem, { key: String(option.data), selected: option.data === transcriptionLanguage, onSelected: () => { void chooseLanguage(String(option.data)); } }, option.label))), languageMenuAnchorRef.current || event.currentTarget || undefined);
                                     } },
                                     "Language: ",
                                     WHISPER_LANGUAGE_OPTIONS.find(option => option.data === transcriptionLanguage)?.label || transcriptionLanguage))),
@@ -707,9 +803,23 @@
                                 } }, "Add Button"))),
                     React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: "Sending" },
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                            React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: "Confirm", description: "Delay before send", checked: confirmMode, onChange: async (next) => { setConfirmMode(next); await setConfirmModeRpc(next); } })),
+                            React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: "Transcription sending", menuLabel: "Transcription sending", rgOptions: [{ data: "immediate", label: "Send immediately" }, { data: "review", label: "Review before sending" }, { data: "countdown", label: "Send after countdown" }], selectedOption: sendingMode, onChange: async (option) => {
+                                    const next = option.data;
+                                    const result = await setSendingModeRpc(next);
+                                    if (result.success) {
+                                        setSendingMode(next);
+                                        setRpcError("");
+                                    }
+                                    else
+                                        setRpcError(result.error || "Could not update sending mode");
+                                } })),
+                        sendingMode === "review" && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement("div", { style: { fontSize: '13px', lineHeight: '1.5' } },
+                                "Review stays visible until you decide. Tap ",
+                                buttons.join('+'),
+                                " to send; hold it to cancel. Open Decktation to review longer text.")),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                            React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: "Manual", description: "You press Enter", checked: manualSend, onChange: async (next) => { setManualSend(next); await setManualSendRpc(next); } })),
+                            React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: "Press Enter yourself", description: "Type into chat without submitting", checked: manualSend, onChange: async (next) => { setManualSend(next); await setManualSendRpc(next); } })),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: "Remember channel", description: "Reuse the last spoken channel", checked: rememberLastChannel, onChange: async (next) => {
                                     setRememberLastChannel(next);
@@ -858,29 +968,37 @@
                 return;
             notifyPollInFlight = true;
             try {
+                await setReviewContextRpc(logic.qamVisible);
+                if (logic.armedDraftId && !logic.qamVisible && Date.now() - logic.qamClosedAt >= 500) {
+                    const draftId = logic.armedDraftId;
+                    logic.armedDraftId = "";
+                    const sent = await sendArmedDraftRpc(draftId);
+                    if (!sent.success)
+                        void logic.notify("Review transcription", 5000, sent.error || "Open Decktation to retry");
+                }
                 const result = await getStatus();
                 if (result.success) {
-                    if (logic.recordingIndicator !== "none") {
-                        const startCount = result.recording_start_count || 0;
-                        if (logic.recordingIndicator === "toast" && startCount > logic.prevRecordingStartCount) {
-                            logic.notify("Recording", 1500, "🎤 Recording...");
-                        }
-                        logic.prevRecordingStartCount = startCount;
-                        const pendingText = result.pending_text || "";
-                        const pendingDelay = result.pending_delay || 0;
-                        if (pendingText && !logic.prevPendingText) {
-                            const secs = Math.round(pendingDelay);
-                            logic.notify(`Sending in ${secs}s`, (pendingDelay + 0.5) * 1000, `"${pendingText}" — hold PTT to cancel`)
-                                .then(id => { logic.lastPendingToastId = id; });
-                        }
-                        else if (!pendingText && logic.prevPendingText) {
-                            if (logic.lastPendingToastId >= 0) {
-                                logic.dismissNotification(logic.lastPendingToastId);
-                                logic.lastPendingToastId = -1;
-                            }
-                        }
-                        logic.prevPendingText = pendingText;
+                    const startCount = result.recording_start_count || 0;
+                    if (logic.recordingIndicator === "toast" && startCount > logic.prevRecordingStartCount) {
+                        logic.notify("Recording", 1500, "🎤 Recording...");
                     }
+                    logic.prevRecordingStartCount = startCount;
+                    const draft = result.pending_draft;
+                    const draftId = draft?.id || "";
+                    if (draftId !== logic.prevPendingId) {
+                        logic.pendingSince = Date.now();
+                        logic.announcedDraftId = "";
+                        if (logic.lastPendingToastId >= 0) {
+                            logic.dismissNotification(logic.lastPendingToastId);
+                            logic.lastPendingToastId = -1;
+                        }
+                    }
+                    // Allow the native renderer time to start; notify on later failure too.
+                    if (draft && !result.preview_overlay?.visible && logic.announcedDraftId !== draftId && Date.now() - logic.pendingSince >= 2000) {
+                        logic.announcedDraftId = draftId;
+                        logic.lastPendingToastId = await logic.notify("Review transcription", 6000, `“${draft.text}” — open Decktation to ${draft.action.toLowerCase()} or cancel`);
+                    }
+                    logic.prevPendingId = draftId;
                 }
             }
             catch (_e) {
