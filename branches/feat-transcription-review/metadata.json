@@ -1,0 +1,8 @@
+{
+  "plugin": "Decktation",
+  "channel": "branch",
+  "ref": "feat/transcription-review",
+  "commit": "4979bfc0cf2ef33f2ebb646825ef0207f5319a8a",
+  "zip_url": "https://silverfoxy.github.io/decktation/branches/feat-transcription-review/decktation.zip",
+  "generated_at": "2026-10-09T15:27:47Z"
+}
