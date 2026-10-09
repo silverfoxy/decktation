@@ -375,6 +375,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [lastTranscription, setLastTranscription] = useState<string>("");
 	const [lastTranscriptionTime, setLastTranscriptionTime] = useState<string>("");
 	const [rpcError, setRpcError] = useState<string>("");
+	const [reviewBlockReason, setReviewBlockReason] = useState<string>("");
 	const [statusError, setStatusError] = useState<string>("");
 	const [testPhase, setTestPhase] = useState<"idle" | "recording" | "transcribing">("idle");
 	const [hasTestResult, setHasTestResult] = useState<boolean>(false);
@@ -453,6 +454,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					setControllerComboSupported(result.controller_combo_supported !== false);
 					setStatusError("");
 					setPendingDraft(result.pending_draft || null);
+					setReviewBlockReason(result.review_block_reason || "");
 					setServiceReady(result.service_ready);
 					setModelReady(result.model_ready);
 					setInferenceDevice(
@@ -757,6 +759,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 				{page === "diagnostics" && <>
 					<PanelSection title="Input and service">
 						<PanelSectionRow><div>Controller: {controllerStatus}</div></PanelSectionRow>
+						{pendingDraft && <PanelSectionRow><div>Review confirmation: {reviewBlockReason || "Ready"}</div></PanelSectionRow>}
 						<PanelSectionRow><div>Binding supported: {controllerComboSupported ? "Yes" : "No"}</div></PanelSectionRow>
 						<PanelSectionRow><div>Held buttons: <strong>{buttonState}</strong></div></PanelSectionRow>
 						<PanelSectionRow><div>Keyboard helper: {inputReady ? "Ready" : "Unavailable"}</div></PanelSectionRow>

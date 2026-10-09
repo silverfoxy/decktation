@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Input-transparent Gamescope recording indicator for Decktation."""
 import math
+import ctypes
 import json
 import os
 import signal
@@ -54,6 +55,8 @@ class Indicator(Gtk.Window):
         self.set_default_size(self.surface_width, self.surface_height)
         screen.connect("size-changed", self.sync_geometry)
         screen.connect("monitors-changed", self.sync_geometry)
+        self.focus_connection = None
+        self.focus_library = None
         self.state = {"mode": "hidden"}
         self.mode = "hidden"
         self.phase = time.monotonic()
@@ -118,6 +121,65 @@ class Indicator(Gtk.Window):
             self.queue_draw()
         return True
 
+    def focused_app(self):
+        # Gdk.property_get cannot be called through PyGObject's caller-allocated
+        # output argument on SteamOS. Use an independent, read-only X connection.
+        try:
+            if self.focus_library is None:
+                library = ctypes.CDLL("libX11.so.6")
+                library.XOpenDisplay.argtypes = [ctypes.c_char_p]
+                library.XOpenDisplay.restype = ctypes.c_void_p
+                library.XDefaultRootWindow.argtypes = [ctypes.c_void_p]
+                library.XDefaultRootWindow.restype = ctypes.c_ulong
+                library.XInternAtom.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int]
+                library.XInternAtom.restype = ctypes.c_ulong
+                library.XGetWindowProperty.argtypes = [
+                    ctypes.c_void_p, ctypes.c_ulong, ctypes.c_ulong,
+                    ctypes.c_long, ctypes.c_long, ctypes.c_int, ctypes.c_ulong,
+                    ctypes.POINTER(ctypes.c_ulong), ctypes.POINTER(ctypes.c_int),
+                    ctypes.POINTER(ctypes.c_ulong), ctypes.POINTER(ctypes.c_ulong),
+                    ctypes.POINTER(ctypes.POINTER(ctypes.c_ubyte)),
+                ]
+                library.XGetWindowProperty.restype = ctypes.c_int
+                library.XCloseDisplay.argtypes = [ctypes.c_void_p]
+                library.XCloseDisplay.restype = ctypes.c_int
+                library.XFree.argtypes = [ctypes.c_void_p]
+                library.XFree.restype = ctypes.c_int
+                self.focus_library = library
+            library = self.focus_library
+            if not self.focus_connection:
+                self.focus_connection = library.XOpenDisplay(None)
+            if not self.focus_connection:
+                return None
+            root = library.XDefaultRootWindow(self.focus_connection)
+            atom = library.XInternAtom(self.focus_connection, b"GAMESCOPE_FOCUSED_APP", True)
+            cardinal = library.XInternAtom(self.focus_connection, b"CARDINAL", True)
+            if not atom or not cardinal:
+                return None
+            actual_type, fmt = ctypes.c_ulong(), ctypes.c_int()
+            count, remaining = ctypes.c_ulong(), ctypes.c_ulong()
+            data = ctypes.POINTER(ctypes.c_ubyte)()
+            result = library.XGetWindowProperty(
+                self.focus_connection, root, atom, 0, 1, False, cardinal,
+                ctypes.byref(actual_type), ctypes.byref(fmt), ctypes.byref(count),
+                ctypes.byref(remaining), ctypes.byref(data),
+            )
+            try:
+                if result == 0 and actual_type.value == cardinal and fmt.value == 32 and count.value == 1 and data:
+                    # Xlib represents a format-32 item as a native unsigned long.
+                    return ctypes.cast(data, ctypes.POINTER(ctypes.c_ulong))[0]
+            finally:
+                if data:
+                    library.XFree(data)
+        except (OSError, AttributeError):
+            pass
+        return None
+
+    def close_focus_connection(self):
+        if self.focus_connection and self.focus_library:
+            self.focus_library.XCloseDisplay(self.focus_connection)
+            self.focus_connection = None
+
     def draw_indicator(self, _widget, ctx):
         ctx.set_operator(cairo.OPERATOR_SOURCE)
         ctx.set_source_rgba(0, 0, 0, 0)
@@ -131,9 +193,13 @@ class Indicator(Gtk.Window):
         if self.mode in {"review", "countdown"}:
             ready = draw_review(ctx, width, height, self.state)
             try:
-                STATE.with_name("status").write_text(json.dumps({
+                status = STATE.parent / "ack" / "status"
+                temporary = status.with_name("status.new")
+                temporary.write_text(json.dumps({
                     "id": self.state.get("id"), "ready": ready, "time": time.time(),
+                    "focus_app": self.focused_app(),
                 }))
+                temporary.replace(status)
             except OSError:
                 pass
             return False
@@ -172,8 +238,11 @@ class Indicator(Gtk.Window):
 def main():
     signal.signal(signal.SIGTERM, lambda *_: Gtk.main_quit())
     signal.signal(signal.SIGINT, lambda *_: Gtk.main_quit())
-    Indicator()
-    Gtk.main()
+    indicator = Indicator()
+    try:
+        Gtk.main()
+    finally:
+        indicator.close_focus_connection()
 
 
 if __name__ == "__main__":

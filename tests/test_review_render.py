@@ -35,3 +35,22 @@ def test_render_countdown_and_result_to_png(tmp_path):
     path = tmp_path / 'preview.png'
     surface.write_to_png(str(path))
     assert path.read_bytes().startswith(b'\x89PNG')
+
+
+def test_blocked_confirmation_explains_reason_without_advertising_tap(monkeypatch):
+    import overlay_render
+    texts = []
+    original = overlay_render.layout_text
+
+    def capture(ctx, text, *args, **kwargs):
+        texts.append(text)
+        return original(ctx, text, *args, **kwargs)
+
+    monkeypatch.setattr(overlay_render, 'layout_text', capture)
+    _, ctx = canvas()
+    assert draw_review(ctx, 1280, 800, {
+        'text': 'Hello', 'binding': 'L2+R2+X',
+        'send_block_reason': 'Close Steam menus and return to your game',
+    })  # Readability remains true so clearing the focus block can enable sending.
+    assert 'Close Steam menus and return to your game' in texts
+    assert not any(text.startswith('Tap ') for text in texts)

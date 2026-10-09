@@ -17,6 +17,10 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Fixed
 
+- Confirm controller taps using the native Gamescope focus report when frontend
+  menu state is unavailable or stale. Blocked confirmations now explain the
+  reason in the overlay and diagnostics; renderer acknowledgments are atomic.
+
 - Detect QAM from its actual visible surface so a missing navigation tree cannot
   silently replace countdown with review or disable tap confirmation. Controller
   confirmation no longer expires with a throttled frontend heartbeat.

@@ -55,8 +55,11 @@ def draw_review(ctx, width, height, state, now=None):
         body.set_ellipsize(Pango.EllipsizeMode.END)
     body_height = body.get_pixel_size()[1]
     error = state.get('error', '')
+    block_reason = state.get('send_block_reason', '')
     note = ('Open Decktation to review all' if truncated else
             'After typing, press Enter in the game' if state.get('manual') else '')
+    if block_reason and not truncated:
+        note = block_reason
     if error:
         note = 'Typing failed · Check game focus, then retry in Decktation'
     note_layout = layout_text(ctx, note, 16) if note else None
@@ -87,7 +90,7 @@ def draw_review(ctx, width, height, state, now=None):
     label = state.get('action', 'Send').lower()
     if state.get('mode') == 'countdown':
         hints = f'Press {binding} to cancel'
-    elif truncated or error:
+    elif truncated or error or block_reason:
         hints = f'Hold {binding} to cancel'
     else:
         hints = f'Tap {binding} to {label}     ·     Hold {binding} to cancel'

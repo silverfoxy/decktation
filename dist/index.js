@@ -493,6 +493,7 @@
         const [lastTranscription, setLastTranscription] = React.useState("");
         const [lastTranscriptionTime, setLastTranscriptionTime] = React.useState("");
         const [rpcError, setRpcError] = React.useState("");
+        const [reviewBlockReason, setReviewBlockReason] = React.useState("");
         const [statusError, setStatusError] = React.useState("");
         const [testPhase, setTestPhase] = React.useState("idle");
         const [hasTestResult, setHasTestResult] = React.useState(false);
@@ -568,6 +569,7 @@
                         setControllerComboSupported(result.controller_combo_supported !== false);
                         setStatusError("");
                         setPendingDraft(result.pending_draft || null);
+                        setReviewBlockReason(result.review_block_reason || "");
                         setServiceReady(result.service_ready);
                         setModelReady(result.model_ready);
                         setInferenceDevice(result.inference_device === "gpu" || result.inference_device === "cpu"
@@ -922,6 +924,10 @@
                             React__default["default"].createElement("div", null,
                                 "Controller: ",
                                 controllerStatus)),
+                        pendingDraft && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement("div", null,
+                                "Review confirmation: ",
+                                reviewBlockReason || "Ready")),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement("div", null,
                                 "Binding supported: ",

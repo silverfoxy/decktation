@@ -206,7 +206,8 @@ def test_overlay_health_rejects_stale_or_other_draft_ack(tmp_path):
     overlay = RecordingOverlay('/plugin', MagicMock(), enabled=False)
     overlay.directory = tmp_path
     overlay.process = SimpleNamespace(poll=lambda: None)
-    ack = tmp_path / 'status'
+    (tmp_path / 'ack').mkdir()
+    ack = tmp_path / 'ack' / 'status'
     ack.write_text(json.dumps({'id': 'draft', 'time': time.time(), 'ready': True}))
     assert overlay.preview_ready('draft')
     assert not overlay.preview_ready('other')
@@ -285,7 +286,7 @@ def test_closed_menu_allows_tap_and_keeps_countdown(monkeypatch):
     voice.confirm_delay = 2
     voice.queue_transcription('hello')
     monkeypatch.setattr(backend.Plugin, 'voice_service', voice)
-    monkeypatch.setattr(backend.Plugin, 'recording_overlay', SimpleNamespace(preview_ready=lambda _: True))
+    monkeypatch.setattr(backend.Plugin, 'recording_overlay', SimpleNamespace(preview_status=lambda _: {"visible": True, "ready": True}))
     monkeypatch.setattr(backend.Plugin, 'review_qam_visible', False)
     monkeypatch.setattr(backend.Plugin, 'review_context_known', True)
     monkeypatch.setattr(backend.Plugin, 'review_closed_at', time.monotonic() - 1)
@@ -319,7 +320,71 @@ def test_controller_confirmation_survives_throttled_frontend_heartbeat(monkeypat
     monkeypatch.setattr(backend.Plugin, 'review_qam_visible', False)
     monkeypatch.setattr(backend.Plugin, 'review_context_time', time.monotonic() - 60)
     monkeypatch.setattr(backend.Plugin, 'review_closed_at', time.monotonic() - 60)
-    monkeypatch.setattr(backend.Plugin, 'recording_overlay', SimpleNamespace(preview_ready=lambda _: True))
+    monkeypatch.setattr(backend.Plugin, 'recording_overlay', SimpleNamespace(preview_status=lambda _: {"visible": True, "ready": True}))
     assert backend.Plugin._review_ready({'id': 'draft'})
     monkeypatch.setattr(backend.Plugin, 'review_qam_visible', True)
     assert not backend.Plugin._review_ready({'id': 'draft'})
+
+
+def test_native_game_focus_allows_send_when_frontend_visibility_is_unknown(monkeypatch):
+    monkeypatch.setattr(backend.Plugin, 'review_context_known', False)
+    monkeypatch.setattr(backend.Plugin, 'review_qam_visible', True)
+    monkeypatch.setattr(backend.Plugin, 'recording_overlay', SimpleNamespace(
+        preview_status=lambda _: {'visible': True, 'ready': True, 'focus_app': 570}))
+    assert backend.Plugin._review_ready({'id': 'draft'})
+
+
+@pytest.mark.parametrize('app', [0, 769])
+def test_native_steam_focus_blocks_confirmation_despite_closed_frontend(app, monkeypatch):
+    monkeypatch.setattr(backend.Plugin, 'review_context_known', True)
+    monkeypatch.setattr(backend.Plugin, 'review_qam_visible', False)
+    monkeypatch.setattr(backend.Plugin, 'recording_overlay', SimpleNamespace(
+        preview_status=lambda _: {'visible': True, 'ready': True, 'focus_app': app}))
+    assert backend.Plugin._review_block_reason({'id': 'draft'}) == 'Close Steam menus and return to your game'
+
+
+def test_native_focus_still_requires_full_readable_preview(monkeypatch):
+    monkeypatch.setattr(backend.Plugin, 'recording_overlay', SimpleNamespace(
+        preview_status=lambda _: {'visible': True, 'ready': False, 'focus_app': 570}))
+    assert backend.Plugin._review_block_reason({'id': 'draft'}) == 'Open Decktation to review all'
+
+
+def test_polling_l2_r2_x_tap_confirms_on_x_release_even_without_frontend(tmp_path, monkeypatch):
+    voice = service(manual_send=True)
+    voice.send_to_wow_chat = MagicMock(return_value=True)
+    voice.start_recording = MagicMock()
+    voice.queue_transcription('party hello')
+    monkeypatch.setattr(backend.Plugin, 'voice_service', voice)
+    monkeypatch.setattr(backend.Plugin, 'controller_enabled', True)
+    monkeypatch.setattr(backend.Plugin, 'poll_running', True)
+    monkeypatch.setattr(backend.Plugin, 'review_context_known', False)
+    monkeypatch.setattr(backend.Plugin, 'review_qam_visible', True)
+    overlay = MagicMock()
+    overlay.preview_status.return_value = {'visible': True, 'ready': True, 'focus_app': 570}
+    monkeypatch.setattr(backend.Plugin, 'recording_overlay', overlay)
+    state_file = tmp_path / 'state'
+    monkeypatch.setattr(backend, 'STATE_FILE', str(state_file))
+    inputs = [({'L2': True}, 1.0), ({'L2': True, 'R2': True}, 1.05),
+              ({'L2': True, 'R2': True, 'X': True}, 1.1),
+              ({'L2': True, 'R2': True, 'X': False}, 1.3)]
+    cursor = [0]
+
+    def publish():
+        buttons, _ = inputs[cursor[0]]
+        state_file.write_text('1' if all(buttons.get(name, False) for name in ['L2', 'R2', 'X']) else '0')
+
+    def next_input(_delay):
+        cursor[0] += 1
+        if cursor[0] == len(inputs):
+            backend.Plugin.poll_running = False
+        else:
+            publish()
+
+    publish()
+    monkeypatch.setattr(backend.time, 'monotonic', lambda: inputs[cursor[0]][1])
+    monkeypatch.setattr(backend.time, 'sleep', next_input)
+    backend.Plugin.poll_button_state()
+    voice.send_to_wow_chat.assert_called_once_with('hello', channel='party')
+    voice.start_recording.assert_not_called()
+    assert voice.pending_snapshot() is None
+    assert overlay.set_cancel_progress.call_args_list[-1].args == (0,)

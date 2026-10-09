@@ -366,11 +366,34 @@ class Plugin:
             Plugin.recording_overlay.hide()
 
     @staticmethod
+    def _review_block_reason(draft, overlay_status=None):
+        if not draft:
+            return ""
+        if draft.get("sending"):
+            return "Typing transcription…"
+        if draft.get("error"):
+            return "Open Decktation to retry typing"
+        status = overlay_status
+        if status is None:
+            status = Plugin.recording_overlay.preview_status(draft["id"]) if Plugin.recording_overlay else {}
+        if not status.get("visible"):
+            return "Open Decktation to review and send"
+        if not status.get("ready"):
+            return "Open Decktation to review all"
+        focused_app = status.get("focus_app")
+        # Gamescope publishes the input-focus app (Steam UI uses app ID 769).
+        # Prefer this native observation over hidden Steam browser state.
+        if isinstance(focused_app, int):
+            return "Close Steam menus and return to your game" if focused_app in (0, 769) else ""
+        if not Plugin.review_context_known:
+            return "Open Decktation to confirm sending"
+        if Plugin.review_qam_visible or time.monotonic() - Plugin.review_closed_at < 0.5:
+            return "Close Steam menus and return to your game"
+        return ""
+
+    @staticmethod
     def _review_ready(draft):
-        if (not Plugin.review_context_known or Plugin.review_qam_visible or
-                time.monotonic() - Plugin.review_closed_at < 0.5):
-            return False
-        return bool(Plugin.recording_overlay and Plugin.recording_overlay.preview_ready(draft["id"]))
+        return bool(draft) and not Plugin._review_block_reason(draft)
 
     @staticmethod
     def _set_controller_enabled(enabled):
@@ -592,11 +615,17 @@ class Plugin:
                         state = f.read().strip() == "1"
 
                     draft = Plugin.voice_service.pending_snapshot() if Plugin.voice_service else None
+                    block_reason = Plugin._review_block_reason(draft) if draft else ""
                     handled, action, progress = gesture.update(
-                        state, draft, Plugin._review_ready(draft) if draft else False,
+                        state, draft, not block_reason if draft else False,
                         time.monotonic(),
                     )
+                    if draft and state != last_state:
+                        logger.info("Review binding %s: ready=%s reason=%s action=%s",
+                                    "pressed" if state else "released", not block_reason,
+                                    block_reason or "none", action or "none")
                     if draft and Plugin.recording_overlay:
+                        Plugin.recording_overlay.set_send_block_reason(block_reason)
                         Plugin.recording_overlay.set_cancel_progress(progress)
                     if action and draft:
                         if action == "cancel":
@@ -1348,6 +1377,7 @@ class Plugin:
                 "success": True,
                 "pending_draft": draft,
                 "preview_overlay": overlay_status,
+                "review_block_reason": Plugin._review_block_reason(draft, overlay_status),
                 "review_menu_known": Plugin.review_context_known,
                 "review_menu_open": Plugin.review_qam_visible,
                 "manual_send": Plugin.voice_service.manual_send if Plugin.voice_service else False,

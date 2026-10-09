@@ -16,7 +16,16 @@ A JSON state file switches the indicator between recording, transcribing,
 review, countdown, a brief result, and hidden without relaunching it. Review
 uses shared Cairo/Pango drawing for readable Unicode text; the child reports
 which draft was rendered and whether all text fits. Quick confirmation requires
-a fresh, readable renderer acknowledgment. The full panel provides scrollable
+a fresh, readable renderer acknowledgment. The child also reads Gamescope's
+`GAMESCOPE_FOCUSED_APP` through Xlib so controller confirmation can check game
+input focus without relying on a hidden browser window. Steam-menu focus blocks
+confirmation; unavailable native focus falls back to verified frontend state.
+Acknowledgments use atomic replacement in a child-owned directory, while the
+backend state file stays owned by the plugin process. The card explains a blocked
+confirmation instead of advertising a tap action that cannot run.
+
+The focus-property interpretation follows
+[Gamescope's input-focus publication](https://github.com/ValveSoftware/gamescope/blob/master/src/steamcompmgr.cpp). The full panel provides scrollable
 text and Send/Cancel actions; sending closes QAM and waits for the frontend to
 observe it closed before typing. Disabling the setting hides it; unloading the plugin
 stops the child and removes its temporary state directory. If the plugin process

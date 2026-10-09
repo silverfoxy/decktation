@@ -20,6 +20,8 @@ python scripts/preview_transcription_review.py
 pytest -q tests
 npx tsc --noEmit
 npm run build
+# Optional real GTK/X11 check (requires Xvfb):
+xvfb-run -a -s '-screen 0 1280x800x24' python tests/overlay_native_probe.py
 ```
 
 Review coverage includes frozen final text/channel, manual-send labeling, stale
@@ -70,6 +72,11 @@ installation; a frontend rebuild is not required just to test the branch.
 8. Disable/reload the plugin or change sending mode while a draft is pending.
    It must be discarded without typing. A binding held during transcription
    must be released and pressed afresh before it can confirm visible text.
+
+Local GTK/X11 validation ran against an isolated Xvfb server and verified
+game/Steam focus decoding and atomic acknowledgment publication. The controller
+polling regression includes L2+R2+X and confirms on X release with manual sending
+enabled and frontend menu state unavailable.
 
 These checks require a Deck running Gaming Mode and an active game. They have
 not been performed as part of the local implementation.

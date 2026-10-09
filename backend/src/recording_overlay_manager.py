@@ -153,10 +153,12 @@ class RecordingOverlay:
         if self.directory is None:
             self.directory = Path(tempfile.mkdtemp(prefix="decktation-overlay-"))
             os.chmod(self.directory, 0o755)
-            status = self.directory / "status"
-            status.touch(mode=0o644)
+            # The child owns only its acknowledgment directory, allowing atomic
+            # publication without permission to change the root-owned state file.
+            acknowledgments = self.directory / "ack"
+            acknowledgments.mkdir(mode=0o755)
             if self.session_user:
-                os.chown(status, self.session_user.pw_uid, self.session_user.pw_gid)
+                os.chown(acknowledgments, self.session_user.pw_uid, self.session_user.pw_gid)
         self._write_state(state)
         if self.process and self.process.poll() is None:
             return
@@ -189,6 +191,13 @@ class RecordingOverlay:
             self.preview = dict(draft, binding=binding, cancel_progress=0)
             self.show(draft["mode"])
 
+    def set_send_block_reason(self, reason):
+        with self.lock:
+            if self.preview and self.preview.get("send_block_reason", "") != reason:
+                self.preview["send_block_reason"] = reason
+                if self.directory:
+                    self._write_state(self.desired_state)
+
     def set_cancel_progress(self, progress):
         with self.lock:
             if self.preview and self.preview.get("cancel_progress") != progress:
@@ -201,10 +210,11 @@ class RecordingOverlay:
             if not self.process or self.process.poll() is not None or not self.directory:
                 return {"visible": False, "ready": False}
             try:
-                status = json.loads((self.directory / "status").read_text())
+                status = json.loads((self.directory / "ack" / "status").read_text())
                 current = (status.get("id") == draft_id and
                            0 <= time.time() - status.get("time", 0) < 1.5)
-                return {"visible": current, "ready": current and status.get("ready") is True}
+                return {"visible": current, "ready": current and status.get("ready") is True,
+                        "focus_app": status.get("focus_app") if current else None}
             except (OSError, ValueError, TypeError):
                 return {"visible": False, "ready": False}
 
