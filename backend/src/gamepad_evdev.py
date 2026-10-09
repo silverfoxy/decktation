@@ -10,6 +10,9 @@ import struct
 
 EVENT = struct.Struct('@llHHi')
 KEY_BUTTONS = {
+    0x13a: 'View', 0x13b: 'Menu', 0x13d: 'L3', 0x13e: 'R3',
+    0x220: 'D-pad Up', 0x221: 'D-pad Down',
+    0x222: 'D-pad Left', 0x223: 'D-pad Right',
     0x130: 'A', 0x131: 'B', 0x133: 'Y', 0x134: 'X',
     0x136: 'L1', 0x137: 'R1', 0x138: 'L2', 0x139: 'R2',
 }
@@ -98,6 +101,9 @@ class EvdevGamepad:
                             self.axes[code] = (name, low, high)
                             self.supported_buttons.add(name)
                             break
+            self.hat_axes = {code for code in (0x10, 0x11) if code in axes}
+            if self.hat_axes:
+                self.supported_buttons.update({'D-pad Up', 'D-pad Down', 'D-pad Left', 'D-pad Right'})
             self.dropped = False
             self.resync_count = 0
             self.resync()
@@ -113,7 +119,7 @@ class EvdevGamepad:
 
     def resync(self):
         self.keys = bits(ioctl_read(self.fd, 0x18, 96))
-        self.values = {code: self.absinfo(code)[0] for code in self.axes}
+        self.values = {code: self.absinfo(code)[0] for code in set(self.axes) | self.hat_axes}
 
     def states(self):
         states = {name: False for name in self.key_buttons.values()}
@@ -121,6 +127,10 @@ class EvdevGamepad:
             states[name] |= code in self.keys
         for code, (name, low, high) in self.axes.items():
             states[name] |= 2 * (self.values[code] - low) >= high - low
+        for code, negative, positive in ((0x10, 'D-pad Left', 'D-pad Right'), (0x11, 'D-pad Up', 'D-pad Down')):
+            value = self.values.get(code, 0)
+            states[negative] |= value < 0
+            states[positive] |= value > 0
         return states
 
     def feed(self, event_type, code, value):
@@ -138,7 +148,7 @@ class EvdevGamepad:
                     self.keys.add(code)
                 else:
                     self.keys.discard(code)
-            elif event_type == 3 and code in self.axes:
+            elif event_type == 3 and code in (set(self.axes) | self.hat_axes):
                 self.values[code] = value
         return None
 

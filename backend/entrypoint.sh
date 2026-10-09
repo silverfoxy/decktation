@@ -9,7 +9,7 @@ cp -R /runtime/python/. out/python/
 # substantive Python backend source in backend/src; root main.py is only the
 # Decky Loader entry point.
 cp src/resident_whisper.py src/audio_runtime.py src/decktation_backend.py src/wow_voice_chat.py src/clipboard_injection.py src/controller_listener.py \
-    src/haptic_feedback.py \
+    src/recording_mode.py src/binding_capture.py src/haptic_feedback.py \
     src/deck_hid.py src/gamepad_evdev.py src/telemetry.py src/convert_wow_context.py \
     src/recording_overlay.py src/recording_overlay_manager.py src/overlay_render.py src/review_gesture.py out/
 

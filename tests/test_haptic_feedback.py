@@ -140,7 +140,9 @@ def test_preference_defaults_off_and_persists(tmp_path, monkeypatch):
         "decktation_backend_haptic_test", repo / "backend/src/decktation_backend.py"
     )
     backend = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(backend)
+    async def load_backend():
+        spec.loader.exec_module(backend)
+    asyncio.run(load_backend())
 
     assert backend._read_button_config()["hapticFeedback"] is False
     backend.Plugin.haptic_feedback = haptic_feedback.HapticFeedback()

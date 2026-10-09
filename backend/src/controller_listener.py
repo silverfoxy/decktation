@@ -13,7 +13,9 @@ import glob
 import selectors
 import tempfile
 from deck_hid import STEAM_DECK_BUTTON_BITS, raw_button_states, triton_button_states
+from recording_mode import ControllerEvents
 from gamepad_evdev import EvdevGamepad
+from binding_capture import BindingCapture, read_json, write_json
 
 STATE_FILE = "/tmp/decktation_l5"
 PREVIEW_FILE = "/tmp/decktation_button_preview"
@@ -233,6 +235,30 @@ def main():
     active_source = None
     open_errors = set()
     combo_active = False
+    event_source = None
+    event_file = os.path.join(CONFIG_DIR, "controller_events.json")
+    events = ControllerEvents(event_file)
+    capture = None
+    capture_blocked = False
+    request_file = os.path.join(CONFIG_DIR, "binding_capture_request.json")
+    result_file = os.path.join(CONFIG_DIR, "binding_capture_result.json")
+
+    def update_capture():
+        nonlocal capture, capture_blocked
+        request = read_json(request_file)
+        if request.get("session") and not request.get("cancelled") and request.get("deadline", 0) > time.time() and (capture is None or capture.session != request["session"]):
+            capture = BindingCapture(request["session"], request["deadline"])
+            capture_blocked = True
+        if capture and capture.active:
+            if request.get("cancelled"):
+                capture.phase = "cancelled"
+            else:
+                capture.update(tracker.sources, time.time())
+            write_json(result_file, capture.status())
+        if capture_blocked and capture and not capture.active:
+            if not any(any(states.values()) for states in tracker.sources.values()):
+                capture_blocked = False
+
 
     def diagnostic(event, **extra):
         snapshot = {
@@ -251,13 +277,15 @@ def main():
         print(DIAGNOSTIC_PREFIX + json.dumps(snapshot), flush=True)
 
     def update_combo():
-        nonlocal combo_active
-        if tracker.active != combo_active:
-            combo_active = tracker.active
-            if combo_active:
-                # The source completing the combo is selected in publish(),
-                # before the backend can observe STATE_FILE=1.
-                write_source(HAPTIC_SOURCE_FILE, source_snapshot(active_source))
+        nonlocal combo_active, event_source
+        active = tracker.active and not capture_blocked
+        if active != combo_active:
+            combo_active = active
+            if active:
+                event_source = next((path for path, states in tracker.sources.items() if all(states.get(b, False) for b in button_names)), None)
+                write_source(HAPTIC_SOURCE_FILE, source_snapshot(event_source))
+            events.append("press" if active else "release", time.monotonic(),
+                          source_snapshot(event_source) if active else None)
             print(f"{combo_str} COMBO: {'pressed' if combo_active else 'released'}", flush=True)
             with open(STATE_FILE, 'w') as f:
                 f.write("1" if combo_active else "0")
@@ -298,10 +326,13 @@ def main():
         tracker.update(path, states)
         if changed:
             write_button_preview(tracker.sources.get(active_source, {}))
+        update_capture()
         update_combo()
 
     def remove(path, error=None):
         nonlocal active_source
+        if path == event_source:
+            events.append("cancel", time.monotonic())
         disconnected = details.pop(path)
         device, _ = devices.pop(path)
         selector.unregister(device.fd)
@@ -314,6 +345,7 @@ def main():
                 f.write(details.get(active_source, {}).get('controller_type', 'unknown'))
         diagnostic('disconnected', affected_controller=disconnected, errno=getattr(error, 'errno', None))
         write_button_preview(tracker.sources.get(active_source, {}))
+        update_capture()
         update_combo()
 
     try:
@@ -323,6 +355,8 @@ def main():
             f.write('unknown')
         diagnostic('started', process_identity=identity)
         while True:
+            update_capture()
+            update_combo()
             if time.monotonic() >= next_scan:
                 candidates = dict(find_steam_hidraw())
                 candidates.update({path: 'evdev_gamepad' for path in glob.glob('/dev/input/event*')})

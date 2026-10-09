@@ -357,6 +357,9 @@ def test_polling_l2_r2_x_tap_confirms_on_x_release_even_without_frontend(tmp_pat
     monkeypatch.setattr(backend.Plugin, 'voice_service', voice)
     monkeypatch.setattr(backend.Plugin, 'controller_enabled', True)
     monkeypatch.setattr(backend.Plugin, 'poll_running', True)
+    monkeypatch.setattr(backend.Plugin, 'recording_input_since', 0)
+    monkeypatch.setattr(backend.Plugin, 'binding_session', None)
+    monkeypatch.setattr(backend.Plugin, 'recording_gesture', backend.RecordingGesture('hold'))
     monkeypatch.setattr(backend.Plugin, 'review_context_known', False)
     monkeypatch.setattr(backend.Plugin, 'review_qam_visible', True)
     overlay = MagicMock()
@@ -369,9 +372,18 @@ def test_polling_l2_r2_x_tap_confirms_on_x_release_even_without_frontend(tmp_pat
               ({'L2': True, 'R2': True, 'X': False}, 1.3)]
     cursor = [0]
 
+    from recording_mode import ControllerEvents
+    monkeypatch.setattr(backend, "CONFIG_DIR", str(tmp_path))
+    writer = ControllerEvents(tmp_path / "controller_events.json")
+    previous = [False]
+
     def publish():
         buttons, _ = inputs[cursor[0]]
         state_file.write_text('1' if all(buttons.get(name, False) for name in ['L2', 'R2', 'X']) else '0')
+        down = state_file.read_text() == '1'
+        if down != previous[0]:
+            writer.append('press' if down else 'release', inputs[cursor[0]][1])
+            previous[0] = down
 
     def next_input(_delay):
         cursor[0] += 1
@@ -388,3 +400,24 @@ def test_polling_l2_r2_x_tap_confirms_on_x_release_even_without_frontend(tmp_pat
     voice.start_recording.assert_not_called()
     assert voice.pending_snapshot() is None
     assert overlay.set_cancel_progress.call_args_list[-1].args == (0,)
+
+
+@pytest.mark.parametrize('held,cancel', [(0.2, False), (0.7, True)])
+def test_buffered_review_gestures_send_or_cancel(held, cancel, monkeypatch):
+    voice = service()
+    voice.send_to_wow_chat = MagicMock(return_value=True)
+    voice.queue_transcription('hello')
+    monkeypatch.setattr(backend.Plugin, 'voice_service', voice)
+    monkeypatch.setattr(backend.Plugin, 'controller_enabled', True)
+    monkeypatch.setattr(backend.Plugin, 'recording_input_since', 0)
+    monkeypatch.setattr(backend.Plugin, 'binding_session', None)
+    monkeypatch.setattr(backend.Plugin, 'recording_gesture', backend.RecordingGesture('tap'))
+    monkeypatch.setattr(backend.Plugin, 'review_gesture', ReviewGesture())
+    monkeypatch.setattr(backend.Plugin, 'recording_overlay', MagicMock())
+    monkeypatch.setattr(backend.Plugin, '_review_block_reason', lambda draft: '')
+    backend.Plugin._handle_recording_event({'kind': 'press', 'time': 1})
+    backend.Plugin._handle_review_input(True, 1 + held)
+    backend.Plugin._handle_recording_event({'kind': 'release', 'time': 1 + held})
+    assert voice.pending_snapshot() is None
+    assert voice.send_to_wow_chat.call_count == (0 if cancel else 1)
+    assert not backend.Plugin.recording_gesture.recording
