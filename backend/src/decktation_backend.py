@@ -37,6 +37,7 @@ from audio_runtime import ensure_audio_environment, setup_audio_environment
 from haptic_feedback import HapticFeedback
 from recording_overlay_manager import RecordingOverlay
 from review_gesture import ReviewGesture
+from plugin_update import PluginUpdater, cleanup_stale
 
 # Decky plugins run outside the desktop user's login environment.  Configure
 # the PipeWire runtime before sounddevice is imported by wow_voice_chat.
@@ -68,6 +69,11 @@ telemetry = False
 telemetry_available = False
 plugin_version = "unknown"
 try:
+    with open(os.path.join(plugin_path, "plugin.json")) as version_file:
+        plugin_version = json.load(version_file).get("version", "unknown")
+except (OSError, ValueError, AttributeError):
+    logger.warning("updater: installed version unavailable")
+try:
     from telemetry import (
         breadcrumb as telemetry_breadcrumb,
         capture_error as telemetry_capture_error,
@@ -80,8 +86,6 @@ try:
         start_dictation_trace as telemetry_start_dictation,
     )
 
-    with open(os.path.join(plugin_path, "plugin.json"), "r") as version_file:
-        plugin_version = json.load(version_file).get("version", "unknown")
     telemetry_available = True
 except Exception as e:
     logger.error(f"Failed to import diagnostics: {e}")
@@ -333,6 +337,9 @@ class Plugin:
     # Serializes complete enable/disable transitions so an older disable cannot
     # finish its teardown after a newer enable has returned.
     enable_transition_lock = asyncio.Lock()
+    updater = PluginUpdater(plugin_version, logger)
+    update_preparing = False
+    model_operations = 0
     recording_start_count = 0  # Increments each time recording starts
     active_preset = "wow"
     dictation_transaction = None
@@ -730,6 +737,10 @@ class Plugin:
         """Initialize the plugin"""
         try:
             logger.info("Initializing Decktation plugin")
+            try:
+                await asyncio.to_thread(cleanup_stale)
+            except Exception as error:
+                logger.warning("updater: stale-file cleanup failed: %s", error)
 
             # Start the bundled daemon; store installs require no terminal setup.
             Plugin.start_ydotoold()
@@ -1166,6 +1177,7 @@ class Plugin:
 
     async def set_model_size(self, modelSize: str = "base"):
         """Set the whisper.cpp model size and reload the model if needed."""
+        Plugin.model_operations += 1
         try:
             model_size = _normalize_model_size(modelSize)
             config = _read_button_config()
@@ -1190,6 +1202,8 @@ class Plugin:
         except Exception as e:
             logger.error(f"Error setting model size: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
+        finally:
+            Plugin.model_operations -= 1
 
     async def get_presets(self):
         """Get all available game presets"""
@@ -1338,6 +1352,45 @@ class Plugin:
             logger.error(f"Error updating context: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
 
+    @staticmethod
+    def _update_block_reason():
+        service = Plugin.voice_service
+        if Plugin.model_operations or (service and service.model_loading):
+            return "Wait for the transcription model to finish loading."
+        if service and (service.is_recording or getattr(service, "is_transcribing", False)
+                        or service.pending_snapshot() or service.pending_text):
+            return "Finish the current dictation before updating."
+        return ""
+
+    async def get_plugin_update(self, force: bool = False):
+        if not isinstance(force, bool):
+            return {"success": False, "error": "Could not check for updates."}
+        return await asyncio.to_thread(Plugin.updater.check, force)
+
+    async def prepare_plugin_update(self, version: str):
+        if Plugin.update_preparing:
+            return {"success": False, "error": "An update is already being prepared."}
+        if not isinstance(version, str):
+            return {"success": False, "error": "The update could not be verified, so it was not installed."}
+        Plugin.update_preparing = True
+        try:
+            reason = Plugin._update_block_reason()
+            if reason:
+                return {"success": False, "error": reason}
+            result = await asyncio.to_thread(Plugin.updater.stage, version)
+            # Dictation retains priority if it started during the download.
+            reason = Plugin._update_block_reason()
+            if reason:
+                from urllib.parse import urlsplit
+                await asyncio.to_thread(Path(urlsplit(result["artifact"]).path).unlink, missing_ok=True)
+                return {"success": False, "error": reason}
+            return result
+        except Exception as error:
+            logger.warning("updater: preparation failed: %s", error)
+            return {"success": False, "error": "The update could not be verified, so it was not installed."}
+        finally:
+            Plugin.update_preparing = False
+
     async def get_status(self):
         """Get plugin status"""
         try:
@@ -1387,7 +1440,8 @@ class Plugin:
                     Plugin.voice_service.inference_device
                     if Plugin.voice_service else None
                 ),
-                "model_loading": model_loading,
+                "model_loading": model_loading or Plugin.model_operations > 0,
+                "transcribing": bool(Plugin.voice_service and getattr(Plugin.voice_service, "is_transcribing", False)),
                 "recording": Plugin.voice_service.is_recording if Plugin.voice_service else False,
                 "recording_start_count": Plugin.recording_start_count,
                 "detected_button": detected_button,
@@ -1405,6 +1459,7 @@ class Plugin:
 
     async def load_model(self):
         """Explicitly load the Whisper model (called when user enables dictation)"""
+        Plugin.model_operations += 1
         try:
             if Plugin.voice_service is None:
                 return {"success": False, "error": "Service not initialized"}
@@ -1423,6 +1478,8 @@ class Plugin:
         except Exception as e:
             logger.error(f"Error loading model: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
+        finally:
+            Plugin.model_operations -= 1
 
     async def get_last_transcription(self):
         """Get the last transcription result for UI display"""

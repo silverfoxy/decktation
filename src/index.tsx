@@ -17,6 +17,9 @@ import {
 	gamepadContextMenuClasses,
 } from "decky-frontend-lib";
 
+import { requestPluginUpdate } from "./pluginUpdate";
+import { version as pluginVersion } from "../package.json";
+
 import { quickAccessVisibility } from "./quickAccessVisibility";
 
 import { callable, toaster } from "@decky/api";
@@ -28,9 +31,12 @@ import React, {
 	useState,
 } from "react";
 
-import { FaMicrophone, FaTrash } from "react-icons/fa";
+import { FaMicrophone, FaTrash, FaArrowCircleUp } from "react-icons/fa";
 
 type RpcResponse = { success: boolean; error?: string; [key: string]: any };
+
+const getPluginUpdate = callable<[force: boolean], RpcResponse>("get_plugin_update");
+const preparePluginUpdate = callable<[version: string], RpcResponse>("prepare_plugin_update");
 
 const getStatus = callable<[], RpcResponse>("get_status");
 const getButtonConfig = callable<[], RpcResponse>("get_button_config");
@@ -63,6 +69,13 @@ const setButtonConfig = callable<
 >("set_button_config");
 
 class DecktationLogic {
+    updateAvailable = false;
+    updateListeners = new Set<(available: boolean) => void>();
+    setUpdateAvailable(available: boolean) {
+        this.updateAvailable = available;
+        this.updateListeners.forEach(listener => listener(available));
+    }
+
 	enabled: boolean = false;
 	recording: boolean = false;
 	recordingIndicator: string = "toast";
@@ -310,13 +323,14 @@ const PRESET_DISPLAY_NAMES: Record<string, string> = {
 	generic: "Generic",
 };
 
-type PanelPage = "main" | "advanced" | "diagnostics" | "help" | "game" | "model" | "binding-button";
+type PanelPage = "main" | "advanced" | "updates" | "diagnostics" | "help" | "game" | "model" | "binding-button";
 
 const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [page, setPage] = useState<PanelPage>("main");
 	const panelRef = useRef<HTMLDivElement>(null);
 	const languageMenuAnchorRef = useRef<HTMLSpanElement>(null);
 	const advancedModelRowRef = useRef<HTMLDivElement>(null);
+    const updateActionRowRef = useRef<HTMLDivElement>(null);
 	const [bindingButtonIndex, setBindingButtonIndex] = useState<number>(0);
 	const [enabled, setEnabled] = useState<boolean>(false);
 	const [recording, setRecording] = useState<boolean>(false);
@@ -379,6 +393,83 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [statusError, setStatusError] = useState<string>("");
 	const [testPhase, setTestPhase] = useState<"idle" | "recording" | "transcribing">("idle");
 	const [hasTestResult, setHasTestResult] = useState<boolean>(false);
+    const [transcribing, setTranscribing] = useState(false);
+    const [updateInfo, setUpdateInfo] = useState<RpcResponse | null>(null);
+    const [updateError, setUpdateError] = useState("");
+    const [updatePhase, setUpdatePhase] = useState<"idle" | "preparing" | "waiting">("idle");
+    const [checkingUpdate, setCheckingUpdate] = useState(false);
+    const updateChecked = useRef(false);
+    const updateMounted = useRef(true);
+    const updateInFlight = useRef(false);
+    const updateTimer = useRef<ReturnType<typeof setTimeout>>();
+    const checkUpdate = async (force = false) => {
+        setCheckingUpdate(true);
+        try {
+            const result = await getPluginUpdate(force);
+            if (!updateMounted.current) return;
+            setUpdateInfo(result);
+            logic.setUpdateAvailable(result.success && result.update_available === true);
+            setUpdateError(result.success ? "" : "Could not check for updates.");
+        } catch (_error) {
+            if (updateMounted.current) {
+                setUpdateInfo(null);
+                logic.setUpdateAvailable(false);
+                setUpdateError("Could not check for updates.");
+            }
+        } finally {
+            if (updateMounted.current) setCheckingUpdate(false);
+        }
+    };
+    useEffect(() => {
+        updateMounted.current = true;
+        return () => {
+            updateMounted.current = false;
+            if (updateTimer.current) clearTimeout(updateTimer.current);
+        };
+    }, []);
+    useEffect(() => {
+        if (qamVisible && !updateChecked.current) {
+            updateChecked.current = true;
+            void checkUpdate();
+        }
+    }, [qamVisible]);
+    const updateBusy = recording || transcribing || modelLoading || testPhase !== "idle" ||
+        !!pendingDraft || draftBusy || updatePhase !== "idle";
+    const startUpdate = async () => {
+        if (updateBusy || updateInFlight.current || !updateInfo?.update_available || logic.readQamVisibility?.() !== true) return;
+        updateInFlight.current = true;
+        setUpdatePhase("preparing");
+        setUpdateError("");
+        try {
+            const prepared = await preparePluginUpdate(updateInfo.version);
+            if (!updateMounted.current || logic.readQamVisibility?.() !== true) return;
+            if (!prepared.success) {
+                setUpdateError(prepared.error || "The update could not be verified, so it was not installed.");
+                return;
+            }
+            const result = await requestPluginUpdate({artifact: prepared.artifact, version: prepared.version, hash: prepared.hash});
+            if (!updateMounted.current) return;
+            if (!result.success) {
+                setUpdateError(result.error || "Decky's plugin installer is not available in this version. Update manually using the packaged Decktation ZIP.");
+                return;
+            }
+            setUpdatePhase("waiting");
+            // Loader has no reliable cancellation callback. Recover if this instance survives.
+            updateTimer.current = setTimeout(() => {
+                updateTimer.current = undefined;
+                updateInFlight.current = false;
+                setUpdatePhase("idle");
+            }, 8000);
+        } catch (_error) {
+            if (updateMounted.current) setUpdateError("The update could not be verified, so it was not installed.");
+        } finally {
+            if (!updateTimer.current) {
+                updateInFlight.current = false;
+                if (updateMounted.current) setUpdatePhase("idle");
+            }
+        }
+    };
+
 
 	useEffect(() => {
 		setEnabled(logic.enabled);
@@ -463,6 +554,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 							: null,
 					);
 					setModelLoading(result.model_loading);
+                    setTranscribing(result.transcribing === true);
 					setInputReady(result.input_ready !== false);
 					if (logic.enabled) {
 						setRecording(result.recording);
@@ -499,8 +591,8 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 		resetScroll();
 		const frame = requestAnimationFrame(() => {
 			resetScroll();
-			if (page === "advanced") {
-				(advancedModelRowRef.current?.querySelector('[role="button"], button') as HTMLElement | null)?.focus();
+			if (page === "advanced" || page === "updates") {
+				((page === "updates" ? updateActionRowRef.current : advancedModelRowRef.current)?.querySelector('[role="button"], button') as HTMLElement | null)?.focus();
 			}
 		});
 		return () => cancelAnimationFrame(frame);
@@ -523,7 +615,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 		node.scrollTop += direction * 96;
 		return true;
 	};
-	const goBack = () => setPage(page === "diagnostics" || page === "help" || page === "model" || page === "binding-button" ? "advanced" : "main");
+	const goBack = () => setPage(page === "updates" || page === "diagnostics" || page === "help" || page === "model" || page === "binding-button" ? "advanced" : "main");
 	const chooseLanguage = async (language: string) => {
 		const result = await setTranscriptionOptionsRpc(language);
 		if (result.success) {
@@ -604,6 +696,9 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 				)}
 				{page === "main" && <>
 					<PanelSection title="Decktation">
+                        {updateInfo?.success && updateInfo.update_available && <PanelSectionRow>
+                            <ButtonItem layout="below" onClick={() => setPage("updates")}><span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}><FaArrowCircleUp aria-hidden="true" style={{ color: "#7cdb98", flexShrink: 0 }} /><span>Update available: {updateInfo.version}</span></span></ButtonItem>
+                        </PanelSectionRow>}
 						<PanelSectionRow>
 							<ToggleField label="Enable" checked={enabled} disabled={!serviceReady || modelLoading || isToggling}
 								onChange={async (next) => {
@@ -684,7 +779,23 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					</PanelSection>
 					<PanelSectionRow><ButtonItem layout="below" onClick={() => setPage("advanced")}>Advanced settings</ButtonItem></PanelSectionRow>
 				</>}
+		{page === "updates" && <>
+                    <PanelSection title="Updates">
+                        <PanelSectionRow><div>Version {updateInfo?.current || pluginVersion}</div></PanelSectionRow>
+                        <PanelSectionRow><div role="status">{updateError || (updateInfo?.success ?
+                            updateInfo.update_available ? `Update available: ${updateInfo.version}` : "Up to date" : "Checking for updates...")}</div></PanelSectionRow>
+                        {updateInfo?.success && updateInfo.update_available && <>
+                            <PanelSectionRow><div>{updateInfo.current} → {updateInfo.version}</div></PanelSectionRow>
+                            <PanelSectionRow><div ref={updateActionRowRef}><ButtonItem layout="below" disabled={updateBusy} onClick={startUpdate}>
+                                {updatePhase === "preparing" ? "Preparing update..." : updatePhase === "waiting" ? "Waiting for Decky confirmation..." : `Update to ${updateInfo.version}`}
+                            </ButtonItem></div></PanelSectionRow>
+                        </>}
+                        <PanelSectionRow><div ref={updateInfo?.update_available ? undefined : updateActionRowRef}><ButtonItem layout="below" disabled={checkingUpdate || updatePhase !== "idle"} onClick={() => { void checkUpdate(true); }}>Check again</ButtonItem></div></PanelSectionRow>
+                    </PanelSection>
+
+                </>}
 		{page === "advanced" && <>
+
 					<PanelSection title="Transcription model">
 						<PanelSectionRow><div ref={advancedModelRowRef}><ButtonItem layout="below" onClick={() => setPage("model")}>
 							Model: {MODEL_SIZE_OPTIONS.find(option => option.data === modelSize)?.label || modelSize}
@@ -753,6 +864,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 								else setRpcError(result.error || "Could not update haptic feedback");
 							}} /></PanelSectionRow>
 					</PanelSection>
+					<PanelSectionRow><ButtonItem layout="below" onClick={() => { setPage("updates"); void checkUpdate(true); }}>Check for updates</ButtonItem></PanelSectionRow>
 					<PanelSectionRow><ButtonItem layout="below" onClick={() => setPage("diagnostics")}>Diagnostics</ButtonItem></PanelSectionRow>
 					<PanelSectionRow><ButtonItem layout="below" onClick={() => setPage("help")}>Help & permissions</ButtonItem></PanelSectionRow>
 				</>}
@@ -828,8 +940,26 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 };
 
 
+const DecktationIcon: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
+    const [available, setAvailable] = useState(logic.updateAvailable);
+    useEffect(() => {
+        logic.updateListeners.add(setAvailable);
+        setAvailable(logic.updateAvailable);
+        return () => { logic.updateListeners.delete(setAvailable); };
+    }, [logic]);
+    return <span style={{ position: "relative", display: "inline-flex" }} aria-label={available ? "Decktation update available" : "Decktation"}>
+        <FaMicrophone />
+        {available && <span aria-hidden="true" style={{ position: "absolute", right: "-3px", top: "-3px", width: "7px", height: "7px", borderRadius: "50%", background: "#7cdb98" }} />}
+    </span>;
+};
+
 export default definePlugin(() => {
 	let logic = new DecktationLogic();
+    let disposed = false;
+    // One cached discovery check per plugin lifecycle, even before opening its panel.
+    void getPluginUpdate(false).then(result => {
+        if (!disposed) logic.setUpdateAvailable(result.success && result.update_available === true);
+    }).catch(() => {});
 	// Seed the recording start count so we don't fire a spurious toast on load
 	getStatus().then((result) => {
 		if (result.success) {
@@ -890,8 +1020,10 @@ export default definePlugin(() => {
 	return {
 		title: <div className={quickAccessMenuClasses.Title}>Decktation</div>,
 		content: <DecktationPanel logic={logic} />,
-		icon: <FaMicrophone />,
+		icon: <DecktationIcon logic={logic} />,
 		onDismount() {
+            disposed = true;
+            logic.updateListeners.clear();
 			clearInterval(bgNotifyInterval);
 			if (logic.recording) {
 				void stopRecording();
