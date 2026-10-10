@@ -70,3 +70,15 @@ test('every supported dictation code has a native display name',()=>{
  assert.deepEqual(Object.keys(names).sort(),codes.sort());
  for(const value of Object.values(names))assert.ok(value.trim());
 });
+
+test('stable review controls use translations and preserve dynamic content',()=>{
+ const source=fs.readFileSync(path.resolve(__dirname,'../src/index.tsx'),'utf8');
+ for(const key of ['Review transcription','Transcription sending','Send immediately','Review before sending','Send after countdown','Press Enter yourself','Type into chat without submitting','Cancel']) {
+  assert.ok(source.includes('t("'+key+'")'),key);
+  for(const lang of ['en','es','ru','pt','pl','ko','ja','de','fr','zh']) assert.ok(require('../src/locales/'+lang+'.json')[key],lang+': '+key);
+ }
+ assert.ok(source.includes('{pendingDraft.text}'));
+ const {api}=load('es');
+ assert.equal(api.t('Review stays visible until you decide. Tap {binding} to send; hold it to cancel. Open Decktation to review longer text.',{binding:'L1+R1'}).includes('L1+R1'),true);
+ assert.equal(api.t('“{text}” — open Decktation to review, send or cancel',{text:'Mañana 漢字'}).includes('Mañana 漢字'),true);
+});

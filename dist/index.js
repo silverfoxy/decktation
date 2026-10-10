@@ -188,6 +188,8 @@
     var Generic$9 = "Generic";
     var Interface$9 = "Interface";
     var Mode$9 = "Mode";
+    var Send$9 = "Send";
+    var Cancel$9 = "Cancel";
     var en$1 = {
       Back: Back$9,
       Enable: Enable$9,
@@ -296,7 +298,33 @@
       "Backend status request failed": "Backend status request failed",
       "Could not update language setting": "Could not update language setting",
       Interface: Interface$9,
-      Mode: Mode$9
+      Mode: Mode$9,
+      "Review transcription": "Review transcription",
+      "Transcription sending": "Transcription sending",
+      "Send immediately": "Send immediately",
+      "Review before sending": "Review before sending",
+      "Send after countdown": "Send after countdown",
+      "Press Enter yourself": "Press Enter yourself",
+      "Type into chat without submitting": "Type into chat without submitting",
+      Send: Send$9,
+      Cancel: Cancel$9,
+      "Type into chat": "Type into chat",
+      "Review confirmation": "Review confirmation",
+      "After typing, press Enter in the game": "After typing, press Enter in the game",
+      "Open Decktation to retry": "Open Decktation to retry",
+      "Could not approve draft": "Could not approve draft",
+      "Could not cancel draft": "Could not cancel draft",
+      "Could not update sending mode": "Could not update sending mode",
+      "Transcription. Use Up and Down to scroll.": "Transcription. Use Up and Down to scroll.",
+      "Closes this menu before typing into your game. Keep your game in the foreground.": "Closes this menu before typing into your game. Keep your game in the foreground.",
+      "Review stays visible until you decide. Tap {binding} to send; hold it to cancel. Open Decktation to review longer text.": "Review stays visible until you decide. Tap {binding} to send; hold it to cancel. Open Decktation to review longer text.",
+      "“{text}” — open Decktation to review, send or cancel": "“{text}” — open Decktation to review, send or cancel",
+      "Typing transcription…": "Typing transcription…",
+      "Open Decktation to retry typing": "Open Decktation to retry typing",
+      "Open Decktation to review and send": "Open Decktation to review and send",
+      "Open Decktation to review all": "Open Decktation to review all",
+      "Close Steam menus and return to your game": "Close Steam menus and return to your game",
+      "Open Decktation to confirm sending": "Open Decktation to confirm sending"
     };
 
     var af = "Afrikaans";
@@ -529,6 +557,8 @@
     var Generic$8 = "Texto general";
     var Interface$8 = "Interfaz";
     var Mode$8 = "Modo";
+    var Send$8 = "Enviar";
+    var Cancel$8 = "Cancelar";
     var es = {
       Back: Back$8,
       Enable: Enable$8,
@@ -637,7 +667,33 @@
       "Backend status request failed": "No se pudo consultar el estado del servicio",
       "Could not update language setting": "No se pudo cambiar el idioma del dictado",
       Interface: Interface$8,
-      Mode: Mode$8
+      Mode: Mode$8,
+      "Review transcription": "Revisar transcripción",
+      "Transcription sending": "Envío de la transcripción",
+      "Send immediately": "Enviar inmediatamente",
+      "Review before sending": "Revisar antes de enviar",
+      "Send after countdown": "Enviar tras la cuenta atrás",
+      "Press Enter yourself": "Pulsar Enter manualmente",
+      "Type into chat without submitting": "Escribir en el chat sin enviar",
+      Send: Send$8,
+      Cancel: Cancel$8,
+      "Type into chat": "Escribir en el chat",
+      "Review confirmation": "Confirmación de la revisión",
+      "After typing, press Enter in the game": "Después de escribir, pulsa Enter en el juego",
+      "Open Decktation to retry": "Abre Decktation para reintentar",
+      "Could not approve draft": "No se pudo aprobar el borrador",
+      "Could not cancel draft": "No se pudo cancelar el borrador",
+      "Could not update sending mode": "No se pudo cambiar el modo de envío",
+      "Transcription. Use Up and Down to scroll.": "Transcripción. Usa Arriba y Abajo para desplazarte.",
+      "Closes this menu before typing into your game. Keep your game in the foreground.": "Cierra este menú antes de escribir en el juego. Mantén el juego en primer plano.",
+      "Review stays visible until you decide. Tap {binding} to send; hold it to cancel. Open Decktation to review longer text.": "La revisión permanece visible hasta que decidas. Pulsa {binding} para enviar; mantenlo pulsado para cancelar. Abre Decktation para revisar textos largos.",
+      "“{text}” — open Decktation to review, send or cancel": "“{text}” — abre Decktation para revisar, enviar o cancelar",
+      "Typing transcription…": "Escribiendo transcripción…",
+      "Open Decktation to retry typing": "Abre Decktation para reintentar la escritura",
+      "Open Decktation to review and send": "Abre Decktation para revisar y enviar",
+      "Open Decktation to review all": "Abre Decktation para revisar todo",
+      "Close Steam menus and return to your game": "Cierra los menús de Steam y vuelve al juego",
+      "Open Decktation to confirm sending": "Abre Decktation para confirmar el envío"
     };
 
     var Back$7 = "Назад";
@@ -667,6 +723,8 @@
     var Generic$7 = "Обычный ввод текста";
     var Interface$7 = "Интерфейс";
     var Mode$7 = "Режим";
+    var Send$7 = "Отправить";
+    var Cancel$7 = "Отмена";
     var ru = {
       Back: Back$7,
       Enable: Enable$7,
@@ -775,7 +833,33 @@
       "Backend status request failed": "Не удалось запросить состояние службы",
       "Could not update language setting": "Не удалось изменить язык диктовки",
       Interface: Interface$7,
-      Mode: Mode$7
+      Mode: Mode$7,
+      "Review transcription": "Проверить расшифровку",
+      "Transcription sending": "Отправка расшифровки",
+      "Send immediately": "Отправить сразу",
+      "Review before sending": "Проверить перед отправкой",
+      "Send after countdown": "Отправить после отсчёта",
+      "Press Enter yourself": "Нажать Enter самостоятельно",
+      "Type into chat without submitting": "Ввести в чат без отправки",
+      Send: Send$7,
+      Cancel: Cancel$7,
+      "Type into chat": "Ввести в чат",
+      "Review confirmation": "Подтверждение проверки",
+      "After typing, press Enter in the game": "После ввода нажмите Enter в игре",
+      "Open Decktation to retry": "Откройте Decktation, чтобы повторить попытку",
+      "Could not approve draft": "Не удалось подтвердить черновик",
+      "Could not cancel draft": "Не удалось отменить черновик",
+      "Could not update sending mode": "Не удалось изменить режим отправки",
+      "Transcription. Use Up and Down to scroll.": "Расшифровка. Используйте кнопки вверх и вниз для прокрутки.",
+      "Closes this menu before typing into your game. Keep your game in the foreground.": "Закрывает это меню перед вводом в игру. Оставьте игру на переднем плане.",
+      "Review stays visible until you decide. Tap {binding} to send; hold it to cancel. Open Decktation to review longer text.": "Текст остаётся видимым до вашего решения. Нажмите {binding}, чтобы отправить; удерживайте для отмены. Откройте Decktation для проверки длинного текста.",
+      "“{text}” — open Decktation to review, send or cancel": "“{text}” — откройте Decktation, чтобы проверить, отправить или отменить",
+      "Typing transcription…": "Ввод расшифровки…",
+      "Open Decktation to retry typing": "Откройте Decktation для повторного ввода",
+      "Open Decktation to review and send": "Откройте Decktation для проверки и отправки",
+      "Open Decktation to review all": "Откройте Decktation для проверки всего текста",
+      "Close Steam menus and return to your game": "Закройте меню Steam и вернитесь в игру",
+      "Open Decktation to confirm sending": "Откройте Decktation для подтверждения отправки"
     };
 
     var Back$6 = "Voltar";
@@ -805,6 +889,8 @@
     var Generic$6 = "Entrada de texto geral";
     var Interface$6 = "Interface";
     var Mode$6 = "Modo";
+    var Send$6 = "Enviar";
+    var Cancel$6 = "Cancelar";
     var pt = {
       Back: Back$6,
       Enable: Enable$6,
@@ -913,7 +999,33 @@
       "Backend status request failed": "Não foi possível consultar o serviço",
       "Could not update language setting": "Não foi possível alterar o idioma do ditado",
       Interface: Interface$6,
-      Mode: Mode$6
+      Mode: Mode$6,
+      "Review transcription": "Rever transcrição",
+      "Transcription sending": "Envio da transcrição",
+      "Send immediately": "Enviar imediatamente",
+      "Review before sending": "Rever antes de enviar",
+      "Send after countdown": "Enviar após a contagem decrescente",
+      "Press Enter yourself": "Premir Enter manualmente",
+      "Type into chat without submitting": "Escrever no chat sem enviar",
+      Send: Send$6,
+      Cancel: Cancel$6,
+      "Type into chat": "Escrever no chat",
+      "Review confirmation": "Confirmação da revisão",
+      "After typing, press Enter in the game": "Depois de escrever, prime Enter no jogo",
+      "Open Decktation to retry": "Abre Decktation para tentar novamente",
+      "Could not approve draft": "Não foi possível aprovar o rascunho",
+      "Could not cancel draft": "Não foi possível cancelar o rascunho",
+      "Could not update sending mode": "Não foi possível alterar o modo de envio",
+      "Transcription. Use Up and Down to scroll.": "Transcrição. Usa Cima e Baixo para percorrer.",
+      "Closes this menu before typing into your game. Keep your game in the foreground.": "Fecha este menu antes de escrever no jogo. Mantém o jogo em primeiro plano.",
+      "Review stays visible until you decide. Tap {binding} to send; hold it to cancel. Open Decktation to review longer text.": "A revisão fica visível até decidires. Prime {binding} para enviar; mantém premido para cancelar. Abre Decktation para rever textos longos.",
+      "“{text}” — open Decktation to review, send or cancel": "“{text}” — abre Decktation para rever, enviar ou cancelar",
+      "Typing transcription…": "A escrever a transcrição…",
+      "Open Decktation to retry typing": "Abre Decktation para tentar escrever novamente",
+      "Open Decktation to review and send": "Abre Decktation para rever e enviar",
+      "Open Decktation to review all": "Abre Decktation para rever tudo",
+      "Close Steam menus and return to your game": "Fecha os menus do Steam e volta ao jogo",
+      "Open Decktation to confirm sending": "Abre Decktation para confirmar o envio"
     };
 
     var Back$5 = "Wstecz";
@@ -943,6 +1055,8 @@
     var Generic$5 = "Ogólne wprowadzanie tekstu";
     var Interface$5 = "Interfejs";
     var Mode$5 = "Tryb";
+    var Send$5 = "Wyślij";
+    var Cancel$5 = "Anuluj";
     var pl = {
       Back: Back$5,
       Enable: Enable$5,
@@ -1051,7 +1165,33 @@
       "Backend status request failed": "Nie można odczytać stanu usługi",
       "Could not update language setting": "Nie można zmienić języka dyktowania",
       Interface: Interface$5,
-      Mode: Mode$5
+      Mode: Mode$5,
+      "Review transcription": "Sprawdź transkrypcję",
+      "Transcription sending": "Wysyłanie transkrypcji",
+      "Send immediately": "Wyślij od razu",
+      "Review before sending": "Sprawdź przed wysłaniem",
+      "Send after countdown": "Wyślij po odliczaniu",
+      "Press Enter yourself": "Naciśnij Enter samodzielnie",
+      "Type into chat without submitting": "Wpisz na czacie bez wysyłania",
+      Send: Send$5,
+      Cancel: Cancel$5,
+      "Type into chat": "Wpisz na czacie",
+      "Review confirmation": "Potwierdzenie przeglądu",
+      "After typing, press Enter in the game": "Po wpisaniu tekstu naciśnij Enter w grze",
+      "Open Decktation to retry": "Otwórz Decktation, aby spróbować ponownie",
+      "Could not approve draft": "Nie udało się zatwierdzić wersji roboczej",
+      "Could not cancel draft": "Nie udało się anulować wersji roboczej",
+      "Could not update sending mode": "Nie udało się zmienić trybu wysyłania",
+      "Transcription. Use Up and Down to scroll.": "Transkrypcja. Użyj przycisków w górę i w dół, aby przewijać.",
+      "Closes this menu before typing into your game. Keep your game in the foreground.": "Zamyka to menu przed wpisaniem tekstu w grze. Pozostaw grę na pierwszym planie.",
+      "Review stays visible until you decide. Tap {binding} to send; hold it to cancel. Open Decktation to review longer text.": "Podgląd pozostaje widoczny do podjęcia decyzji. Naciśnij {binding}, aby wysłać; przytrzymaj, aby anulować. Otwórz Decktation, aby sprawdzić dłuższy tekst.",
+      "“{text}” — open Decktation to review, send or cancel": "“{text}” — otwórz Decktation, aby sprawdzić, wysłać lub anulować",
+      "Typing transcription…": "Wpisywanie transkrypcji…",
+      "Open Decktation to retry typing": "Otwórz Decktation, aby ponowić wpisywanie",
+      "Open Decktation to review and send": "Otwórz Decktation, aby sprawdzić i wysłać",
+      "Open Decktation to review all": "Otwórz Decktation, aby sprawdzić całość",
+      "Close Steam menus and return to your game": "Zamknij menu Steam i wróć do gry",
+      "Open Decktation to confirm sending": "Otwórz Decktation, aby potwierdzić wysłanie"
     };
 
     var Back$4 = "뒤로";
@@ -1081,6 +1221,8 @@
     var Generic$4 = "일반 텍스트 입력";
     var Interface$4 = "인터페이스";
     var Mode$4 = "모드";
+    var Send$4 = "전송";
+    var Cancel$4 = "취소";
     var ko = {
       Back: Back$4,
       Enable: Enable$4,
@@ -1189,7 +1331,33 @@
       "Backend status request failed": "서비스 상태를 확인할 수 없습니다",
       "Could not update language setting": "받아쓰기 언어를 변경할 수 없습니다",
       Interface: Interface$4,
-      Mode: Mode$4
+      Mode: Mode$4,
+      "Review transcription": "받아쓰기 확인",
+      "Transcription sending": "받아쓰기 전송",
+      "Send immediately": "즉시 전송",
+      "Review before sending": "전송 전에 확인",
+      "Send after countdown": "카운트다운 후 전송",
+      "Press Enter yourself": "Enter 직접 누르기",
+      "Type into chat without submitting": "전송하지 않고 채팅에 입력",
+      Send: Send$4,
+      Cancel: Cancel$4,
+      "Type into chat": "채팅에 입력",
+      "Review confirmation": "검토 확인 상태",
+      "After typing, press Enter in the game": "입력 후 게임에서 Enter를 누르세요",
+      "Open Decktation to retry": "Decktation을 열어 다시 시도하세요",
+      "Could not approve draft": "초안을 승인하지 못했습니다",
+      "Could not cancel draft": "초안을 취소하지 못했습니다",
+      "Could not update sending mode": "전송 모드를 변경하지 못했습니다",
+      "Transcription. Use Up and Down to scroll.": "받아쓰기. 위아래 버튼으로 스크롤하세요.",
+      "Closes this menu before typing into your game. Keep your game in the foreground.": "이 메뉴를 닫은 후 게임에 입력합니다. 게임을 맨 앞에 두세요.",
+      "Review stays visible until you decide. Tap {binding} to send; hold it to cancel. Open Decktation to review longer text.": "결정할 때까지 검토 화면이 유지됩니다. {binding}을 짧게 누르면 전송하고 길게 누르면 취소합니다. 긴 글은 Decktation을 열어 확인하세요.",
+      "“{text}” — open Decktation to review, send or cancel": "“{text}” — Decktation을 열어 확인, 전송 또는 취소하세요",
+      "Typing transcription…": "받아쓰기 입력 중…",
+      "Open Decktation to retry typing": "Decktation을 열어 입력을 다시 시도하세요",
+      "Open Decktation to review and send": "Decktation을 열어 확인하고 전송하세요",
+      "Open Decktation to review all": "Decktation을 열어 전체 내용을 확인하세요",
+      "Close Steam menus and return to your game": "Steam 메뉴를 닫고 게임으로 돌아가세요",
+      "Open Decktation to confirm sending": "Decktation을 열어 전송을 확인하세요"
     };
 
     var Back$3 = "戻る";
@@ -1219,6 +1387,8 @@
     var Generic$3 = "通常のテキスト入力";
     var Interface$3 = "インターフェース";
     var Mode$3 = "モード";
+    var Send$3 = "送信";
+    var Cancel$3 = "キャンセル";
     var ja = {
       Back: Back$3,
       Enable: Enable$3,
@@ -1327,7 +1497,33 @@
       "Backend status request failed": "サービスの状態を取得できません",
       "Could not update language setting": "音声入力の言語を変更できません",
       Interface: Interface$3,
-      Mode: Mode$3
+      Mode: Mode$3,
+      "Review transcription": "文字起こしを確認",
+      "Transcription sending": "文字起こしの送信",
+      "Send immediately": "すぐに送信",
+      "Review before sending": "送信前に確認",
+      "Send after countdown": "カウントダウン後に送信",
+      "Press Enter yourself": "Enterを自分で押す",
+      "Type into chat without submitting": "送信せずにチャットへ入力",
+      Send: Send$3,
+      Cancel: Cancel$3,
+      "Type into chat": "チャットへ入力",
+      "Review confirmation": "確認操作の状態",
+      "After typing, press Enter in the game": "入力後、ゲーム内でEnterを押してください",
+      "Open Decktation to retry": "Decktationを開いて再試行してください",
+      "Could not approve draft": "下書きを承認できませんでした",
+      "Could not cancel draft": "下書きをキャンセルできませんでした",
+      "Could not update sending mode": "送信モードを変更できませんでした",
+      "Transcription. Use Up and Down to scroll.": "文字起こし。上下ボタンでスクロールします。",
+      "Closes this menu before typing into your game. Keep your game in the foreground.": "このメニューを閉じてからゲームに入力します。ゲームを最前面にしてください。",
+      "Review stays visible until you decide. Tap {binding} to send; hold it to cancel. Open Decktation to review longer text.": "確認画面は操作するまで表示されます。{binding}を短く押すと送信、長押しでキャンセルします。長い文章はDecktationを開いて確認してください。",
+      "“{text}” — open Decktation to review, send or cancel": "“{text}” — Decktationを開いて確認、送信、またはキャンセルしてください",
+      "Typing transcription…": "文字起こしを入力中…",
+      "Open Decktation to retry typing": "Decktationを開いて入力を再試行してください",
+      "Open Decktation to review and send": "Decktationを開いて確認し、送信してください",
+      "Open Decktation to review all": "Decktationを開いて全文を確認してください",
+      "Close Steam menus and return to your game": "Steamのメニューを閉じてゲームに戻ってください",
+      "Open Decktation to confirm sending": "Decktationを開いて送信を確認してください"
     };
 
     var Back$2 = "Zurück";
@@ -1357,6 +1553,8 @@
     var Generic$2 = "Allgemeine Texteingabe";
     var Interface$2 = "Oberfläche";
     var Mode$2 = "Modus";
+    var Send$2 = "Senden";
+    var Cancel$2 = "Abbrechen";
     var de = {
       Back: Back$2,
       Enable: Enable$2,
@@ -1465,7 +1663,33 @@
       "Backend status request failed": "Dienststatus konnte nicht abgefragt werden",
       "Could not update language setting": "Diktiersprache konnte nicht geändert werden",
       Interface: Interface$2,
-      Mode: Mode$2
+      Mode: Mode$2,
+      "Review transcription": "Transkription prüfen",
+      "Transcription sending": "Transkription senden",
+      "Send immediately": "Sofort senden",
+      "Review before sending": "Vor dem Senden prüfen",
+      "Send after countdown": "Nach Countdown senden",
+      "Press Enter yourself": "Enter selbst drücken",
+      "Type into chat without submitting": "In den Chat schreiben, ohne zu senden",
+      Send: Send$2,
+      Cancel: Cancel$2,
+      "Type into chat": "In den Chat schreiben",
+      "Review confirmation": "Prüfbestätigung",
+      "After typing, press Enter in the game": "Nach der Texteingabe im Spiel Enter drücken",
+      "Open Decktation to retry": "Decktation öffnen, um es erneut zu versuchen",
+      "Could not approve draft": "Entwurf konnte nicht bestätigt werden",
+      "Could not cancel draft": "Entwurf konnte nicht verworfen werden",
+      "Could not update sending mode": "Sendemodus konnte nicht geändert werden",
+      "Transcription. Use Up and Down to scroll.": "Transkription. Mit Oben und Unten scrollen.",
+      "Closes this menu before typing into your game. Keep your game in the foreground.": "Schließt dieses Menü vor der Texteingabe im Spiel. Das Spiel im Vordergrund lassen.",
+      "Review stays visible until you decide. Tap {binding} to send; hold it to cancel. Open Decktation to review longer text.": "Die Vorschau bleibt sichtbar, bis du entscheidest. {binding} kurz drücken zum Senden; gedrückt halten zum Abbrechen. Decktation öffnen, um längere Texte zu prüfen.",
+      "“{text}” — open Decktation to review, send or cancel": "“{text}” — Decktation öffnen zum Prüfen, Senden oder Abbrechen",
+      "Typing transcription…": "Transkription wird eingegeben…",
+      "Open Decktation to retry typing": "Decktation öffnen, um die Eingabe erneut zu versuchen",
+      "Open Decktation to review and send": "Decktation öffnen zum Prüfen und Senden",
+      "Open Decktation to review all": "Decktation öffnen, um alles zu prüfen",
+      "Close Steam menus and return to your game": "Steam-Menüs schließen und zum Spiel zurückkehren",
+      "Open Decktation to confirm sending": "Decktation öffnen, um das Senden zu bestätigen"
     };
 
     var Back$1 = "Retour";
@@ -1495,6 +1719,8 @@
     var Generic$1 = "Saisie générale";
     var Interface$1 = "Interface";
     var Mode$1 = "Mode";
+    var Send$1 = "Envoyer";
+    var Cancel$1 = "Annuler";
     var fr = {
       Back: Back$1,
       Enable: Enable$1,
@@ -1603,7 +1829,33 @@
       "Backend status request failed": "Impossible de lire l’état du service",
       "Could not update language setting": "Impossible de modifier la langue de dictée",
       Interface: Interface$1,
-      Mode: Mode$1
+      Mode: Mode$1,
+      "Review transcription": "Relire la transcription",
+      "Transcription sending": "Envoi de la transcription",
+      "Send immediately": "Envoyer immédiatement",
+      "Review before sending": "Relire avant d’envoyer",
+      "Send after countdown": "Envoyer après le compte à rebours",
+      "Press Enter yourself": "Appuyer sur Entrée soi-même",
+      "Type into chat without submitting": "Écrire dans le chat sans envoyer",
+      Send: Send$1,
+      Cancel: Cancel$1,
+      "Type into chat": "Écrire dans le chat",
+      "Review confirmation": "Confirmation de la relecture",
+      "After typing, press Enter in the game": "Après la saisie, appuyez sur Entrée dans le jeu",
+      "Open Decktation to retry": "Ouvrez Decktation pour réessayer",
+      "Could not approve draft": "Impossible de valider le brouillon",
+      "Could not cancel draft": "Impossible d’annuler le brouillon",
+      "Could not update sending mode": "Impossible de modifier le mode d’envoi",
+      "Transcription. Use Up and Down to scroll.": "Transcription. Utilisez Haut et Bas pour faire défiler.",
+      "Closes this menu before typing into your game. Keep your game in the foreground.": "Ferme ce menu avant de saisir dans le jeu. Gardez le jeu au premier plan.",
+      "Review stays visible until you decide. Tap {binding} to send; hold it to cancel. Open Decktation to review longer text.": "La transcription reste visible jusqu’à votre décision. Appuyez sur {binding} pour envoyer ; maintenez pour annuler. Ouvrez Decktation pour relire les textes longs.",
+      "“{text}” — open Decktation to review, send or cancel": "“{text}” — ouvrez Decktation pour relire, envoyer ou annuler",
+      "Typing transcription…": "Saisie de la transcription…",
+      "Open Decktation to retry typing": "Ouvrez Decktation pour réessayer la saisie",
+      "Open Decktation to review and send": "Ouvrez Decktation pour relire et envoyer",
+      "Open Decktation to review all": "Ouvrez Decktation pour tout relire",
+      "Close Steam menus and return to your game": "Fermez les menus Steam et revenez au jeu",
+      "Open Decktation to confirm sending": "Ouvrez Decktation pour confirmer l’envoi"
     };
 
     var Back = "返回";
@@ -1633,6 +1885,8 @@
     var Generic = "通用文本输入";
     var Interface = "界面";
     var Mode = "模式";
+    var Send = "发送";
+    var Cancel = "取消";
     var zh = {
       Back: Back,
       Enable: Enable,
@@ -1741,7 +1995,33 @@
       "Backend status request failed": "无法获取服务状态",
       "Could not update language setting": "无法更改听写语言",
       Interface: Interface,
-      Mode: Mode
+      Mode: Mode,
+      "Review transcription": "检查转录文本",
+      "Transcription sending": "转录文本发送方式",
+      "Send immediately": "立即发送",
+      "Review before sending": "发送前检查",
+      "Send after countdown": "倒计时后发送",
+      "Press Enter yourself": "自行按 Enter",
+      "Type into chat without submitting": "输入到聊天框但不发送",
+      Send: Send,
+      Cancel: Cancel,
+      "Type into chat": "输入到聊天框",
+      "Review confirmation": "检查确认状态",
+      "After typing, press Enter in the game": "输入后，请在游戏中按 Enter",
+      "Open Decktation to retry": "打开 Decktation 重试",
+      "Could not approve draft": "无法确认草稿",
+      "Could not cancel draft": "无法取消草稿",
+      "Could not update sending mode": "无法更改发送方式",
+      "Transcription. Use Up and Down to scroll.": "转录文本。使用上、下按钮滚动。",
+      "Closes this menu before typing into your game. Keep your game in the foreground.": "先关闭此菜单，再向游戏输入文本。请保持游戏位于前台。",
+      "Review stays visible until you decide. Tap {binding} to send; hold it to cancel. Open Decktation to review longer text.": "预览会一直显示，直到你做出决定。短按 {binding} 发送，长按取消。打开 Decktation 检查较长的文本。",
+      "“{text}” — open Decktation to review, send or cancel": "“{text}” — 打开 Decktation 进行检查、发送或取消",
+      "Typing transcription…": "正在输入转录文本…",
+      "Open Decktation to retry typing": "打开 Decktation 重试输入",
+      "Open Decktation to review and send": "打开 Decktation 检查并发送",
+      "Open Decktation to review all": "打开 Decktation 检查全部文本",
+      "Close Steam menus and return to your game": "关闭 Steam 菜单并返回游戏",
+      "Open Decktation to confirm sending": "打开 Decktation 确认发送"
     };
 
     const catalogs = { en: en$1, es, ru, pt, pl, ko, ja, de, fr, zh };
@@ -2358,9 +2638,9 @@
             }, onCancelActionDescription: page === "main" ? undefined : t("Back") },
             React__default["default"].createElement("div", { ref: panelRef },
                 React__default["default"].createElement("style", null, `.decktation-trash-focused { outline: 3px solid #66c0f4 !important; outline-offset: 2px; background-color: #456b90 !important; box-shadow: 0 0 0 2px rgba(102, 192, 244, 0.38) !important; }`),
-                pendingDraft && React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: "Review transcription" },
+                pendingDraft && React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Review transcription") },
                     React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                        React__default["default"].createElement(deckyFrontendLib.Focusable, { ref: reviewTextRef, tabIndex: 0, "aria-label": "Transcription. Use Up and Down to scroll.", style: { fontSize: '16px', lineHeight: '1.5', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: '260px', overflowY: 'auto', padding: '4px' }, onGamepadDirection: (event) => {
+                        React__default["default"].createElement(deckyFrontendLib.Focusable, { ref: reviewTextRef, tabIndex: 0, "aria-label": t("Transcription. Use Up and Down to scroll."), style: { fontSize: '16px', lineHeight: '1.5', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: '260px', overflowY: 'auto', padding: '4px' }, onGamepadDirection: (event) => {
                                 const direction = event.detail.button === deckyFrontendLib.GamepadButton.DIR_UP ? -1 : event.detail.button === deckyFrontendLib.GamepadButton.DIR_DOWN ? 1 : 0;
                                 if (direction && scrollReview(direction)) {
                                     event.preventDefault();
@@ -2375,10 +2655,10 @@
                             } }, pendingDraft.text)),
                     React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                         React__default["default"].createElement("div", { style: { fontSize: '13px', color: '#adb8c4' } },
-                            pendingDraft.destination,
-                            pendingDraft.manual ? " · After typing, press Enter in the game" : "")),
+                            t(pendingDraft.destination),
+                            pendingDraft.manual ? " · " + t("After typing, press Enter in the game") : "")),
                     pendingDraft.error && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                        React__default["default"].createElement("div", { role: "alert" }, pendingDraft.error)),
+                        React__default["default"].createElement("div", { role: "alert" }, t(pendingDraft.error))),
                     React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                         React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: draftBusy || pendingDraft.sending, onClick: async () => {
                                 setDraftBusy(true);
@@ -2390,7 +2670,7 @@
                                         deckyFrontendLib.Router.CloseSideMenus();
                                     }
                                     else
-                                        setRpcError(result.error || "Could not approve draft");
+                                        setRpcError(result.error || t("Could not approve draft"));
                                 }
                                 catch (error) {
                                     setRpcError(String(error));
@@ -2398,9 +2678,9 @@
                                 finally {
                                     setDraftBusy(false);
                                 }
-                            } }, pendingDraft.action)),
+                            } }, t(pendingDraft.action))),
                     React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                        React__default["default"].createElement("div", { style: { fontSize: '12px' } }, "Closes this menu before typing into your game. Keep your game in the foreground.")),
+                        React__default["default"].createElement("div", { style: { fontSize: '12px' } }, t("Closes this menu before typing into your game. Keep your game in the foreground."))),
                     React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                         React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: draftBusy || pendingDraft.sending, onClick: async () => {
                                 setDraftBusy(true);
@@ -2409,7 +2689,7 @@
                                     if (result.success)
                                         setPendingDraft(null);
                                     else
-                                        setRpcError(result.error || "Could not cancel draft");
+                                        setRpcError(result.error || t("Could not cancel draft"));
                                 }
                                 catch (error) {
                                     setRpcError(String(error));
@@ -2417,7 +2697,7 @@
                                 finally {
                                     setDraftBusy(false);
                                 }
-                            } }, "Cancel"))),
+                            } }, t("Cancel")))),
                 page !== "main" && (React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                     React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: goBack }, t("Back")))),
                 page === "main" && React__default["default"].createElement(React__default["default"].Fragment, null,
@@ -2547,9 +2827,9 @@
                                         await setButtonConfig(next);
                                     }
                                 } }, t("Add Button")))),
-                    React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: "Sending" },
+                    React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Sending") },
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                            React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: "Transcription sending", menuLabel: "Transcription sending", rgOptions: [{ data: "immediate", label: "Send immediately" }, { data: "review", label: "Review before sending" }, { data: "countdown", label: "Send after countdown" }], selectedOption: sendingMode, onChange: async (option) => {
+                            React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: t("Transcription sending"), menuLabel: t("Transcription sending"), rgOptions: [{ data: "immediate", label: t("Send immediately") }, { data: "review", label: t("Review before sending") }, { data: "countdown", label: t("Send after countdown") }], selectedOption: sendingMode, onChange: async (option) => {
                                     const next = option.data;
                                     const result = await setSendingModeRpc(next);
                                     if (result.success) {
@@ -2557,15 +2837,12 @@
                                         setRpcError("");
                                     }
                                     else
-                                        setRpcError(result.error || "Could not update sending mode");
+                                        setRpcError(result.error || t("Could not update sending mode"));
                                 } })),
                         sendingMode === "review" && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                            React__default["default"].createElement("div", { style: { fontSize: '13px', lineHeight: '1.5' } },
-                                "Review stays visible until you decide. Tap ",
-                                buttons.join('+'),
-                                " to send; hold it to cancel. Open Decktation to review longer text.")),
+                            React__default["default"].createElement("div", { style: { fontSize: '13px', lineHeight: '1.5' } }, t("Review stays visible until you decide. Tap {binding} to send; hold it to cancel. Open Decktation to review longer text.", { binding: buttons.join("+") }))),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                            React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: "Press Enter yourself", description: "Type into chat without submitting", checked: manualSend, onChange: async (next) => { setManualSend(next); await setManualSendRpc(next); } })),
+                            React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: t("Press Enter yourself"), description: t("Type into chat without submitting"), checked: manualSend, onChange: async (next) => { setManualSend(next); await setManualSendRpc(next); } })),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: t("Remember channel"), description: t("Reuse the last spoken channel"), checked: rememberLastChannel, onChange: async (next) => {
                                     setRememberLastChannel(next);
@@ -2628,8 +2905,9 @@
                                 modelLoading ? t("Loading") : modelReady ? t("Ready") : t("Unavailable"))),
                         pendingDraft && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement("div", null,
-                                "Review confirmation: ",
-                                reviewBlockReason || t("Ready"))),
+                                t("Review confirmation"),
+                                ": ",
+                                t(reviewBlockReason || "Ready"))),
                         (statusError || rpcError) && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement("div", { role: "alert" }, statusError || rpcError))),
                     React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Diagnostics sharing") },
@@ -2733,7 +3011,7 @@
                     logic.armedDraftId = "";
                     const sent = await sendArmedDraftRpc(draftId);
                     if (!sent.success)
-                        void logic.notify("Review transcription", 5000, sent.error || "Open Decktation to retry");
+                        void logic.notify(t("Review transcription"), 5000, sent.error || t("Open Decktation to retry"));
                 }
                 const result = await getStatus();
                 if (result.success) {
@@ -2755,7 +3033,7 @@
                     // Allow the native renderer time to start; notify on later failure too.
                     if (draft && !result.preview_overlay?.visible && logic.announcedDraftId !== draftId && Date.now() - logic.pendingSince >= 2000) {
                         logic.announcedDraftId = draftId;
-                        logic.lastPendingToastId = await logic.notify("Review transcription", 6000, `“${draft.text}” — open Decktation to ${draft.action.toLowerCase()} or cancel`);
+                        logic.lastPendingToastId = await logic.notify(t("Review transcription"), 6000, t("“{text}” — open Decktation to review, send or cancel", { text: draft.text }));
                     }
                     logic.prevPendingId = draftId;
                 }

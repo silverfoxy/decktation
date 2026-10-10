@@ -578,16 +578,16 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 		}} onCancelActionDescription={page === "main" ? undefined : t("Back")}>
 			<div ref={panelRef}>
 				<style>{`.decktation-trash-focused { outline: 3px solid #66c0f4 !important; outline-offset: 2px; background-color: #456b90 !important; box-shadow: 0 0 0 2px rgba(102, 192, 244, 0.38) !important; }`}</style>
-				{pendingDraft && <PanelSection title="Review transcription">
-					<PanelSectionRow><Focusable ref={reviewTextRef} tabIndex={0} aria-label="Transcription. Use Up and Down to scroll." style={{ fontSize: '16px', lineHeight: '1.5', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: '260px', overflowY: 'auto', padding: '4px' }} onGamepadDirection={(event) => {
+				{pendingDraft && <PanelSection title={t("Review transcription")}>
+					<PanelSectionRow><Focusable ref={reviewTextRef} tabIndex={0} aria-label={t("Transcription. Use Up and Down to scroll.")} style={{ fontSize: '16px', lineHeight: '1.5', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: '260px', overflowY: 'auto', padding: '4px' }} onGamepadDirection={(event) => {
 						const direction = event.detail.button === GamepadButton.DIR_UP ? -1 : event.detail.button === GamepadButton.DIR_DOWN ? 1 : 0;
 						if (direction && scrollReview(direction)) { event.preventDefault(); event.stopPropagation(); }
 					}} onKeyDown={(event) => {
 						const direction = event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0;
 						if (direction && scrollReview(direction)) { event.preventDefault(); event.stopPropagation(); }
 					}}>{pendingDraft.text}</Focusable></PanelSectionRow>
-					<PanelSectionRow><div style={{ fontSize: '13px', color: '#adb8c4' }}>{pendingDraft.destination}{pendingDraft.manual ? " · After typing, press Enter in the game" : ""}</div></PanelSectionRow>
-					{pendingDraft.error && <PanelSectionRow><div role="alert">{pendingDraft.error}</div></PanelSectionRow>}
+					<PanelSectionRow><div style={{ fontSize: '13px', color: '#adb8c4' }}>{t(pendingDraft.destination)}{pendingDraft.manual ? " · " + t("After typing, press Enter in the game") : ""}</div></PanelSectionRow>
+					{pendingDraft.error && <PanelSectionRow><div role="alert">{t(pendingDraft.error)}</div></PanelSectionRow>}
 					<PanelSectionRow><ButtonItem layout="below" disabled={draftBusy || pendingDraft.sending} onClick={async () => {
 						setDraftBusy(true);
 						try {
@@ -596,20 +596,20 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 							if (result.success) {
 								logic.armedDraftId = pendingDraft.id;
 								Router.CloseSideMenus();
-							} else setRpcError(result.error || "Could not approve draft");
+							} else setRpcError(result.error || t("Could not approve draft"));
 						} catch (error) { setRpcError(String(error)); }
 						finally { setDraftBusy(false); }
-					}}>{pendingDraft.action}</ButtonItem></PanelSectionRow>
-					<PanelSectionRow><div style={{ fontSize: '12px' }}>Closes this menu before typing into your game. Keep your game in the foreground.</div></PanelSectionRow>
+					}}>{t(pendingDraft.action)}</ButtonItem></PanelSectionRow>
+					<PanelSectionRow><div style={{ fontSize: '12px' }}>{t("Closes this menu before typing into your game. Keep your game in the foreground.")}</div></PanelSectionRow>
 					<PanelSectionRow><ButtonItem layout="below" disabled={draftBusy || pendingDraft.sending} onClick={async () => {
 						setDraftBusy(true);
 						try {
 							const result = await cancelDraftRpc(pendingDraft.id);
 							if (result.success) setPendingDraft(null);
-							else setRpcError(result.error || "Could not cancel draft");
+							else setRpcError(result.error || t("Could not cancel draft"));
 						} catch (error) { setRpcError(String(error)); }
 						finally { setDraftBusy(false); }
-					}}>Cancel</ButtonItem></PanelSectionRow>
+					}}>{t("Cancel")}</ButtonItem></PanelSectionRow>
 				</PanelSection>}
 				{page !== "main" && (
 					<PanelSectionRow><ButtonItem layout="below" onClick={goBack}>{t("Back")}</ButtonItem></PanelSectionRow>
@@ -740,15 +740,15 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 							}
 						}}>{t("Add Button")}</ButtonItem></PanelSectionRow>}
 					</PanelSection>
-					<PanelSection title="Sending">
-						<PanelSectionRow><DropdownItem label="Transcription sending" menuLabel="Transcription sending" rgOptions={[{data:"immediate",label:"Send immediately"},{data:"review",label:"Review before sending"},{data:"countdown",label:"Send after countdown"}]} selectedOption={sendingMode} onChange={async (option) => {
+					<PanelSection title={t("Sending")}>
+						<PanelSectionRow><DropdownItem label={t("Transcription sending")} menuLabel={t("Transcription sending")} rgOptions={[{data:"immediate",label:t("Send immediately")},{data:"review",label:t("Review before sending")},{data:"countdown",label:t("Send after countdown")}]} selectedOption={sendingMode} onChange={async (option) => {
 							const next = option.data as string;
 							const result = await setSendingModeRpc(next);
 							if (result.success) { setSendingMode(next); setRpcError(""); }
-							else setRpcError(result.error || "Could not update sending mode");
+							else setRpcError(result.error || t("Could not update sending mode"));
 						}} /></PanelSectionRow>
-						{sendingMode === "review" && <PanelSectionRow><div style={{ fontSize: '13px', lineHeight: '1.5' }}>Review stays visible until you decide. Tap {buttons.join('+')} to send; hold it to cancel. Open Decktation to review longer text.</div></PanelSectionRow>}
-						<PanelSectionRow><ToggleField label="Press Enter yourself" description="Type into chat without submitting" checked={manualSend}
+						{sendingMode === "review" && <PanelSectionRow><div style={{ fontSize: '13px', lineHeight: '1.5' }}>{t("Review stays visible until you decide. Tap {binding} to send; hold it to cancel. Open Decktation to review longer text.", {binding: buttons.join("+")})}</div></PanelSectionRow>}
+						<PanelSectionRow><ToggleField label={t("Press Enter yourself")} description={t("Type into chat without submitting")} checked={manualSend}
 							onChange={async (next) => { setManualSend(next); await setManualSendRpc(next); }} /></PanelSectionRow>
 						<PanelSectionRow><ToggleField label={t("Remember channel")} description={t("Reuse the last spoken channel")} checked={rememberLastChannel}
 							onChange={async (next) => {
@@ -782,7 +782,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 						<PanelSectionRow><div>{t("Keyboard helper")}: {inputReady ? t("Ready") : t("Unavailable")}</div></PanelSectionRow>
 						<PanelSectionRow><div>{t("Backend")}: {serviceReady ? t("Ready") : t("Unavailable")}</div></PanelSectionRow>
 						<PanelSectionRow><div>{t("Model")}: {modelLoading ? t("Loading") : modelReady ? t("Ready") : t("Unavailable")}</div></PanelSectionRow>
-						{pendingDraft && <PanelSectionRow><div>Review confirmation: {reviewBlockReason || t("Ready")}</div></PanelSectionRow>}
+						{pendingDraft && <PanelSectionRow><div>{t("Review confirmation")}: {t(reviewBlockReason || "Ready")}</div></PanelSectionRow>}
 						{(statusError || rpcError) && <PanelSectionRow><div role="alert">{statusError || rpcError}</div></PanelSectionRow>}
 					</PanelSection>
 					<PanelSection title={t("Diagnostics sharing")}>
@@ -869,7 +869,7 @@ export default definePlugin(() => {
 				const draftId = logic.armedDraftId;
 				logic.armedDraftId = "";
 				const sent = await sendArmedDraftRpc(draftId);
-				if (!sent.success) void logic.notify("Review transcription", 5000, sent.error || "Open Decktation to retry");
+				if (!sent.success) void logic.notify(t("Review transcription"), 5000, sent.error || t("Open Decktation to retry"));
 			}
 			const result = await getStatus();
 			if (result.success) {
@@ -892,8 +892,8 @@ export default definePlugin(() => {
 				// Allow the native renderer time to start; notify on later failure too.
 				if (draft && !result.preview_overlay?.visible && logic.announcedDraftId !== draftId && Date.now() - logic.pendingSince >= 2000) {
 					logic.announcedDraftId = draftId;
-					logic.lastPendingToastId = await logic.notify("Review transcription", 6000,
-						`“${draft.text}” — open Decktation to ${draft.action.toLowerCase()} or cancel`);
+					logic.lastPendingToastId = await logic.notify(t("Review transcription"), 6000,
+						t("“{text}” — open Decktation to review, send or cancel", {text: draft.text}));
 				}
 				logic.prevPendingId = draftId;
 			}
