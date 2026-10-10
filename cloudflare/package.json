@@ -4,5 +4,8 @@
   "scripts": {
     "test": "node --test tests/*.test.js",
     "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.149.0"
   }
 }

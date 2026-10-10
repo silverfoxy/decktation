@@ -6,8 +6,8 @@ For the recommended install walkthrough, start with the [README](../README.md#in
 
 Use a packaged plugin ZIP, which includes the runtime dependencies required by Decktation:
 
-- [Recommended short URL](https://silverfoxy.github.io/decktation/Decktation.zip)
-- [Full stable URL](https://silverfoxy.github.io/decktation/releases/latest/Decktation.zip)
+- [Recommended short URL](https://decktation.com/Decktation.zip)
+- [Full stable URL](https://decktation.com/releases/latest/Decktation.zip)
 - [GitHub release asset](https://github.com/silverfoxy/decktation/releases/latest/download/decktation.zip)
 
 Keep Decky's **Store Channel** set to **Default** for the recommended install. In Decky Settings, choose **Install Plugin from URL** and paste the short URL above, or download the ZIP and choose **Install Plugin from ZIP**. Enable developer options if those actions are not shown. Decky imports the archive and reloads the plugin.
@@ -20,7 +20,7 @@ Do not use GitHub’s automatically generated **Source code (zip)** or **Source 
 
 Until Decktation is available in Decky's official store, update it manually when you want a newer release:
 
-1. Install the [latest packaged ZIP](https://silverfoxy.github.io/decktation/Decktation.zip) with **Install Plugin from URL**, or download it and use **Install Plugin from ZIP**.
+1. Install the [latest packaged ZIP](https://decktation.com/Decktation.zip) with **Install Plugin from URL**, or download it and use **Install Plugin from ZIP**.
 2. Reopen Decktation.
 
 Keep the filename `Decktation.zip` so Decky recognizes the existing plugin and uninstalls its code before extracting the new build. Leave Decktation settings and downloaded Whisper model files alone; deleting them is not part of a normal update.
@@ -58,7 +58,7 @@ https://silverfoxy.github.io/decktation/branches/feat-transcription-review/Deckt
 
 Paste that URL into Decky Settings → Developer → Install Plugin from URL.
 Use the same route to switch to another branch or return to the stable
-`https://silverfoxy.github.io/decktation/Decktation.zip` build. Branch builds do
+`https://decktation.com/Decktation.zip` build. Branch builds do
 not need a store entry. Their commit/version remains in the manifest and download
 metadata; their install identity always stays `Decktation`.
 

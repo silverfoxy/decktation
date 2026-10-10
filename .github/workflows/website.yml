@@ -1,0 +1,79 @@
+name: Deploy Decktation Website
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'site/**'
+      - 'cloudflare/**'
+      - '.github/workflows/website.yml'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'site/**'
+      - 'cloudflare/**'
+      - '.github/workflows/website.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            site/package-lock.json
+            cloudflare/package-lock.json
+      - name: Install landing dependencies
+        run: npm ci --prefix site
+      - name: Install Worker dependencies
+        run: npm ci --prefix cloudflare
+      - name: Test Worker routes and catalog
+        run: npm --prefix cloudflare test
+      - name: Build, test, and package the website without publishing
+        working-directory: cloudflare
+        run: npm exec -- wrangler deploy --dry-run
+
+  deploy:
+    needs: check
+    if: github.repository == 'silverfoxy/decktation' && github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: cloudflare-website-production
+      cancel-in-progress: false
+    steps:
+      - name: Verify deployment credential
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::Add the CLOUDFLARE_API_TOKEN repository secret; see doc/CLOUDFLARE_WORKER.md."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            site/package-lock.json
+            cloudflare/package-lock.json
+      - name: Install landing dependencies
+        run: npm ci --prefix site
+      - name: Install Worker dependencies
+        run: npm ci --prefix cloudflare
+      - name: Deploy to decktation.com
+        working-directory: cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npm run deploy

@@ -16,7 +16,7 @@ Tagged releases also publish a single-plugin Decky catalog through GitHub
 Pages:
 
 ```text
-https://homebrew.imsilverfoxy.com/plugins.json
+https://decktation.com/plugins.json
 ```
 
 Users who specifically want to manage Decktation through Decky's plugin

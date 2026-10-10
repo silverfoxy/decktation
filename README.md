@@ -25,14 +25,14 @@ Until Decktation is available in Decky’s official store, install its packaged 
 3. Paste this URL and install Decktation:
 
    ```text
-   https://silverfoxy.github.io/decktation/Decktation.zip
+   https://decktation.com/Decktation.zip
    ```
 
 Note: Decktation won't receive automatic updates, see updating section for more information.
 
 ### Alternative: Install from a packaged ZIP
 
-Download the [latest packaged Decktation ZIP](https://silverfoxy.github.io/decktation/Decktation.zip), then choose **Install Plugin from ZIP** in Decky Settings.
+Download the [latest packaged Decktation ZIP](https://decktation.com/Decktation.zip), then choose **Install Plugin from ZIP** in Decky Settings.
 
 > **Do not install GitHub’s automatically generated “Source code (zip)” or “Source code (tar.gz)” archives.** They are not Decktation plugin packages and do not include its bundled dependencies.
 
@@ -41,7 +41,7 @@ Download the [latest packaged Decktation ZIP](https://silverfoxy.github.io/deckt
 The [Decktation Custom Store](doc/DECKY_STORE.md) can list Decktation in Decky’s plugin browser:
 
 ```text
-https://homebrew.imsilverfoxy.com/plugins.json
+https://decktation.com/plugins.json
 ```
 
 To opt in, open **Decky Settings → General → Store Channel**, select **Custom**, and enter the URL above.
@@ -54,7 +54,7 @@ Use this option only if you specifically want Decktation listed in Decky and und
 
 Installing from `Decktation.zip` does not enable automatic updates. Until Decktation is in the official store, update it manually:
 
-1. Choose **Install Plugin from URL** and paste [`Decktation.zip`](https://silverfoxy.github.io/decktation/Decktation.zip), or download it and choose **Install Plugin from ZIP**.
+1. Choose **Install Plugin from URL** and paste [`Decktation.zip`](https://decktation.com/Decktation.zip), or download it and choose **Install Plugin from ZIP**.
 2. Reopen Decktation.
 
 This replaces the plugin code; do not delete Decktation settings or downloaded Whisper models. See the [full update steps](doc/INSTALLATION.md#updating-decktation-before-it-reaches-the-official-store).
@@ -95,3 +95,5 @@ Decktation uses Decky’s `_root` permission to read controller inputs and type 
 ## Credits and license
 
 Built with [whisper.cpp](https://github.com/ggml-org/whisper.cpp) and [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader). Decktation is licensed under the MIT License.
+
+Website hosting and domain setup: [decktation.com setup](doc/DOMAIN_SETUP.md).

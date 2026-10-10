@@ -4,8 +4,20 @@ on:
   push:
     branches: ['**']
     tags: ['v*']
+    paths-ignore:
+      - 'site/**'
+      - 'cloudflare/**'
+      - '.github/workflows/website.yml'
+      - 'doc/CLOUDFLARE_WORKER.md'
+      - 'doc/DOMAIN_SETUP.md'
   pull_request:
     branches: [master, main]
+    paths-ignore:
+      - 'site/**'
+      - 'cloudflare/**'
+      - '.github/workflows/website.yml'
+      - 'doc/CLOUDFLARE_WORKER.md'
+      - 'doc/DOMAIN_SETUP.md'
   delete:
   workflow_dispatch:
 
@@ -90,7 +102,7 @@ jobs:
           DECKTATION_VERSION="$(node scripts/release-version.mjs print)"
           python scripts/generate-store-catalog.py \
             --artifact build-output/decktation.zip \
-            --artifact-url "https://silverfoxy.github.io/decktation/releases/v${DECKTATION_VERSION}/Decktation.zip" \
+            --artifact-url "https://decktation.com/releases/v${DECKTATION_VERSION}/Decktation.zip" \
             --output /tmp/decktation-store.json
           python -m json.tool /tmp/decktation-store.json >/dev/null
 
@@ -107,7 +119,7 @@ jobs:
           REF_NAME: ${{ github.ref_name }}
           REF_TYPE: ${{ github.ref_type }}
           EVENT_NAME: ${{ github.event_name }}
-          PAGES_BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          PAGES_BASE_URL: ${{ vars.DECKTATION_PAGES_BASE_URL || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
         run: |
           {
             echo "## Decktation test build"
@@ -126,7 +138,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_SHA: ${{ github.sha }}
-          PAGES_BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          PAGES_BASE_URL: ${{ vars.DECKTATION_PAGES_BASE_URL || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
           REF_NAME: ${{ github.ref_name }}
           REF_TYPE: ${{ github.ref_type }}
           RELEASE_TAG: ${{ github.ref_name }}
@@ -162,7 +174,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          PAGES_BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          PAGES_BASE_URL: ${{ vars.DECKTATION_PAGES_BASE_URL || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
           CLEANUP_ONLY: "true"
         run: bash scripts/publish-pages.sh
 

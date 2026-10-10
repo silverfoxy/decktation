@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="450" viewBox="0 0 1000 450">
+<defs><filter id="shadow" x="-10%" y="-15%" width="120%" height="150%"><feDropShadow dx="0" dy="10" stdDeviation="8" flood-opacity=".08"/></filter></defs>
+<g stroke="#202124" stroke-width="7" stroke-linejoin="round" filter="url(#shadow)">
+<path d="M126 34Q74 35 57 86L43 318Q39 379 101 407Q159 427 233 412H767Q841 427 899 407Q961 379 957 318L943 86Q926 35 874 34L126 34Z" fill="#fefefe"/>
+<path d="M236 57H764V392H236Z" fill="#23262b" stroke-width="5"/>
+<circle cx="186" cy="156" r="29" fill="#fefefe"/><circle cx="186" cy="156" r="21" fill="#202124"/>
+<circle cx="814" cy="156" r="29" fill="#fefefe"/><circle cx="814" cy="156" r="21" fill="#202124"/>
+<path d="M98 86h23v23h23v23h-23v23H98v-23H75v-23h23Z" fill="#202124" stroke-width="3"/>
+<rect x="108" y="208" width="93" height="100" rx="16" fill="#f3f4f5" transform="rotate(3 154 258)" stroke-width="5"/>
+<rect x="799" y="208" width="93" height="100" rx="16" fill="#f3f4f5" transform="rotate(-3 845 258)" stroke-width="5"/>
+<g fill="#202124" stroke="none"><circle cx="892" cy="88" r="13"/><circle cx="866" cy="115" r="13"/><circle cx="918" cy="115" r="13"/><circle cx="892" cy="142" r="13"/></g>
+<rect x="142" y="344" width="52" height="21" rx="10" fill="#fefefe" stroke-width="4"/>
+<rect x="805" y="344" width="52" height="21" rx="10" fill="#fefefe" stroke-width="4"/>
+<path d="M151 328h35M814 328h35" stroke-width="3"/>
+
+</g>
+<g fill="#fff" font-family="system-ui,sans-serif" font-size="12" text-anchor="middle"><text x="892" y="92">Y</text><text x="866" y="119">X</text><text x="918" y="119">B</text><text x="892" y="146">A</text></g>
+</svg>

@@ -1,0 +1,45 @@
+---
+import { createHash } from 'node:crypto';
+import appSource from '../../public/app.js?raw';
+import styleSource from '../../public/styles.css?raw';
+import { dictionaries, locales, type Locale } from '../i18n';
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+const strings = dictionaries[locale];
+const base = Astro.site!;
+const canonical = new URL(locale === 'en' ? '/' : `/${locale}/`, base);
+const version = (source: string) => createHash('sha256').update(source).digest('hex').slice(0, 10);
+const schema = {
+  '@context': 'https://schema.org', '@type': 'SoftwareApplication',
+  name: 'Decktation', operatingSystem: 'SteamOS', applicationCategory: 'UtilitiesApplication',
+  url: base.href, isAccessibleForFree: true,
+  license: 'https://github.com/silverfoxy/decktation/blob/master/LICENSE',
+};
+---
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <script is:inline>(function(){let t='auto';try{t=localStorage.getItem('decktation-theme')||'auto';}catch(e){}document.documentElement.dataset.theme=(t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches))?'dark':'light';})();</script>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{strings['seo.title']}</title>
+    <meta name="description" content={strings['seo.description']} />
+    <link rel="canonical" href={canonical} />
+    {locales.map(lang => <link rel="alternate" hreflang={lang} href={new URL(lang === 'en' ? '/' : `/${lang}/`, base)} />)}
+    <link rel="alternate" hreflang="x-default" href={base} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={strings['seo.title']} />
+    <meta property="og:description" content={strings['seo.description']} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={new URL('/assets/og-image.png', base)} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/assets/decktation-logo.png" />
+    <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css" />
+    <link rel="stylesheet" href={`/styles.css?v=${version(styleSource)}`} />
+    <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+    <script is:inline src={`/app.js?v=${version(appSource)}`} defer></script>
+  </head>
+  <body data-copy-success={strings['copy.success']} data-copy-error={strings['copy.error']}>
+    <slot />
+  </body>
+</html>

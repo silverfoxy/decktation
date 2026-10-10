@@ -150,7 +150,7 @@ write_download_page() {
       <a class="button" href="${metadata_url}">View metadata</a>
     </div>
     <p><strong>Direct ZIP URL</strong><br><code>${zip_url}</code></p>
-    <p><a class="link" href="${PAGES_BASE_URL}/">Back to all Decktation downloads</a></p>
+    <p><a class="link" href="${PAGES_BASE_URL}/downloads/">Back to all Decktation downloads</a></p>
   </main>
 </body>
 </html>
@@ -474,9 +474,9 @@ render_pages_content() {
         <p>Stable, direct ZIP URLs for Decky Loader installs. Use the ZIP URLs directly with Decky's <strong>Install Plugin from URL</strong> flow.</p>
       </div>
       <div class="panel">
-        <p><strong>Short install URL</strong><br><code>${PAGES_BASE_URL}/Decktation.zip</code></p>
+        <p><strong>Short install URL</strong><br><a href="${PAGES_BASE_URL}/Decktation.zip">${PAGES_BASE_URL}/Decktation.zip</a></p>
         <p><strong>Latest release ZIP</strong><br><code>${PAGES_BASE_URL}/releases/latest/Decktation.zip</code></p>
-        <p><strong>Decky Custom Store URL</strong><br><code>https://homebrew.imsilverfoxy.com/plugins.json</code></p>
+        <p><strong>Decky Custom Store URL</strong><br><a href="https://decktation.com/plugins.json">https://decktation.com/plugins.json</a></p>
         <p><strong>Branch ZIP pattern</strong><br><code>${PAGES_BASE_URL}/branches/&lt;branch-slug&gt;/Decktation.zip</code></p>
       </div>
     </div>
@@ -486,6 +486,10 @@ render_pages_content() {
 </body>
 </html>
 EOF
+
+  # Keep /downloads/ available on both the Worker and the original Pages host.
+  mkdir -p "$PAGES_DIR/downloads"
+  cp "$PAGES_DIR/index.html" "$PAGES_DIR/downloads/index.html"
 
   touch "$PAGES_DIR/.nojekyll"
 }

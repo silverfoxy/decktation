@@ -1,0 +1,3 @@
+dist/
+.astro/
+!package-lock.json

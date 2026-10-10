@@ -9,7 +9,7 @@ const assets = {
 
 test("OPTIONS permits Decky's custom header", async () => {
   const response = await worker.fetch(
-    new Request("https://homebrew.imsilverfoxy.com/plugins.json", {
+    new Request("https://decktation.com/plugins.json", {
       method: "OPTIONS",
     }),
     { ASSETS: assets },
@@ -23,7 +23,7 @@ test("OPTIONS permits Decky's custom header", async () => {
   );
   assert.equal(
     response.headers.get("Access-Control-Allow-Methods"),
-    "GET, OPTIONS",
+    "GET, HEAD, OPTIONS",
   );
 });
 
@@ -36,6 +36,7 @@ test("GET proxies the catalog and adds CORS headers", async () => {
       "https://silverfoxy.github.io/decktation/store/plugins.json",
     );
     assert.equal(init.headers.get("X-Decky-Version"), "3.0.0");
+    assert.equal(init.redirect, "manual");
 
     return new Response('[{"name":"Decktation"}]', {
       status: 200,
@@ -45,7 +46,7 @@ test("GET proxies the catalog and adds CORS headers", async () => {
 
   try {
     const response = await worker.fetch(
-      new Request("https://homebrew.imsilverfoxy.com/plugins.json", {
+      new Request("https://decktation.com/plugins.json", {
         headers: { "X-Decky-Version": "3.0.0" },
       }),
       { ASSETS: assets },
@@ -67,7 +68,7 @@ test("GET returns a CORS-enabled error if the upstream request fails", async () 
 
   try {
     const response = await worker.fetch(
-      new Request("https://homebrew.imsilverfoxy.com/plugins.json"),
+      new Request("https://decktation.com/plugins.json"),
       { ASSETS: assets },
     );
 
@@ -79,4 +80,13 @@ test("GET returns a CORS-enabled error if the upstream request fails", async () 
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test("legacy custom-store hostname still permits Decky preflight", async () => {
+  const response = await worker.fetch(
+    new Request("https://homebrew.imsilverfoxy.com/plugins.json", { method: "OPTIONS" }),
+    { ASSETS: assets },
+  );
+  assert.equal(response.status, 204);
+  assert.equal(response.headers.get("Access-Control-Allow-Headers"), "X-Decky-Version");
 });

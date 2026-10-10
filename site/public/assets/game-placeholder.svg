@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600">
+<rect width="960" height="600" fill="#e9efec"/>
+<!-- Quiet, schematic fantasy landscape: no game branding or player information. -->
+<g stroke="#aebeb9" stroke-width="2" stroke-linejoin="round">
+<path d="M0 247 139 104 289 260 413 136 589 278 747 108 960 270V600H0Z" fill="#dce6e2"/>
+<path d="m139 104-42 116 42-29 37 37ZM413 136l-34 83 36-16 30 28ZM747 108l-46 120 45-32 43 47Z" fill="#edf2ef" stroke="none"/>
+<path d="M0 331Q171 251 329 332T636 306T960 326V600H0Z" fill="#d4e0d7"/>
+<path d="M0 431Q221 323 451 357Q655 374 960 420V600H0Z" fill="#cbd9ce"/>
+<path d="m503 353-143 247h305L534 353Z" fill="#e6e4d7" stroke="#bdc7be"/>
+<path d="M518 364 482 435M466 466l-42 92M540 423l27 69" fill="none" stroke="#cbd0c3"/>
+<!-- Distant settlement. -->
+<g fill="#e7e8de"><path d="M615 256h100v75H615Z"/><path d="m602 257 62-48 65 48Z" fill="#bbcfc6"/><path d="M655 294h20v37"/><path d="M744 204h41v111h-41Z"/><path d="m737 204 27-29 28 29Z" fill="#bbcfc6"/></g>
+<!-- Low-contrast trees and rocks. -->
+<g fill="#bfd1c5"><path d="m141 264-40 88h80ZM132 318l-41 77h84ZM824 285l-38 83h76Z"/><path d="m813 339-36 72h79Z"/></g>
+<path d="M140 349v66M824 363v62" stroke="#a9bbb0" stroke-width="5"/>
+<path d="m234 443 17-19 28 4 17 21ZM695 431l20-21 35 2 16 24Z" fill="#d7ddd5"/>
+<!-- Third-person adventurer silhouette. -->
+<ellipse cx="493" cy="425" rx="35" ry="9" fill="#b3c5bb" stroke="none"/>
+<circle cx="493" cy="346" r="14" fill="#e9e5d7"/>
+<path d="m477 365 16-6 16 6 11 41h-54Z" fill="#b4c4cf"/>
+<path d="m483 403-5 26M504 403l7 26M477 369l-19 20M509 369l19 18" fill="none" stroke="#94a8b1" stroke-width="7" stroke-linecap="round"/>
+<path d="m532 342-5 73" fill="none" stroke="#a7b5ad" stroke-width="4"/>
+</g>
+<!-- Recognizable MMO interface, deliberately muted and without tiny text. -->
+<g stroke="#a9bab4" stroke-width="2" fill="#f3f6f1" opacity=".65">
+<rect x="24" y="24" width="161" height="54" rx="7"/><circle cx="53" cy="51" r="17"/>
+<path d="M80 43h88M80 58h72" stroke="#afc6b4" stroke-width="7"/>
+<circle cx="881" cy="64" r="42"/><path d="m858 77 17-28 14 19 16-11" fill="none"/>
+<rect x="816" y="129" width="114" height="75" rx="5"/><path d="M830 146h77M830 165h59M830 184h70" stroke-width="5"/>
+<g fill="#dbe4df"><rect x="345" y="552" width="29" height="29" rx="4"/><rect x="381" y="552" width="29" height="29" rx="4"/><rect x="417" y="552" width="29" height="29" rx="4"/><rect x="453" y="552" width="29" height="29" rx="4"/><rect x="489" y="552" width="29" height="29" rx="4"/><rect x="525" y="552" width="29" height="29" rx="4"/><rect x="561" y="552" width="29" height="29" rx="4"/><rect x="597" y="552" width="29" height="29" rx="4"/></g>
+</g>
+</svg>
