@@ -132,6 +132,7 @@ class WoWVoiceChat:
         # Audio recording
         self.audio_queue = queue.Queue()
         self.is_recording = False
+        self.is_transcribing = False
         self.recording_stream = None
         self.input_channels = 1
         self.recording_lock = threading.Lock()
@@ -996,61 +997,65 @@ class WoWVoiceChat:
             if not self.is_recording:
                 return
 
-            self.is_recording = False
-            with self._pending_lock:
-                generation = self._draft_generation
+            self.is_transcribing = True
+            try:
+                self.is_recording = False
+                with self._pending_lock:
+                    generation = self._draft_generation
 
-            # TEST MODE: Use static audio file instead of recorded audio
-            if self.test_mode:
+                # TEST MODE: Use static audio file instead of recorded audio
+                if self.test_mode:
+                    self._recording_transition("stopped")
+                    print(f"[TEST MODE] Recording stopped, using {self.test_audio_file}")
+                    if self.test_audio_file and Path(self.test_audio_file).exists():
+                        try:
+                            print("[TEST MODE] Transcribing...")
+                            text = self.transcribe_audio(self.test_audio_file)
+                            print(f"[TEST MODE] Transcribed: {text}")
+                            self.last_transcription = text
+                            self.last_transcription_time = time.time()
+                            if text and send:
+                                self.queue_transcription(text, generation)
+                        except Exception as e:
+                            print(f"[TEST MODE] Error: {e}")
+                            self._report_diagnostic("transcription.failed", e)
+                    else:
+                        print(f"[TEST MODE] Test audio file not found: {self.test_audio_file}")
+                    return
+
+                print("Recording stopped...")
+
+                # Stop audio stream
+                if self.recording_stream:
+                    self.recording_stream.stop()
+                    self.recording_stream.close()
+                    self.recording_stream = None
+
                 self._recording_transition("stopped")
-                print(f"[TEST MODE] Recording stopped, using {self.test_audio_file}")
-                if self.test_audio_file and Path(self.test_audio_file).exists():
-                    try:
-                        print("[TEST MODE] Transcribing...")
-                        text = self.transcribe_audio(self.test_audio_file)
-                        print(f"[TEST MODE] Transcribed: {text}")
-                        self.last_transcription = text
-                        self.last_transcription_time = time.time()
-                        if text and send:
-                            self.queue_transcription(text, generation)
-                    except Exception as e:
-                        print(f"[TEST MODE] Error: {e}")
-                        self._report_diagnostic("transcription.failed", e)
-                else:
-                    print(f"[TEST MODE] Test audio file not found: {self.test_audio_file}")
-                return
 
-            print("Recording stopped...")
+                # Collect all audio
+                audio_data = []
+                while not self.audio_queue.empty():
+                    audio_data.append(self.audio_queue.get())
 
-            # Stop audio stream
-            if self.recording_stream:
-                self.recording_stream.stop()
-                self.recording_stream.close()
-                self.recording_stream = None
+                if not audio_data:
+                    print("No audio recorded")
+                    return
 
-            self._recording_transition("stopped")
+                audio = np.concatenate(audio_data, axis=0)
 
-            # Collect all audio
-            audio_data = []
-            while not self.audio_queue.empty():
-                audio_data.append(self.audio_queue.get())
+                print("Transcribing...")
+                text = self.transcribe_audio(audio)
+                print(f"Transcribed: {text}")
 
-            if not audio_data:
-                print("No audio recorded")
-                return
+                # Store last transcription result
+                self.last_transcription = text
+                self.last_transcription_time = time.time()
 
-            audio = np.concatenate(audio_data, axis=0)
-
-            print("Transcribing...")
-            text = self.transcribe_audio(audio)
-            print(f"Transcribed: {text}")
-
-            # Store last transcription result
-            self.last_transcription = text
-            self.last_transcription_time = time.time()
-
-            if text and send:
-                self.queue_transcription(text, generation)
+                if text and send:
+                    self.queue_transcription(text, generation)
+            finally:
+                self.is_transcribing = False
 
     def abort_recording(self):
         """Stop recording and discard audio instead of transcribing or sending it."""

@@ -5,7 +5,8 @@
   "scripts": {
     "build": "shx rm -rf dist && rollup -c",
     "watch": "rollup -c -w",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:update": "node --test tests/frontend-plugin-update.test.cjs"
   },
   "repository": {
     "type": "git",

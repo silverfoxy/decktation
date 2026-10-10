@@ -5,6 +5,48 @@
 
     var React__default = /*#__PURE__*/_interopDefaultLegacy(React);
 
+    const unavailable = "Decky's plugin installer is not available in this version. Update manually using the packaged Decktation ZIP.";
+    async function requestPluginUpdate(update) {
+        try {
+            const loader = (typeof window === "undefined" ? undefined :
+                window.DeckyBackend);
+            if (typeof loader?.call !== "function")
+                return { success: false, error: unavailable };
+            // Defense against accidentally handing a remote artifact to Loader.
+            if (!/^file:\/\/\/tmp\/decktation-update-[A-Za-z0-9_-]+\.zip$/.test(update.artifact)) {
+                return { success: false, error: "The update could not be verified, so it was not installed." };
+            }
+            const result = await loader.call("utilities/install_plugin", update.artifact, "Decktation", update.version, update.hash, 2);
+            if (result === false || (result && typeof result === "object" &&
+                "success" in result && result.success === false)) {
+                return { success: false, error: unavailable };
+            }
+            // This requests a native prompt; it does not report installation success.
+            leaveStalePluginPanel();
+            return { success: true };
+        }
+        catch (_error) {
+            return { success: false, error: unavailable };
+        }
+    }
+    /** Optional navigation workaround for Loader #976; no Steam patches or reloads. */
+    function leaveStalePluginPanel() {
+        try {
+            const state = (typeof window === "undefined" ? undefined :
+                window.DeckyPluginLoader?.deckyState);
+            if (typeof state?.publicState !== "function" || typeof state.closeActivePlugin !== "function" ||
+                state.publicState().activePlugin?.name !== "Decktation")
+                return false;
+            state.closeActivePlugin();
+            return true;
+        }
+        catch (_error) {
+            return false;
+        }
+    }
+
+    var version = "0.3.18";
+
     // Read the actual QAM surface. Document visibility alone does not establish
     // whether a persistent Steam sidebar is on screen.
     function quickAccessVisibility(documents, classNames) {
@@ -155,12 +197,16 @@
     }
 
     // THIS FILE IS AUTO GENERATED
-    function FaMicrophone (props) {
+    function FaArrowCircleUp (props) {
+      return GenIcon({"tag":"svg","attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M8 256C8 119 119 8 256 8s248 111 248 248-111 248-248 248S8 393 8 256zm143.6 28.9l72.4-75.5V392c0 13.3 10.7 24 24 24h16c13.3 0 24-10.7 24-24V209.4l72.4 75.5c9.3 9.7 24.8 9.9 34.3.4l10.9-11c9.4-9.4 9.4-24.6 0-33.9L273 107.7c-9.4-9.4-24.6-9.4-33.9 0L106.3 240.4c-9.4 9.4-9.4 24.6 0 33.9l10.9 11c9.6 9.5 25.1 9.3 34.4-.4z"}}]})(props);
+    }function FaMicrophone (props) {
       return GenIcon({"tag":"svg","attr":{"viewBox":"0 0 352 512"},"child":[{"tag":"path","attr":{"d":"M176 352c53.02 0 96-42.98 96-96V96c0-53.02-42.98-96-96-96S80 42.98 80 96v160c0 53.02 42.98 96 96 96zm160-160h-16c-8.84 0-16 7.16-16 16v48c0 74.8-64.49 134.82-140.79 127.38C96.71 376.89 48 317.11 48 250.3V208c0-8.84-7.16-16-16-16H16c-8.84 0-16 7.16-16 16v40.16c0 89.64 63.97 169.55 152 181.69V464H96c-8.84 0-16 7.16-16 16v16c0 8.84 7.16 16 16 16h160c8.84 0 16-7.16 16-16v-16c0-8.84-7.16-16-16-16h-56v-33.77C285.71 418.47 352 344.9 352 256v-48c0-8.84-7.16-16-16-16z"}}]})(props);
     }function FaTrash (props) {
       return GenIcon({"tag":"svg","attr":{"viewBox":"0 0 448 512"},"child":[{"tag":"path","attr":{"d":"M432 32H312l-9.4-18.7A24 24 0 0 0 281.1 0H166.8a23.72 23.72 0 0 0-21.4 13.3L136 32H16A16 16 0 0 0 0 48v32a16 16 0 0 0 16 16h416a16 16 0 0 0 16-16V48a16 16 0 0 0-16-16zM53.2 467a48 48 0 0 0 47.9 45h245.8a48 48 0 0 0 47.9-45L416 128H32z"}}]})(props);
     }
 
+    const getPluginUpdate = callable("get_plugin_update");
+    const preparePluginUpdate = callable("prepare_plugin_update");
     const getStatus = callable("get_status");
     const getButtonConfig = callable("get_button_config");
     const getPresets = callable("get_presets");
@@ -185,6 +231,8 @@
     const setButtonConfig = callable("set_button_config");
     class DecktationLogic {
         constructor() {
+            this.updateAvailable = false;
+            this.updateListeners = new Set();
             this.enabled = false;
             this.recording = false;
             this.recordingIndicator = "toast";
@@ -290,6 +338,10 @@
                     onPhase("idle");
                 }
             };
+        }
+        setUpdateAvailable(available) {
+            this.updateAvailable = available;
+            this.updateListeners.forEach(listener => listener(available));
         }
     }
     // Available button options
@@ -429,6 +481,7 @@
         const panelRef = React.useRef(null);
         const languageMenuAnchorRef = React.useRef(null);
         const advancedModelRowRef = React.useRef(null);
+        const updateActionRowRef = React.useRef(null);
         const [bindingButtonIndex, setBindingButtonIndex] = React.useState(0);
         const [enabled, setEnabled] = React.useState(false);
         const [recording, setRecording] = React.useState(false);
@@ -497,6 +550,94 @@
         const [statusError, setStatusError] = React.useState("");
         const [testPhase, setTestPhase] = React.useState("idle");
         const [hasTestResult, setHasTestResult] = React.useState(false);
+        const [transcribing, setTranscribing] = React.useState(false);
+        const [updateInfo, setUpdateInfo] = React.useState(null);
+        const [updateError, setUpdateError] = React.useState("");
+        const [updatePhase, setUpdatePhase] = React.useState("idle");
+        const [checkingUpdate, setCheckingUpdate] = React.useState(false);
+        const updateChecked = React.useRef(false);
+        const updateMounted = React.useRef(true);
+        const updateInFlight = React.useRef(false);
+        const updateTimer = React.useRef();
+        const checkUpdate = async (force = false) => {
+            setCheckingUpdate(true);
+            try {
+                const result = await getPluginUpdate(force);
+                if (!updateMounted.current)
+                    return;
+                setUpdateInfo(result);
+                logic.setUpdateAvailable(result.success && result.update_available === true);
+                setUpdateError(result.success ? "" : "Could not check for updates.");
+            }
+            catch (_error) {
+                if (updateMounted.current) {
+                    setUpdateInfo(null);
+                    logic.setUpdateAvailable(false);
+                    setUpdateError("Could not check for updates.");
+                }
+            }
+            finally {
+                if (updateMounted.current)
+                    setCheckingUpdate(false);
+            }
+        };
+        React.useEffect(() => {
+            updateMounted.current = true;
+            return () => {
+                updateMounted.current = false;
+                if (updateTimer.current)
+                    clearTimeout(updateTimer.current);
+            };
+        }, []);
+        React.useEffect(() => {
+            if (qamVisible && !updateChecked.current) {
+                updateChecked.current = true;
+                void checkUpdate();
+            }
+        }, [qamVisible]);
+        const updateBusy = recording || transcribing || modelLoading || testPhase !== "idle" ||
+            !!pendingDraft || draftBusy || updatePhase !== "idle";
+        const startUpdate = async () => {
+            if (updateBusy || updateInFlight.current || !updateInfo?.update_available || logic.readQamVisibility?.() !== true)
+                return;
+            updateInFlight.current = true;
+            setUpdatePhase("preparing");
+            setUpdateError("");
+            try {
+                const prepared = await preparePluginUpdate(updateInfo.version);
+                if (!updateMounted.current || logic.readQamVisibility?.() !== true)
+                    return;
+                if (!prepared.success) {
+                    setUpdateError(prepared.error || "The update could not be verified, so it was not installed.");
+                    return;
+                }
+                const result = await requestPluginUpdate({ artifact: prepared.artifact, version: prepared.version, hash: prepared.hash });
+                if (!updateMounted.current)
+                    return;
+                if (!result.success) {
+                    setUpdateError(result.error || "Decky's plugin installer is not available in this version. Update manually using the packaged Decktation ZIP.");
+                    return;
+                }
+                setUpdatePhase("waiting");
+                // Loader has no reliable cancellation callback. Recover if this instance survives.
+                updateTimer.current = setTimeout(() => {
+                    updateTimer.current = undefined;
+                    updateInFlight.current = false;
+                    setUpdatePhase("idle");
+                }, 8000);
+            }
+            catch (_error) {
+                if (updateMounted.current)
+                    setUpdateError("The update could not be verified, so it was not installed.");
+            }
+            finally {
+                if (!updateTimer.current) {
+                    updateInFlight.current = false;
+                    if (updateMounted.current)
+                        setUpdatePhase("idle");
+                }
+            }
+        };
         React.useEffect(() => {
             setEnabled(logic.enabled);
             setRecording(logic.recording);
@@ -576,6 +717,7 @@
                             ? result.inference_device
                             : null);
                         setModelLoading(result.model_loading);
+                        setTranscribing(result.transcribing === true);
                         setInputReady(result.input_ready !== false);
                         if (logic.enabled) {
                             setRecording(result.recording);
@@ -617,8 +759,8 @@
             resetScroll();
             const frame = requestAnimationFrame(() => {
                 resetScroll();
-                if (page === "advanced") {
-                    advancedModelRowRef.current?.querySelector('[role="button"], button')?.focus();
+                if (page === "advanced" || page === "updates") {
+                    (page === "updates" ? updateActionRowRef.current : advancedModelRowRef.current)?.querySelector('[role="button"], button')?.focus();
                 }
             });
             return () => cancelAnimationFrame(frame);
@@ -641,7 +783,7 @@
             node.scrollTop += direction * 96;
             return true;
         };
-        const goBack = () => setPage(page === "diagnostics" || page === "help" || page === "model" || page === "binding-button" ? "advanced" : "main");
+        const goBack = () => setPage(page === "updates" || page === "diagnostics" || page === "help" || page === "model" || page === "binding-button" ? "advanced" : "main");
         const chooseLanguage = async (language) => {
             const result = await setTranscriptionOptionsRpc(language);
             if (result.success) {
@@ -749,6 +891,13 @@
                     React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: goBack }, "Back"))),
                 page === "main" && React__default["default"].createElement(React__default["default"].Fragment, null,
                     React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: "Decktation" },
+                        updateInfo?.success && updateInfo.update_available && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: () => setPage("updates") },
+                                React__default["default"].createElement("span", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } },
+                                    React__default["default"].createElement(FaArrowCircleUp, { "aria-hidden": "true", style: { color: "#7cdb98", flexShrink: 0 } }),
+                                    React__default["default"].createElement("span", null,
+                                        "Update available: ",
+                                        updateInfo.version)))),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: "Enable", checked: enabled, disabled: !serviceReady || modelLoading || isToggling, onChange: async (next) => {
                                     if (isToggling)
@@ -829,6 +978,27 @@
                                 React__default["default"].createElement("small", null, lastTranscriptionTime)))),
                     React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                         React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: () => setPage("advanced") }, "Advanced settings"))),
+                page === "updates" && React__default["default"].createElement(React__default["default"].Fragment, null,
+                    React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: "Updates" },
+                        React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement("div", null,
+                                "Version ",
+                                updateInfo?.current || version)),
+                        React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement("div", { role: "status" }, updateError || (updateInfo?.success ?
+                                updateInfo.update_available ? `Update available: ${updateInfo.version}` : "Up to date" : "Checking for updates..."))),
+                        updateInfo?.success && updateInfo.update_available && React__default["default"].createElement(React__default["default"].Fragment, null,
+                            React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                                React__default["default"].createElement("div", null,
+                                    updateInfo.current,
+                                    " \u2192 ",
+                                    updateInfo.version)),
+                            React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                                React__default["default"].createElement("div", { ref: updateActionRowRef },
+                                    React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: updateBusy, onClick: startUpdate }, updatePhase === "preparing" ? "Preparing update..." : updatePhase === "waiting" ? "Waiting for Decky confirmation..." : `Update to ${updateInfo.version}`)))),
+                        React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement("div", { ref: updateInfo?.update_available ? undefined : updateActionRowRef },
+                                React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: checkingUpdate || updatePhase !== "idle", onClick: () => { void checkUpdate(true); } }, "Check again"))))),
                 page === "advanced" && React__default["default"].createElement(React__default["default"].Fragment, null,
                     React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: "Transcription model" },
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
@@ -914,6 +1084,8 @@
                                     else
                                         setRpcError(result.error || "Could not update haptic feedback");
                                 } }))),
+                    React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                        React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: () => { setPage("updates"); void checkUpdate(true); } }, "Check for updates")),
                     React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                         React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: () => setPage("diagnostics") }, "Diagnostics")),
                     React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
@@ -1029,8 +1201,25 @@
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement("div", { style: { fontSize: '13px', lineHeight: '1.5' } }, "Decktation uses Decky root access only to read raw Steam Deck controller input and to create virtual keyboard events for dictated text. Your transcription is passed to the bundled keyboard helper as data, never as a shell command.")))))));
     };
+    const DecktationIcon = ({ logic }) => {
+        const [available, setAvailable] = React.useState(logic.updateAvailable);
+        React.useEffect(() => {
+            logic.updateListeners.add(setAvailable);
+            setAvailable(logic.updateAvailable);
+            return () => { logic.updateListeners.delete(setAvailable); };
+        }, [logic]);
+        return React__default["default"].createElement("span", { style: { position: "relative", display: "inline-flex" }, "aria-label": available ? "Decktation update available" : "Decktation" },
+            React__default["default"].createElement(FaMicrophone, null),
+            available && React__default["default"].createElement("span", { "aria-hidden": "true", style: { position: "absolute", right: "-3px", top: "-3px", width: "7px", height: "7px", borderRadius: "50%", background: "#7cdb98" } }));
+    };
     var index = deckyFrontendLib.definePlugin(() => {
         let logic = new DecktationLogic();
+        let disposed = false;
+        // One cached discovery check per plugin lifecycle, even before opening its panel.
+        void getPluginUpdate(false).then(result => {
+            if (!disposed)
+                logic.setUpdateAvailable(result.success && result.update_available === true);
+        }).catch(() => { });
         // Seed the recording start count so we don't fire a spurious toast on load
         getStatus().then((result) => {
             if (result.success) {
@@ -1092,8 +1281,10 @@
         return {
             title: React__default["default"].createElement("div", { className: deckyFrontendLib.quickAccessMenuClasses.Title }, "Decktation"),
             content: React__default["default"].createElement(DecktationPanel, { logic: logic }),
-            icon: React__default["default"].createElement(FaMicrophone, null),
+            icon: React__default["default"].createElement(DecktationIcon, { logic: logic }),
             onDismount() {
+                disposed = true;
+                logic.updateListeners.clear();
                 clearInterval(bgNotifyInterval);
                 if (logic.recording) {
                     void stopRecording();
