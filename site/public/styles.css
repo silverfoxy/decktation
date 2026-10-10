@@ -133,7 +133,7 @@ footer .brand{width:max-content;background:#fff;border-radius:10px;padding:4px 1
 @media(prefers-reduced-motion:reduce){.brand-wave-cover,.brand-wave{display:none}}
 
 .language-control{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:0 10px;min-height:44px;color:var(--ink);background:#fff}
-.language-control>i{font-size:22px;color:var(--muted)}.language-control select{min-height:44px;border:0;background:transparent;color:inherit;font-size:14px;cursor:pointer;max-width:112px}.language-control:focus-within{outline:3px solid var(--blue);outline-offset:3px}
+.language-control>i{font-size:22px;color:var(--muted)}.language-control select{min-height:44px;border:0;background:inherit;color:inherit;font-size:14px;cursor:pointer;max-width:112px}.language-control select option{background:var(--bg);color:var(--ink)}.language-control:focus-within{outline:3px solid var(--blue);outline-offset:3px}
 .game-logo{height:88px;display:flex;align-items:center;margin-bottom:20px}.game-logo img{width:160px;height:80px;object-fit:contain;object-position:left center}.game-logo .fa-steam{font-size:64px;color:#17191d}
 @media(max-width:850px){.navlinks .language-control{align-self:stretch;justify-content:flex-start;margin:12px 0}.navlinks.is-open{align-items:stretch}}
 
@@ -240,6 +240,7 @@ html{color-scheme:light}html[data-theme="dark"]{color-scheme:dark;--bg:#11151c;-
 html[data-theme="dark"] header,html[data-theme="dark"] .navlinks.is-open{background:var(--bg)}
 html[data-theme="dark"] .navlinks{color:var(--muted)}
 html[data-theme="dark"] .btn:not(.primary),html[data-theme="dark"] .language-control,html[data-theme="dark"] .mobile-menu,html[data-theme="dark"] .demo-toggle,html[data-theme="dark"] .routing,html[data-theme="dark"] .code{background:var(--alt);color:var(--ink);border-color:var(--line)}
+html[data-theme="dark"] .language-control select option{background:var(--alt)}
 html[data-theme="dark"] .btn:not(.primary):hover{background:#263044}
 html[data-theme="dark"] .install-band{background:#18273f;border-color:#2d4568}
 html[data-theme="dark"] #install .install-wizard>li,html[data-theme="dark"] #install .install-zip-option,html[data-theme="dark"] #install #install-ready{border-color:#324763}
