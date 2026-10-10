@@ -17,7 +17,9 @@ import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 gi.require_version("GdkX11", "3.0")
-from gi.repository import Gdk, GdkX11, GLib, Gtk  # noqa: E402
+gi.require_version("Pango", "1.0")
+gi.require_version("PangoCairo", "1.0")
+from gi.repository import Pango, PangoCairo, Gdk, GdkX11, GLib, Gtk  # noqa: E402
 
 STATE = Path(sys.argv[1])
 PARENT_PID = int(sys.argv[2])
@@ -217,10 +219,19 @@ class Indicator(Gtk.Window):
         ctx.stroke()
         if self.mode == "transcribing":
             ctx.set_source_rgb(0.96, 0.96, 0.97)
-            ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
-            ctx.set_font_size(12)
-            ctx.move_to(47, 25)
-            ctx.show_text("Transcribing...")
+            try:
+                label = STATE.with_name("label").read_text(encoding="utf-8").strip()
+            except (OSError, UnicodeError):
+                label = "Transcribing..."
+            layout = PangoCairo.create_layout(ctx)
+            layout.set_font_description(Pango.FontDescription("Sans 12px"))
+            layout.set_text(label or "Transcribing...", -1)
+            layout.set_width(160 * Pango.SCALE)
+            layout.set_ellipsize(Pango.EllipsizeMode.END)
+            layout.set_alignment(Pango.Alignment.CENTER)
+            _, text_height = layout.get_pixel_size()
+            ctx.move_to(12, (40 - text_height) / 2)
+            PangoCairo.show_layout(ctx, layout)
         else:
             ctx.arc(22, 20, 4, 0, math.tau)
             ctx.set_source_rgb(0.98, 0.35, 0.45)

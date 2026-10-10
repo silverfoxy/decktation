@@ -150,7 +150,7 @@ write_download_page() {
       <a class="button" href="${metadata_url}">View metadata</a>
     </div>
     <p><strong>Direct ZIP URL</strong><br><code>${zip_url}</code></p>
-    <p><a class="link" href="${PAGES_BASE_URL}/">Back to all Decktation downloads</a></p>
+    <p><a class="link" href="${PAGES_BASE_URL}/downloads/">Back to all Decktation downloads</a></p>
   </main>
 </body>
 </html>
@@ -384,7 +384,8 @@ render_pages_content() {
     done
   fi
 
-  cat >"$PAGES_DIR/index.html" <<EOF
+  mkdir -p "$PAGES_DIR/downloads"
+  cat >"$PAGES_DIR/downloads/index.html" <<EOF
 <!doctype html>
 <html lang="en">
 <head>
@@ -486,6 +487,11 @@ render_pages_content() {
 </body>
 </html>
 EOF
+
+  # Landing owns the root; plugin builds only update the download catalog.
+  if [ ! -f "$PAGES_DIR/index.html" ]; then
+    cp "$PAGES_DIR/downloads/index.html" "$PAGES_DIR/index.html"
+  fi
 
   touch "$PAGES_DIR/.nojekyll"
 }

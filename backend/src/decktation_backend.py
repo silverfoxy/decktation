@@ -1012,6 +1012,18 @@ class Plugin:
             logger.error(f"Error setting button config: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
 
+    async def set_overlay_transcribing_label(self, label: str):
+        """Receive the interface translation independently of dictation language."""
+        if not isinstance(label, str) or not label.strip() or len(label) > 100:
+            return {"success": False, "error": "Invalid overlay label"}
+        try:
+            if Plugin.recording_overlay:
+                Plugin.recording_overlay.set_transcribing_label(label.strip())
+            return {"success": True}
+        except Exception as exc:
+            logger.warning("Could not update overlay label: %s", exc)
+            return {"success": False, "error": str(exc)}
+
     async def set_recording_indicator(self, mode: str):
         """Select toast, Gamescope overlay, or no recording cue."""
         try:

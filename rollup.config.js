@@ -31,7 +31,7 @@ export default defineConfig({
     commonjs(),
     nodeResolve(),
     typescript(),
-    json(),
+    json({ indent: "  " }),
     replace({
       preventAssignment: false,
       'process.env.NODE_ENV': JSON.stringify('production'),
