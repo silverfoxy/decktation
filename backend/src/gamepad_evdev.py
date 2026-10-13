@@ -13,6 +13,23 @@ KEY_BUTTONS = {
     0x130: 'A', 0x131: 'B', 0x133: 'Y', 0x134: 'X',
     0x136: 'L1', 0x137: 'R1', 0x138: 'L2', 0x139: 'R2',
 }
+# BTN_TRIGGER_HAPPY codes have device-specific meanings. HHD's uinput maps:
+# https://github.com/hhd-dev/hhd/blob/master/src/hhd/controller/virtual/uinput/const.py
+# Map extra_l1/r1 to L4/R4 and extra_l2/r2 to L5/R5; extra_l3/r3
+# have no selectable equivalent. Unknown devices need a configuration override.
+HHD_GRIP_BUTTONS = {0x2c0: 'L4', 0x2c1: 'R4', 0x2c2: 'L5', 0x2c3: 'R5'}
+DEVICE_GRIP_BUTTONS = {
+    (0x5335, 0x0001): HHD_GRIP_BUTTONS,  # HHD UInputDevice defaults.
+    (0x045e, 0x02e3): {0x2c6: 'L4', 0x2c4: 'R4', 0x2c7: 'L5', 0x2c5: 'R5'},
+    # Hori HAPPY1 is Share, not a grip.
+    (0x0f0d, 0x0196): {0x2c1: 'L4', 0x2c2: 'R4', 0x2c3: 'L5', 0x2c4: 'R5'},
+    # HHD DualSense Edge uses paddles for extra_l1/r1 and Fn for extra_l2/r2.
+    # hid-playstation exposes paddles as HAPPY3/4 and Fn as HAPPY1/2:
+    # https://github.com/torvalds/linux/blob/master/drivers/hid/hid-playstation.c
+    # https://github.com/hhd-dev/hhd/blob/master/src/hhd/controller/virtual/dualsense/const.py
+    # This requires a kernel exposing those controls; a map cannot create events.
+    (0x054c, 0x0df2): {0x2c2: 'L4', 0x2c3: 'R4', 0x2c0: 'L5', 0x2c1: 'R5'},
+}
 # Common xpad/hid mappings, then the gamepad specification's HAT2 axes.
 # Prefer dedicated GAS/BRAKE axes: Xbox Bluetooth can expose Z/RZ for
 # the right stick alongside these trigger axes.
@@ -22,6 +39,12 @@ SELECTABLE_BUTTONS = set(KEY_BUTTONS.values()) | {'L4', 'R4', 'L5', 'R5'}
 
 def button_mapping(identity):
     mapping = KEY_BUTTONS.copy()
+    device_id = (identity.get('vendor_id'), identity.get('product_id'))
+    mapping.update(DEVICE_GRIP_BUTTONS.get(device_id, {}))
+    # HHD's virtual Joy-Con pair uses GAMEPAD_BUTTON_MAP. Restrict this
+    # layout to BUS_VIRTUAL rather than assuming physical Nintendo devices do.
+    if device_id == (0x057e, 0x2008) and identity.get('bus') == 6:
+        mapping.update(HHD_GRIP_BUTTONS)
     # Xbox drivers use the historical BTN_X/BTN_Y aliases (0x133/0x134),
     # rather than the positional NORTH/WEST interpretation. Steam's virtual
     # Xbox 360 pads expose the same convention. Keep other gamepads positional.

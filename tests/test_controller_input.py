@@ -107,6 +107,108 @@ def test_evdev_buttons_press_repeat_release(code, name):
         assert {key for key, pressed in states.items() if pressed} == ({name} if value else set())
 
 
+# Expectations are independent of the implementation dictionaries: HHD's
+# GAMEPAD_BUTTON_MAP, XBOX_ELITE_BUTTON_MAP, HORIPAD_STEAM_BUTTON_MAP,
+# and DualSense report bits decoded by hid-playstation.
+GRIP_LAYOUTS = [
+    ({'vendor_id': 0x5335, 'product_id': 0x0001, 'bus': 3},
+     [(0x2c0, 'L4'), (0x2c1, 'R4'), (0x2c2, 'L5'), (0x2c3, 'R5')]),
+    ({'vendor_id': 0x045e, 'product_id': 0x02e3, 'bus': 3},
+     [(0x2c6, 'L4'), (0x2c4, 'R4'), (0x2c7, 'L5'), (0x2c5, 'R5')]),
+    ({'vendor_id': 0x054c, 'product_id': 0x0df2, 'bus': 5},
+     [(0x2c2, 'L4'), (0x2c3, 'R4'), (0x2c0, 'L5'), (0x2c1, 'R5')]),
+    ({'vendor_id': 0x0f0d, 'product_id': 0x0196, 'bus': 6},
+     [(0x2c1, 'L4'), (0x2c2, 'R4'), (0x2c3, 'L5'), (0x2c4, 'R5')]),
+    ({'vendor_id': 0x057e, 'product_id': 0x2008, 'bus': 6},
+     [(0x2c0, 'L4'), (0x2c1, 'R4'), (0x2c2, 'L5'), (0x2c3, 'R5')]),
+]
+
+
+@pytest.mark.parametrize('identity,code,name', [
+    (identity, code, name) for identity, layout in GRIP_LAYOUTS for code, name in layout
+])
+def test_device_grips_press_repeat_release(identity, code, name):
+    device = gamepad(identity=identity)
+    for value in (1, 2, 0):
+        device.feed(1, code, value)
+        states = device.feed(0, 0, 0)
+        assert {key for key, pressed in states.items() if pressed} == ({name} if value else set())
+
+
+@pytest.mark.parametrize('identity,layout', GRIP_LAYOUTS)
+def test_device_left_grip_combo_and_release(listener, identity, layout):
+    device = gamepad(identity=identity)
+    tracker = listener.ComboTracker(['L4', 'L5'])
+    codes = {name: code for code, name in layout}
+    for name in ('R4', 'R5'):
+        device.feed(1, codes[name], 1)
+    assert not tracker.update('pad', device.feed(0, 0, 0))
+    device.feed(1, codes['L4'], 1)
+    assert not tracker.update('pad', device.feed(0, 0, 0))
+    device.feed(1, codes['L5'], 1)
+    assert tracker.update('pad', device.feed(0, 0, 0))
+    device.feed(1, codes['L4'], 0)
+    assert not tracker.update('pad', device.feed(0, 0, 0))
+
+
+@pytest.mark.parametrize('identity,ignored_codes', [
+    ({}, range(0x2c0, 0x2c8)),
+    ({'vendor_id': 0x045e, 'product_id': 0x028e}, range(0x2c0, 0x2c8)),
+    ({'vendor_id': 0x054c, 'product_id': 0x0ce6}, range(0x2c0, 0x2c8)),
+    ({'vendor_id': 0x057e, 'product_id': 0x2008, 'bus': 5}, range(0x2c0, 0x2c8)),
+    ({'vendor_id': 0x0f0d, 'product_id': 0x0196}, [0x2c0, 0x2c5, 0x2c6]),
+    ({'vendor_id': 0x5335, 'product_id': 0x0001}, [0x2c4, 0x2c5]),
+    ({'vendor_id': 0x045e, 'product_id': 0x02e3}, range(0x2c0, 0x2c4)),
+])
+def test_unverified_codes_share_and_extra_controls_do_not_trigger_grips(identity, ignored_codes):
+    device = gamepad(identity=identity)
+    for code in ignored_codes:
+        device.feed(1, code, 1)
+    assert not any(device.feed(0, 0, 0).values())
+
+
+@pytest.mark.parametrize('identity,layout', GRIP_LAYOUTS)
+@pytest.mark.parametrize('exposes_grips', [False, True])
+def test_grip_capabilities_and_initial_state(monkeypatch, tmp_path, identity, layout, exposes_grips):
+    monkeypatch.setenv('DECKTATION_CONFIG_DIR', str(tmp_path))
+    def bitmap(codes, size):
+        data = bytearray(size)
+        for code in codes:
+            data[code // 8] |= 1 << (code % 8)
+        return data
+    def ioctl(fd, number, size):
+        if number == 0x02:
+            return struct.pack('4H', identity['bus'], identity['vendor_id'], identity['product_id'], 1)
+        if number == 0x21:
+            return bitmap([0x130, 0x131] + ([code for code, _ in layout] if exposes_grips else []), size)
+        if number == 0x23:
+            return bitmap([0, 1], size)
+        if number == 0x18:
+            return bitmap([layout[0][0]] if exposes_grips else [], size)
+        raise AssertionError(number)
+    monkeypatch.setattr('gamepad_evdev.os.open', lambda *args: 123)
+    monkeypatch.setattr('gamepad_evdev.os.close', lambda fd: None)
+    monkeypatch.setattr('gamepad_evdev.ioctl_read', ioctl)
+    device = EvdevGamepad('/dev/input/event42')
+    assert device.supported_buttons == ({'A', 'B', 'L4', 'R4', 'L5', 'R5'} if exposes_grips else {'A', 'B'})
+    assert {name for name, pressed in device.states().items() if pressed} == ({'L4'} if exposes_grips else set())
+    device.close()
+
+
+@pytest.mark.parametrize('identity,layout', GRIP_LAYOUTS)
+def test_configured_grips_override_device_defaults(monkeypatch, tmp_path, identity, layout):
+    import json
+    monkeypatch.setenv('DECKTATION_CONFIG_DIR', str(tmp_path))
+    device_id = '{bus:04x}:{vendor_id:04x}:{product_id:04x}'.format(**identity)
+    (tmp_path / 'controller_mappings.json').write_text(json.dumps({device_id: {hex(layout[0][0]): 'R4'}}))
+    device = gamepad(identity=identity)
+    device.key_buttons = configured_button_mapping(identity)
+    device.feed(1, layout[0][0], 1)
+    states = device.feed(0, 0, 0)
+    assert states['R4'] and not states.get('L4', False)
+    assert button_mapping(identity)[layout[0][0]] == 'L4'
+
+
 @pytest.mark.parametrize('low,high,below,pressed', [
     (0, 255, 127, 128), (0, 1023, 511, 512), (-32768, 32767, -1, 0),
 ])
