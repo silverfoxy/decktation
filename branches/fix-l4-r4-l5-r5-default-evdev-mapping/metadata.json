@@ -1,0 +1,8 @@
+{
+  "plugin": "Decktation",
+  "channel": "branch",
+  "ref": "fix/l4-r4-l5-r5-default-evdev-mapping",
+  "commit": "5e461616abebda41737e64c09a32dfd7a394176c",
+  "zip_url": "https://decktation.com/branches/fix-l4-r4-l5-r5-default-evdev-mapping/Decktation.zip",
+  "generated_at": "2026-10-13T00:21:20Z"
+}
