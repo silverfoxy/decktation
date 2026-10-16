@@ -2667,6 +2667,13 @@
     };
 
     const catalogs = { en: en$1, es, ru, pt, pl, ko, ja, de, fr, zh };
+    const INTERFACE_LANGUAGE_OPTIONS = [
+        { data: "en", label: "English" }, { data: "es", label: "Español" },
+        { data: "ru", label: "Русский" }, { data: "pt", label: "Português" },
+        { data: "pl", label: "Polski" }, { data: "ko", label: "한국어" },
+        { data: "ja", label: "日本語" }, { data: "de", label: "Deutsch" },
+        { data: "fr", label: "Français" }, { data: "zh", label: "中文（简体）" },
+    ];
     function isLocale(value) {
         return typeof value === "string" && Object.prototype.hasOwnProperty.call(catalogs, value);
     }
@@ -2680,6 +2687,15 @@
     }
     catch (_) { /* Storage may be unavailable in the Steam renderer. */ }
     function getInterfacePreference() { return preference; }
+    function setInterfacePreference(value) {
+        if (value !== "auto" && !isLocale(value))
+            return;
+        preference = value;
+        try {
+            window.localStorage.setItem(STORAGE_KEY, value);
+        }
+        catch (_) { }
+    }
     function resolveLocale(value, systemLanguage) {
         if (value !== "auto")
             return value;
@@ -2990,7 +3006,7 @@
         generic: "Generic",
     };
     const DecktationPanel = ({ logic }) => {
-        React.useState(getInterfacePreference);
+        const [interfaceLanguage, updateInterfaceLanguage] = React.useState(getInterfacePreference);
         const [, refreshLocale] = React.useState(0);
         React.useEffect(() => {
             let mounted = true;
@@ -3625,6 +3641,15 @@
                             React__default["default"].createElement("div", { ref: updateInfo?.update_available ? undefined : updateActionRowRef },
                                 React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: checkingUpdate || updatePhase !== "idle", onClick: () => { void checkUpdate(true); } }, t("Check again")))))),
                 page === "advanced" && React__default["default"].createElement(React__default["default"].Fragment, null,
+                    React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Interface") },
+                        React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: t("Interface language"), menuLabel: t("Interface language"), rgOptions: [{ data: "auto", label: t("Automatic (system)") }, ...INTERFACE_LANGUAGE_OPTIONS], selectedOption: interfaceLanguage, onChange: (option) => {
+                                    const next = option.data;
+                                    setInterfacePreference(next);
+                                    updateInterfaceLanguage(next);
+                                    refreshLocale(value => value + 1);
+                                    void syncOverlayLanguage();
+                                } }))),
                     React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Transcription model") },
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement("div", { ref: advancedModelRowRef },

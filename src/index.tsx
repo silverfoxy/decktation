@@ -873,7 +873,17 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 
                 </>}
 		{page === "advanced" && <>
-
+					<PanelSection title={t("Interface")}>
+						<PanelSectionRow><DropdownItem label={t("Interface language")} menuLabel={t("Interface language")}
+							rgOptions={[{data:"auto",label:t("Automatic (system)")}, ...INTERFACE_LANGUAGE_OPTIONS]}
+							selectedOption={interfaceLanguage} onChange={(option) => {
+								const next = option.data as InterfacePreference;
+								setInterfacePreference(next);
+								updateInterfaceLanguage(next);
+								refreshLocale(value => value + 1);
+								void syncOverlayLanguage();
+							}} /></PanelSectionRow>
+					</PanelSection>
 					<PanelSection title={t("Transcription model")}>
 						<PanelSectionRow><div ref={advancedModelRowRef}><ButtonItem layout="below" onClick={() => setPage("model")}>
 							{t("Model")}: {t(String(MODEL_SIZE_OPTIONS.find(option => option.data === modelSize)?.label || modelSize))}

@@ -24,6 +24,20 @@ test('catalog coverage and placeholders match',()=>{
  }
  }
 });
+test('Advanced settings exposes a persistent interface-language selector',()=>{
+ const source=fs.readFileSync(path.resolve(__dirname,'../src/index.tsx'),'utf8');
+ const start=source.indexOf('{page === "advanced" && <>');
+ const advanced=source.slice(start,source.indexOf('{page === "microphone-help" &&',start));
+ assert.ok(advanced.includes('<PanelSection title={t("Interface")}>' ));
+ assert.ok(advanced.includes('label={t("Interface language")}'));
+ assert.ok(advanced.includes('data:"auto",label:t("Automatic (system)")'));
+ assert.ok(advanced.includes('...INTERFACE_LANGUAGE_OPTIONS]'));
+ assert.ok(!advanced.includes('setTranscriptionOptionsRpc('));
+ assert.ok(advanced.includes('selectedOption={interfaceLanguage}'));
+ assert.ok(advanced.includes('setInterfacePreference(next)'));
+ assert.ok(advanced.includes('updateInterfaceLanguage(next)'));
+ assert.ok(advanced.includes('syncOverlayLanguage()'));
+});
 test('regional Spanish, English fallback and explicit preference',()=>{
  const {api,values}=load(null,'es-MX');
  assert.equal(api.t('Advanced settings'),'Ajustes avanzados');
