@@ -1,0 +1,8 @@
+{
+  "plugin": "Decktation",
+  "channel": "branch",
+  "ref": "fix/interface-language-selector",
+  "commit": "ca7fe924c53496eb0466d57894fdcf335ed4c035",
+  "zip_url": "https://decktation.com/branches/fix-interface-language-selector/Decktation.zip",
+  "generated_at": "2026-10-16T18:44:50Z"
+}
