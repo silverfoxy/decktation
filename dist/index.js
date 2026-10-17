@@ -45,6 +45,177 @@
         }
     }
 
+    const ACTIVE = new Set(["starting", "recording", "stopping"]);
+    const STATES = new Set(["idle", ...ACTIVE, "ready", "failed"]);
+    const idle = () => ({ success: true, session: null, revision: 0, state: "idle",
+        remaining_ms: 0, event_count: 0, device_count: 0, metadata: {}, report: null });
+    const object = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+    const LIVE_BUTTONS = new Set(["A", "B", "X", "Y", "L1", "R1", "L2", "R2", "L3", "R3",
+        "L4", "R4", "L5", "R5", "View", "Menu", "D-pad Up", "D-pad Down", "D-pad Left", "D-pad Right",
+        "Left Trackpad", "Right Trackpad"]);
+    const liveSource = (value) => typeof value === "string" && /^source_([1-9]|1[0-6])$/.test(value);
+    const liveCode = (value) => Number.isInteger(value) &&
+        ((value >= 0x100 && value <= 0x15f) || (value >= 0x220 && value <= 0x223) || (value >= 0x2c0 && value <= 0x2ff));
+    function liveInput(value) {
+        if (!object(value) || !Array.isArray(value.pressed) || value.pressed.length > 32 ||
+            !value.pressed.every((entry) => object(entry) && liveSource(entry.source) && LIVE_BUTTONS.has(entry.button)))
+            return null;
+        const event = value.last_event;
+        if (event !== null && (!object(event) || !Number.isFinite(event.at_ms) || event.at_ms < 0 || event.at_ms > 30000 ||
+            !liveSource(event.source) || !["key", "hid", "mapped", "binding"].includes(event.kind) || typeof event.pressed !== "boolean" ||
+            (event.button !== undefined && !LIVE_BUTTONS.has(event.button)) ||
+            (event.code !== undefined && !liveCode(event.code)) ||
+            (event.kind === "key" ? !liveCode(event.code) : !LIVE_BUTTONS.has(event.button))))
+            return null;
+        return { pressed: value.pressed.map(({ source, button }) => ({ source, button })),
+            last_event: event === null ? null : { at_ms: event.at_ms, source: event.source, kind: event.kind,
+                ...(event.button !== undefined ? { button: event.button } : {}),
+                ...(event.code !== undefined ? { code: event.code } : {}), pressed: event.pressed } };
+    }
+    class ControllerDebugClient {
+        constructor(rpc) {
+            this.rpc = rpc;
+            this.view = { snapshot: idle(), pending: null, error: "" };
+            this.listeners = new Set();
+            this.epoch = 0;
+            this.disposed = false;
+            this.cancelRequests = new Set();
+        }
+        subscribe(listener) {
+            this.listeners.add(listener);
+            listener(this.view);
+            return () => { this.listeners.delete(listener); };
+        }
+        emit(patch) {
+            this.view = { ...this.view, ...patch };
+            for (const listener of this.listeners)
+                listener(this.view);
+        }
+        clearPoll() {
+            if (this.pollTimer !== undefined)
+                clearTimeout(this.pollTimer);
+            this.pollTimer = undefined;
+        }
+        async request(invoke, timeout = 5000) {
+            let timer;
+            let cancel = () => { };
+            try {
+                return await new Promise((resolve, reject) => {
+                    cancel = () => reject(new Error("Controller debugger disconnected."));
+                    this.cancelRequests.add(cancel);
+                    timer = setTimeout(() => reject(new Error("Controller debugger did not respond. Try a new capture.")), timeout);
+                    Promise.resolve().then(invoke).then(resolve, reject);
+                });
+            }
+            finally {
+                if (timer !== undefined)
+                    clearTimeout(timer);
+                this.cancelRequests.delete(cancel);
+            }
+        }
+        accept(result, expectedSession) {
+            if (!result?.success)
+                throw new Error(result?.error || "Could not read controller report");
+            if (!STATES.has(result.state) || !Number.isInteger(result.revision) || result.revision < 0 ||
+                !Number.isInteger(result.remaining_ms) || result.remaining_ms < 0 || result.remaining_ms > 30000 ||
+                !Number.isInteger(result.event_count) || result.event_count < 0 ||
+                !Number.isInteger(result.device_count) || result.device_count < 0 ||
+                !object(result.metadata) ||
+                (result.state === "idle" ? result.session !== null : typeof result.session !== "string" || !result.session) ||
+                (expectedSession !== undefined && result.session !== expectedSession) ||
+                (result.state === "ready" && (!object(result.report) || !["complete", "stopped"].includes(result.report.phase)))) {
+                throw new Error("Invalid controller capture status. Reopen Diagnostics to reconnect.");
+            }
+            const current = this.view.snapshot;
+            if (current.session === result.session && result.revision < current.revision)
+                return;
+            // Even a newer stale transport response cannot resurrect a terminal session.
+            if (current.session === result.session && ["ready", "failed"].includes(current.state) && ACTIVE.has(result.state))
+                return;
+            this.emit({ snapshot: { ...result, report: result.state === "ready" ? result.report : null,
+                    live_input: result.state === "recording" ? liveInput(result.live_input) : null }, error: "" });
+        }
+        schedulePoll() {
+            this.clearPoll();
+            if (this.disposed || this.view.pending || this.view.error || !ACTIVE.has(this.view.snapshot.state))
+                return;
+            this.pollTimer = setTimeout(() => this.poll(), 250);
+        }
+        async poll() {
+            this.pollTimer = undefined;
+            const token = this.epoch;
+            const session = this.view.snapshot.session;
+            if (!session || this.disposed || this.view.pending)
+                return;
+            try {
+                const result = await this.request(() => this.rpc.get(session));
+                if (!this.disposed && token === this.epoch)
+                    this.accept(result, session);
+            }
+            catch (error) {
+                if (!this.disposed && token === this.epoch)
+                    this.emit({ error: error.message, snapshot: { ...this.view.snapshot, live_input: null } });
+            }
+            finally {
+                if (!this.disposed && token === this.epoch)
+                    this.schedulePoll();
+            }
+        }
+        async command(pending, invoke, expectedSession) {
+            const token = ++this.epoch;
+            this.clearPoll();
+            this.emit({ pending, error: "" });
+            try {
+                const result = await this.request(invoke, pending === "upload" ? 15000 : 5000);
+                if (!this.disposed && token === this.epoch)
+                    this.accept(result, expectedSession);
+            }
+            catch (error) {
+                if (!this.disposed && token === this.epoch)
+                    this.emit({ error: error.message, snapshot: { ...this.view.snapshot, live_input: null } });
+            }
+            finally {
+                if (!this.disposed && token === this.epoch) {
+                    this.emit({ pending: null });
+                    this.schedulePoll();
+                }
+            }
+        }
+        async connect() {
+            this.disposed = false;
+            await this.command("resume", () => this.rpc.resume());
+        }
+        async start() {
+            if (this.disposed || (this.view.pending && this.view.pending !== "resume") || ACTIVE.has(this.view.snapshot.state))
+                return;
+            await this.command("start", () => this.rpc.start());
+        }
+        async stop() {
+            const { snapshot, pending } = this.view;
+            if (this.disposed || pending || !snapshot.session || !["starting", "recording"].includes(snapshot.state))
+                return;
+            await this.command("stop", () => this.rpc.stop(snapshot.session), snapshot.session);
+        }
+        async refresh() {
+            if (!this.disposed && !this.view.pending)
+                await this.command("resume", () => this.rpc.resume());
+        }
+        async upload() {
+            const { snapshot, pending } = this.view;
+            if (this.disposed || pending || snapshot.state !== "ready" || !snapshot.session || snapshot.event_id)
+                return;
+            await this.command("upload", () => this.rpc.upload(snapshot.session, true), snapshot.session);
+        }
+        dispose() {
+            this.disposed = true;
+            ++this.epoch;
+            this.clearPoll();
+            for (const cancel of this.cancelRequests)
+                cancel();
+            this.listeners.clear();
+        }
+    }
+
     var version = "0.3.19";
 
     // Read the actual QAM surface. Document visibility alone does not establish
@@ -233,6 +404,13 @@
     var Send$9 = "Send";
     var Cancel$9 = "Cancel";
     var Updates$9 = "Updates";
+    var capturing$9 = "capturing";
+    var complete$9 = "complete";
+    var stopped$9 = "stopped";
+    var Source$9 = "Source";
+    var Pressed$9 = "Pressed";
+    var Released$9 = "Released";
+    var ms$a = "ms";
     var en$1 = {
       Back: Back$9,
       Enable: Enable$9,
@@ -426,7 +604,51 @@
       "Use at most five buttons.": "Use at most five buttons.",
       "Finish recording before changing the binding.": "Finish recording before changing the binding.",
       "Controller listener unavailable.": "Controller listener unavailable.",
-      "Binding session ended.": "Binding session ended."
+      "Binding session ended.": "Binding session ended.",
+      "Controller input debugger": "Controller input debugger",
+      "Start 30-second capture": "Start 30-second capture",
+      "Starting controller capture...": "Starting controller capture…",
+      "Finalizing controller report...": "Finalizing controller report…",
+      "Stop and review": "Stop and review",
+      "Report preview": "Report preview",
+      "Send this report to Sentry": "Send this report to Sentry",
+      "Recording controller input": "Recording controller input",
+      "seconds remaining": "seconds remaining",
+      "Waiting for controller listener...": "Waiting for controller listener…",
+      "Events captured": "Events captured",
+      "Controller interfaces": "Controller interfaces",
+      "Host metadata available": "Host metadata available",
+      "Unavailable values are omitted.": "Unavailable values are omitted.",
+      "Full sanitized report (scroll to inspect all fields)": "Full sanitized report (scroll to inspect all fields)",
+      "Could not read controller report": "Could not read controller report",
+      "Could not start controller debugger": "Could not start controller debugger",
+      "Could not stop capture": "Could not stop capture",
+      "Could not send controller report": "Could not send controller report",
+      capturing: capturing$9,
+      complete: complete$9,
+      stopped: stopped$9,
+      "Controller debugger did not respond. Try a new capture.": "Controller debugger did not respond. Try a new capture.",
+      "Reconnecting controller capture...": "Reconnecting controller capture...",
+      "Retry controller status": "Retry controller status",
+      "Controller report ready for review": "Controller report ready for review",
+      "Stop and review (touch or mouse)": "Stop and review (touch or mouse)",
+      "Invalid controller capture status. Reopen Diagnostics to reconnect.": "Invalid controller capture status. Reopen Diagnostics to reconnect.",
+      "Controller debugger disconnected.": "Controller debugger disconnected.",
+      Source: Source$9,
+      "Last transition": "Last transition",
+      Pressed: Pressed$9,
+      Released: Released$9,
+      "No buttons held": "No buttons held",
+      "No input yet": "No input yet",
+      "Live input unavailable": "Live input unavailable",
+      ms: ms$a,
+      "Record up to 30 seconds of controller input.": "Record up to 30 seconds of controller input.",
+      "Press each paddle, then A. Do not type.": "Press each paddle, then A. Do not type.",
+      "Controller navigation is paused. Steam/Quick Access may open menus. Ends after 30 seconds; touch or mouse can stop early.": "Controller navigation is paused. Steam/Quick Access may open menus. Ends after 30 seconds; touch or mouse can stop early.",
+      "Includes host/build details, controller interfaces and button transitions. Excludes typing, audio, transcripts, serials and input paths.": "Includes host/build details, controller interfaces and button transitions. Excludes typing, audio, transcripts, serials and input paths.",
+      "Nothing is sent automatically. Send shares only this report with Sentry.": "Nothing is sent automatically. Send shares only this report with Sentry.",
+      "Capture continues if you close this panel.": "Capture continues if you close this panel.",
+      "Report submitted. Event ID": "Report submitted. Event ID"
     };
 
     var af = "Afrikaans";
@@ -487,7 +709,7 @@
     var ml = "മലയാളം";
     var mn = "Монгол";
     var mr = "मराठी";
-    var ms = "Bahasa Melayu";
+    var ms$9 = "Bahasa Melayu";
     var mt = "Malti";
     var my = "မြန်မာ";
     var ne = "नेपाली";
@@ -588,7 +810,7 @@
       ml: ml,
       mn: mn,
       mr: mr,
-      ms: ms,
+      ms: ms$9,
       mt: mt,
       my: my,
       ne: ne,
@@ -662,6 +884,13 @@
     var Send$8 = "Enviar";
     var Cancel$8 = "Cancelar";
     var Updates$8 = "Actualizaciones";
+    var capturing$8 = "capturing";
+    var complete$8 = "complete";
+    var stopped$8 = "stopped";
+    var Source$8 = "Origen";
+    var Pressed$8 = "Pulsado";
+    var Released$8 = "Soltado";
+    var ms$8 = "ms";
     var es = {
       Back: Back$8,
       Enable: Enable$8,
@@ -855,7 +1084,51 @@
       "Use at most five buttons.": "Usa un máximo de cinco botones.",
       "Finish recording before changing the binding.": "Termina la grabación antes de cambiar la asignación.",
       "Controller listener unavailable.": "El detector de mandos no está disponible.",
-      "Binding session ended.": "La sesión de asignación ha terminado."
+      "Binding session ended.": "La sesión de asignación ha terminado.",
+      "Controller input debugger": "Controller input debugger",
+      "Start 30-second capture": "Start 30-second capture",
+      "Stop and review": "Stop and review",
+      "Report preview": "Report preview",
+      "Send this report to Sentry": "Send this report to Sentry",
+      "Recording controller input": "Grabando entradas del mando",
+      "seconds remaining": "segundos restantes",
+      "Waiting for controller listener...": "Esperando al lector del mando…",
+      "Events captured": "Eventos capturados",
+      "Controller interfaces": "Interfaces de mando",
+      "Host metadata available": "Metadatos del sistema disponibles",
+      "Unavailable values are omitted.": "Se omiten los valores no disponibles.",
+      "Full sanitized report (scroll to inspect all fields)": "Informe depurado completo (desplázate para ver todos los campos)",
+      "Could not read controller report": "Could not read controller report",
+      "Could not start controller debugger": "Could not start controller debugger",
+      "Could not stop capture": "Could not stop capture",
+      "Could not send controller report": "Could not send controller report",
+      capturing: capturing$8,
+      complete: complete$8,
+      stopped: stopped$8,
+      "Starting controller capture...": "Iniciando la captura del mando…",
+      "Finalizing controller report...": "Finalizando el informe del mando…",
+      "Controller debugger did not respond. Try a new capture.": "El depurador del mando no respondió. Intenta una nueva captura.",
+      "Reconnecting controller capture...": "Reconectando la captura del mando…",
+      "Retry controller status": "Reintentar estado del mando",
+      "Controller report ready for review": "Informe del mando listo para revisar",
+      "Stop and review (touch or mouse)": "Detener y revisar (táctil o ratón)",
+      "Invalid controller capture status. Reopen Diagnostics to reconnect.": "Estado de captura no válido. Abre Diagnóstico de nuevo para reconectar.",
+      "Controller debugger disconnected.": "Depurador del mando desconectado.",
+      Source: Source$8,
+      "Last transition": "Último cambio",
+      Pressed: Pressed$8,
+      Released: Released$8,
+      "No buttons held": "Ningún botón pulsado",
+      "No input yet": "Aún no hay entrada",
+      "Live input unavailable": "Entrada en directo no disponible",
+      ms: ms$8,
+      "Record up to 30 seconds of controller input.": "Graba hasta 30 segundos de entrada del mando.",
+      "Press each paddle, then A. Do not type.": "Pulsa cada palanca trasera y luego A. No escribas.",
+      "Controller navigation is paused. Steam/Quick Access may open menus. Ends after 30 seconds; touch or mouse can stop early.": "La navegación con el mando está en pausa. Steam/Acceso rápido puede abrir menús. Termina a los 30 segundos; usa la pantalla táctil o el ratón para detener antes.",
+      "Includes host/build details, controller interfaces and button transitions. Excludes typing, audio, transcripts, serials and input paths.": "Incluye datos del sistema y su versión, interfaces del mando y cambios de botones. Excluye escritura, audio, transcripciones, números de serie y rutas de entrada.",
+      "Nothing is sent automatically. Send shares only this report with Sentry.": "No se envía nada automáticamente. Enviar comparte solo este informe con Sentry.",
+      "Capture continues if you close this panel.": "La captura continúa si cierras este panel.",
+      "Report submitted. Event ID": "Informe enviado. ID del evento"
     };
 
     var Back$7 = "Назад";
@@ -888,6 +1161,13 @@
     var Send$7 = "Отправить";
     var Cancel$7 = "Отмена";
     var Updates$7 = "Обновления";
+    var capturing$7 = "capturing";
+    var complete$7 = "complete";
+    var stopped$7 = "stopped";
+    var Source$7 = "Источник";
+    var Pressed$7 = "Нажата";
+    var Released$7 = "Отпущена";
+    var ms$7 = "мс";
     var ru = {
       Back: Back$7,
       Enable: Enable$7,
@@ -927,7 +1207,7 @@
       "Binding supported": "Сочетание поддерживается",
       Yes: Yes$7,
       No: No$7,
-      "Held buttons": "Нажатые кнопки",
+      "Held buttons": "Зажатые кнопки",
       "Keyboard helper": "Служба клавиатуры",
       Backend: Backend$7,
       Ready: Ready$7,
@@ -1081,7 +1361,51 @@
       "Use at most five buttons.": "Используйте не более пяти кнопок.",
       "Finish recording before changing the binding.": "Завершите запись перед изменением сочетания.",
       "Controller listener unavailable.": "Служба ввода контроллера недоступна.",
-      "Binding session ended.": "Сеанс настройки сочетания завершён."
+      "Binding session ended.": "Сеанс настройки сочетания завершён.",
+      "Controller input debugger": "Controller input debugger",
+      "Start 30-second capture": "Start 30-second capture",
+      "Stop and review": "Stop and review",
+      "Report preview": "Report preview",
+      "Send this report to Sentry": "Send this report to Sentry",
+      "Recording controller input": "Запись ввода контроллера",
+      "seconds remaining": "секунд осталось",
+      "Waiting for controller listener...": "Ожидание прослушивателя контроллера…",
+      "Events captured": "Событий записано",
+      "Controller interfaces": "Интерфейсов контроллера",
+      "Host metadata available": "Доступно метаданных системы",
+      "Unavailable values are omitted.": "Недоступные значения не отображаются.",
+      "Full sanitized report (scroll to inspect all fields)": "Полный очищенный отчет (прокрутите, чтобы увидеть все поля)",
+      "Could not read controller report": "Could not read controller report",
+      "Could not start controller debugger": "Could not start controller debugger",
+      "Could not stop capture": "Could not stop capture",
+      "Could not send controller report": "Could not send controller report",
+      capturing: capturing$7,
+      complete: complete$7,
+      stopped: stopped$7,
+      "Starting controller capture...": "Запуск записи контроллера…",
+      "Finalizing controller report...": "Завершение отчёта контроллера…",
+      "Controller debugger did not respond. Try a new capture.": "Отладчик контроллера не ответил. Попробуйте начать новую запись.",
+      "Reconnecting controller capture...": "Подключение к записи контроллера…",
+      "Retry controller status": "Повторить запрос состояния контроллера",
+      "Controller report ready for review": "Отчёт контроллера готов к просмотру",
+      "Stop and review (touch or mouse)": "Остановить и проверить (касание или мышь)",
+      "Invalid controller capture status. Reopen Diagnostics to reconnect.": "Недопустимое состояние записи. Откройте диагностику снова для подключения.",
+      "Controller debugger disconnected.": "Отладчик контроллера отключён.",
+      Source: Source$7,
+      "Last transition": "Последнее изменение",
+      Pressed: Pressed$7,
+      Released: Released$7,
+      "No buttons held": "Нет зажатых кнопок",
+      "No input yet": "Ввода пока нет",
+      "Live input unavailable": "Данные ввода недоступны",
+      ms: ms$7,
+      "Record up to 30 seconds of controller input.": "Запись ввода контроллера длится до 30 секунд.",
+      "Press each paddle, then A. Do not type.": "Нажмите каждую заднюю кнопку, затем A. Не вводите текст.",
+      "Controller navigation is paused. Steam/Quick Access may open menus. Ends after 30 seconds; touch or mouse can stop early.": "Навигация контроллером приостановлена. Steam/Быстрый доступ могут открывать меню. Запись завершится через 30 секунд; для досрочной остановки используйте сенсорный экран или мышь.",
+      "Includes host/build details, controller interfaces and button transitions. Excludes typing, audio, transcripts, serials and input paths.": "Включает сведения о системе и сборке, интерфейсы контроллера и изменения кнопок. Не включает ввод текста, аудио, расшифровки, серийные номера и пути устройств ввода.",
+      "Nothing is sent automatically. Send shares only this report with Sentry.": "Ничего не отправляется автоматически. Кнопка отправки передаёт в Sentry только этот отчёт.",
+      "Capture continues if you close this panel.": "Запись продолжится, если закрыть эту панель.",
+      "Report submitted. Event ID": "Отчёт отправлен. ID события"
     };
 
     var Back$6 = "Voltar";
@@ -1114,6 +1438,13 @@
     var Send$6 = "Enviar";
     var Cancel$6 = "Cancelar";
     var Updates$6 = "Atualizações";
+    var capturing$6 = "capturing";
+    var complete$6 = "complete";
+    var stopped$6 = "stopped";
+    var Source$6 = "Origem";
+    var Pressed$6 = "Pressionado";
+    var Released$6 = "Solto";
+    var ms$6 = "ms";
     var pt = {
       Back: Back$6,
       Enable: Enable$6,
@@ -1307,7 +1638,51 @@
       "Use at most five buttons.": "Usa no máximo cinco botões.",
       "Finish recording before changing the binding.": "Termina a gravação antes de alterar o atalho.",
       "Controller listener unavailable.": "O serviço de deteção de comandos está indisponível.",
-      "Binding session ended.": "A sessão de configuração do atalho terminou."
+      "Binding session ended.": "A sessão de configuração do atalho terminou.",
+      "Controller input debugger": "Controller input debugger",
+      "Start 30-second capture": "Start 30-second capture",
+      "Stop and review": "Stop and review",
+      "Report preview": "Report preview",
+      "Send this report to Sentry": "Send this report to Sentry",
+      "Recording controller input": "A gravar entradas do comando",
+      "seconds remaining": "segundos restantes",
+      "Waiting for controller listener...": "À espera do detetor do comando…",
+      "Events captured": "Eventos capturados",
+      "Controller interfaces": "Interfaces do comando",
+      "Host metadata available": "Metadados do sistema disponíveis",
+      "Unavailable values are omitted.": "Os valores indisponíveis são omitidos.",
+      "Full sanitized report (scroll to inspect all fields)": "Relatório sanitizado completo (desloca para ver todos os campos)",
+      "Could not read controller report": "Could not read controller report",
+      "Could not start controller debugger": "Could not start controller debugger",
+      "Could not stop capture": "Could not stop capture",
+      "Could not send controller report": "Could not send controller report",
+      capturing: capturing$6,
+      complete: complete$6,
+      stopped: stopped$6,
+      "Starting controller capture...": "A iniciar a captura do comando…",
+      "Finalizing controller report...": "A finalizar o relatório do comando…",
+      "Controller debugger did not respond. Try a new capture.": "O depurador do comando não respondeu. Tenta uma nova captura.",
+      "Reconnecting controller capture...": "A voltar a ligar à captura do comando…",
+      "Retry controller status": "Tentar obter o estado do comando novamente",
+      "Controller report ready for review": "Relatório do comando pronto a rever",
+      "Stop and review (touch or mouse)": "Parar e rever (toque ou rato)",
+      "Invalid controller capture status. Reopen Diagnostics to reconnect.": "Estado de captura inválido. Abre Diagnóstico novamente para voltar a ligar.",
+      "Controller debugger disconnected.": "Depurador do comando desligado.",
+      Source: Source$6,
+      "Last transition": "Última alteração",
+      Pressed: Pressed$6,
+      Released: Released$6,
+      "No buttons held": "Nenhum botão pressionado",
+      "No input yet": "Ainda sem entrada",
+      "Live input unavailable": "Entrada em tempo real indisponível",
+      ms: ms$6,
+      "Record up to 30 seconds of controller input.": "Grave até 30 segundos de entrada do controle.",
+      "Press each paddle, then A. Do not type.": "Pressione cada botão traseiro e depois A. Não digite.",
+      "Controller navigation is paused. Steam/Quick Access may open menus. Ends after 30 seconds; touch or mouse can stop early.": "A navegação pelo controle está pausada. Steam/Acesso rápido podem abrir menus. Termina após 30 segundos; use o toque ou o mouse para parar antes.",
+      "Includes host/build details, controller interfaces and button transitions. Excludes typing, audio, transcripts, serials and input paths.": "Inclui detalhes do sistema e da compilação, interfaces do controle e alterações dos botões. Exclui digitação, áudio, transcrições, números de série e caminhos de entrada.",
+      "Nothing is sent automatically. Send shares only this report with Sentry.": "Nada é enviado automaticamente. Enviar compartilha apenas este relatório com o Sentry.",
+      "Capture continues if you close this panel.": "A captura continua se você fechar este painel.",
+      "Report submitted. Event ID": "Relatório enviado. ID do evento"
     };
 
     var Back$5 = "Wstecz";
@@ -1340,6 +1715,13 @@
     var Send$5 = "Wyślij";
     var Cancel$5 = "Anuluj";
     var Updates$5 = "Aktualizacje";
+    var capturing$5 = "capturing";
+    var complete$5 = "complete";
+    var stopped$5 = "stopped";
+    var Source$5 = "Źródło";
+    var Pressed$5 = "Wciśnięty";
+    var Released$5 = "Zwolniony";
+    var ms$5 = "ms";
     var pl = {
       Back: Back$5,
       Enable: Enable$5,
@@ -1379,7 +1761,7 @@
       "Binding supported": "Obsługiwana kombinacja",
       Yes: Yes$5,
       No: No$5,
-      "Held buttons": "Wciśnięte przyciski",
+      "Held buttons": "Przytrzymane przyciski",
       "Keyboard helper": "Usługa klawiatury",
       Backend: Backend$5,
       Ready: Ready$5,
@@ -1533,7 +1915,51 @@
       "Use at most five buttons.": "Użyj najwyżej pięciu przycisków.",
       "Finish recording before changing the binding.": "Zakończ nagrywanie przed zmianą skrótu.",
       "Controller listener unavailable.": "Usługa wykrywania kontrolerów jest niedostępna.",
-      "Binding session ended.": "Sesja przypisywania skrótu została zakończona."
+      "Binding session ended.": "Sesja przypisywania skrótu została zakończona.",
+      "Controller input debugger": "Controller input debugger",
+      "Start 30-second capture": "Start 30-second capture",
+      "Stop and review": "Stop and review",
+      "Report preview": "Report preview",
+      "Send this report to Sentry": "Send this report to Sentry",
+      "Recording controller input": "Nagrywanie wejścia kontrolera",
+      "seconds remaining": "sekund pozostało",
+      "Waiting for controller listener...": "Oczekiwanie na odbiornik kontrolera…",
+      "Events captured": "Przechwycone zdarzenia",
+      "Controller interfaces": "Interfejsy kontrolera",
+      "Host metadata available": "Dostępne metadane systemu",
+      "Unavailable values are omitted.": "Niedostępne wartości są pomijane.",
+      "Full sanitized report (scroll to inspect all fields)": "Pełny oczyszczony raport (przewiń, aby zobaczyć wszystkie pola)",
+      "Could not read controller report": "Could not read controller report",
+      "Could not start controller debugger": "Could not start controller debugger",
+      "Could not stop capture": "Could not stop capture",
+      "Could not send controller report": "Could not send controller report",
+      capturing: capturing$5,
+      complete: complete$5,
+      stopped: stopped$5,
+      "Starting controller capture...": "Rozpoczynanie przechwytywania kontrolera…",
+      "Finalizing controller report...": "Finalizowanie raportu kontrolera…",
+      "Controller debugger did not respond. Try a new capture.": "Debuger kontrolera nie odpowiedział. Spróbuj ponownie rozpocząć przechwytywanie.",
+      "Reconnecting controller capture...": "Ponowne łączenie z przechwytywaniem kontrolera…",
+      "Retry controller status": "Ponów odczyt stanu kontrolera",
+      "Controller report ready for review": "Raport kontrolera gotowy do sprawdzenia",
+      "Stop and review (touch or mouse)": "Zatrzymaj i sprawdź (dotyk lub mysz)",
+      "Invalid controller capture status. Reopen Diagnostics to reconnect.": "Nieprawidłowy stan przechwytywania. Otwórz Diagnostykę ponownie, aby się połączyć.",
+      "Controller debugger disconnected.": "Debuger kontrolera rozłączony.",
+      Source: Source$5,
+      "Last transition": "Ostatnia zmiana",
+      Pressed: Pressed$5,
+      Released: Released$5,
+      "No buttons held": "Żaden przycisk nie jest wciśnięty",
+      "No input yet": "Brak sygnału wejściowego",
+      "Live input unavailable": "Podgląd wejścia niedostępny",
+      ms: ms$5,
+      "Record up to 30 seconds of controller input.": "Rejestruj wejście kontrolera przez maksymalnie 30 sekund.",
+      "Press each paddle, then A. Do not type.": "Naciśnij każdy tylny przycisk, a następnie A. Nie wpisuj tekstu.",
+      "Controller navigation is paused. Steam/Quick Access may open menus. Ends after 30 seconds; touch or mouse can stop early.": "Nawigacja kontrolerem jest wstrzymana. Steam/Szybki dostęp mogą otwierać menu. Rejestracja kończy się po 30 sekundach; dotyk lub mysz pozwala zakończyć ją wcześniej.",
+      "Includes host/build details, controller interfaces and button transitions. Excludes typing, audio, transcripts, serials and input paths.": "Zawiera dane systemu i kompilacji, interfejsy kontrolera oraz zmiany przycisków. Nie zawiera wpisywanego tekstu, dźwięku, transkrypcji, numerów seryjnych ani ścieżek urządzeń wejściowych.",
+      "Nothing is sent automatically. Send shares only this report with Sentry.": "Nic nie jest wysyłane automatycznie. Przycisk wysyłania udostępnia w Sentry tylko ten raport.",
+      "Capture continues if you close this panel.": "Rejestracja trwa po zamknięciu tego panelu.",
+      "Report submitted. Event ID": "Raport wysłany. ID zdarzenia"
     };
 
     var Back$4 = "뒤로";
@@ -1566,6 +1992,13 @@
     var Send$4 = "전송";
     var Cancel$4 = "취소";
     var Updates$4 = "업데이트";
+    var capturing$4 = "capturing";
+    var complete$4 = "complete";
+    var stopped$4 = "stopped";
+    var Source$4 = "입력 소스";
+    var Pressed$4 = "누름";
+    var Released$4 = "뗌";
+    var ms$4 = "밀리초";
     var ko = {
       Back: Back$4,
       Enable: Enable$4,
@@ -1605,7 +2038,7 @@
       "Binding supported": "버튼 조합 지원",
       Yes: Yes$4,
       No: No$4,
-      "Held buttons": "누르고 있는 버튼",
+      "Held buttons": "누른 버튼",
       "Keyboard helper": "키보드 서비스",
       Backend: Backend$4,
       Ready: Ready$4,
@@ -1759,7 +2192,51 @@
       "Use at most five buttons.": "버튼은 최대 5개까지 사용할 수 있습니다.",
       "Finish recording before changing the binding.": "버튼 조합을 변경하기 전에 녹음을 마치세요.",
       "Controller listener unavailable.": "컨트롤러 입력 서비스를 사용할 수 없습니다.",
-      "Binding session ended.": "버튼 조합 설정 세션이 종료되었습니다."
+      "Binding session ended.": "버튼 조합 설정 세션이 종료되었습니다.",
+      "Controller input debugger": "Controller input debugger",
+      "Start 30-second capture": "Start 30-second capture",
+      "Stop and review": "Stop and review",
+      "Report preview": "Report preview",
+      "Send this report to Sentry": "Send this report to Sentry",
+      "Recording controller input": "컨트롤러 입력 기록 중",
+      "seconds remaining": "초 남음",
+      "Waiting for controller listener...": "컨트롤러 리스너 대기 중…",
+      "Events captured": "캡처된 이벤트",
+      "Controller interfaces": "컨트롤러 인터페이스",
+      "Host metadata available": "사용 가능한 호스트 메타데이터",
+      "Unavailable values are omitted.": "사용할 수 없는 값은 생략됩니다.",
+      "Full sanitized report (scroll to inspect all fields)": "전체 정리된 보고서 (스크롤하여 모든 항목 확인)",
+      "Could not read controller report": "Could not read controller report",
+      "Could not start controller debugger": "Could not start controller debugger",
+      "Could not stop capture": "Could not stop capture",
+      "Could not send controller report": "Could not send controller report",
+      capturing: capturing$4,
+      complete: complete$4,
+      stopped: stopped$4,
+      "Starting controller capture...": "컨트롤러 캡처를 시작하는 중…",
+      "Finalizing controller report...": "컨트롤러 보고서를 마무리하는 중…",
+      "Controller debugger did not respond. Try a new capture.": "컨트롤러 디버거가 응답하지 않습니다. 새 캡처를 시작해 보세요.",
+      "Reconnecting controller capture...": "컨트롤러 캡처에 다시 연결하는 중…",
+      "Retry controller status": "컨트롤러 상태 다시 확인",
+      "Controller report ready for review": "컨트롤러 보고서를 검토할 수 있습니다",
+      "Stop and review (touch or mouse)": "중지하고 검토 (터치 또는 마우스)",
+      "Invalid controller capture status. Reopen Diagnostics to reconnect.": "캡처 상태가 잘못되었습니다. 진단을 다시 열어 연결하세요.",
+      "Controller debugger disconnected.": "컨트롤러 디버거 연결이 끊어졌습니다.",
+      Source: Source$4,
+      "Last transition": "마지막 변경",
+      Pressed: Pressed$4,
+      Released: Released$4,
+      "No buttons held": "누른 버튼 없음",
+      "No input yet": "아직 입력 없음",
+      "Live input unavailable": "실시간 입력을 사용할 수 없음",
+      ms: ms$4,
+      "Record up to 30 seconds of controller input.": "컨트롤러 입력을 최대 30초간 기록합니다.",
+      "Press each paddle, then A. Do not type.": "각 후면 버튼을 누른 다음 A를 누르세요. 글자를 입력하지 마세요.",
+      "Controller navigation is paused. Steam/Quick Access may open menus. Ends after 30 seconds; touch or mouse can stop early.": "컨트롤러 탐색이 일시 중지됩니다. Steam/빠른 액세스 메뉴는 열릴 수 있습니다. 30초 후 종료되며 터치나 마우스로 일찍 멈출 수 있습니다.",
+      "Includes host/build details, controller interfaces and button transitions. Excludes typing, audio, transcripts, serials and input paths.": "시스템·빌드 정보, 컨트롤러 인터페이스와 버튼 상태 변경을 포함합니다. 타이핑, 오디오, 받아쓰기 내용, 일련번호와 입력 경로는 제외합니다.",
+      "Nothing is sent automatically. Send shares only this report with Sentry.": "자동으로 전송하지 않습니다. 전송을 누르면 이 보고서만 Sentry에 공유됩니다.",
+      "Capture continues if you close this panel.": "이 패널을 닫아도 기록은 계속됩니다.",
+      "Report submitted. Event ID": "보고서 제출됨. 이벤트 ID"
     };
 
     var Back$3 = "戻る";
@@ -1792,6 +2269,13 @@
     var Send$3 = "送信";
     var Cancel$3 = "キャンセル";
     var Updates$3 = "更新";
+    var capturing$3 = "capturing";
+    var complete$3 = "complete";
+    var stopped$3 = "stopped";
+    var Source$3 = "入力元";
+    var Pressed$3 = "押下";
+    var Released$3 = "解放";
+    var ms$3 = "ミリ秒";
     var ja = {
       Back: Back$3,
       Enable: Enable$3,
@@ -1831,7 +2315,7 @@
       "Binding supported": "ボタンの組み合わせに対応",
       Yes: Yes$3,
       No: No$3,
-      "Held buttons": "押しているボタン",
+      "Held buttons": "押されているボタン",
       "Keyboard helper": "キーボードサービス",
       Backend: Backend$3,
       Ready: Ready$3,
@@ -1985,7 +2469,51 @@
       "Use at most five buttons.": "ボタンは5個まで使用できます。",
       "Finish recording before changing the binding.": "割り当てを変更する前に録音を終了してください。",
       "Controller listener unavailable.": "コントローラー入力サービスを利用できません。",
-      "Binding session ended.": "割り当て設定のセッションが終了しました。"
+      "Binding session ended.": "割り当て設定のセッションが終了しました。",
+      "Controller input debugger": "Controller input debugger",
+      "Start 30-second capture": "Start 30-second capture",
+      "Stop and review": "Stop and review",
+      "Report preview": "Report preview",
+      "Send this report to Sentry": "Send this report to Sentry",
+      "Recording controller input": "コントローラー入力を記録中",
+      "seconds remaining": "秒残り",
+      "Waiting for controller listener...": "コントローラーリスナーを待機中…",
+      "Events captured": "記録したイベント",
+      "Controller interfaces": "コントローラーのインターフェース",
+      "Host metadata available": "取得できたホストメタデータ",
+      "Unavailable values are omitted.": "取得できない値は省略されます。",
+      "Full sanitized report (scroll to inspect all fields)": "サニタイズ済みレポート全文（スクロールして確認）",
+      "Could not read controller report": "Could not read controller report",
+      "Could not start controller debugger": "Could not start controller debugger",
+      "Could not stop capture": "Could not stop capture",
+      "Could not send controller report": "Could not send controller report",
+      capturing: capturing$3,
+      complete: complete$3,
+      stopped: stopped$3,
+      "Starting controller capture...": "コントローラーの記録を開始しています…",
+      "Finalizing controller report...": "コントローラーレポートを確定しています…",
+      "Controller debugger did not respond. Try a new capture.": "コントローラーデバッガーが応答しません。新しい記録を試してください。",
+      "Reconnecting controller capture...": "コントローラーの記録に再接続しています…",
+      "Retry controller status": "コントローラーの状態を再取得",
+      "Controller report ready for review": "コントローラーレポートを確認できます",
+      "Stop and review (touch or mouse)": "停止して確認（タッチまたはマウス）",
+      "Invalid controller capture status. Reopen Diagnostics to reconnect.": "記録の状態が無効です。「診断」を開き直して再接続してください。",
+      "Controller debugger disconnected.": "コントローラーデバッガーの接続が切れました。",
+      Source: Source$3,
+      "Last transition": "最後の変化",
+      Pressed: Pressed$3,
+      Released: Released$3,
+      "No buttons held": "押されているボタンなし",
+      "No input yet": "まだ入力がありません",
+      "Live input unavailable": "リアルタイム入力を利用できません",
+      ms: ms$3,
+      "Record up to 30 seconds of controller input.": "コントローラー入力を最大30秒間記録します。",
+      "Press each paddle, then A. Do not type.": "各背面ボタンを押してからAを押してください。文字は入力しないでください。",
+      "Controller navigation is paused. Steam/Quick Access may open menus. Ends after 30 seconds; touch or mouse can stop early.": "コントローラーでの操作は一時停止します。Steam/クイックアクセスのメニューは開く場合があります。30秒で終了し、タッチやマウスで早めに停止できます。",
+      "Includes host/build details, controller interfaces and button transitions. Excludes typing, audio, transcripts, serials and input paths.": "システム・ビルド情報、コントローラーのインターフェース、ボタンの状態変化を含みます。文字入力、音声、文字起こし、シリアル番号、入力パスは含みません。",
+      "Nothing is sent automatically. Send shares only this report with Sentry.": "自動では送信されません。送信ボタンで、このレポートだけをSentryに共有します。",
+      "Capture continues if you close this panel.": "このパネルを閉じても記録は続きます。",
+      "Report submitted. Event ID": "レポートを送信しました。イベントID"
     };
 
     var Back$2 = "Zurück";
@@ -2018,6 +2546,13 @@
     var Send$2 = "Senden";
     var Cancel$2 = "Abbrechen";
     var Updates$2 = "Updates";
+    var capturing$2 = "capturing";
+    var complete$2 = "complete";
+    var stopped$2 = "stopped";
+    var Source$2 = "Quelle";
+    var Pressed$2 = "Gedrückt";
+    var Released$2 = "Losgelassen";
+    var ms$2 = "ms";
     var de = {
       Back: Back$2,
       Enable: Enable$2,
@@ -2211,7 +2746,51 @@
       "Use at most five buttons.": "Verwende höchstens fünf Tasten.",
       "Finish recording before changing the binding.": "Beende die Aufnahme, bevor du die Belegung änderst.",
       "Controller listener unavailable.": "Controller-Erkennung nicht verfügbar.",
-      "Binding session ended.": "Die Belegungssitzung wurde beendet."
+      "Binding session ended.": "Die Belegungssitzung wurde beendet.",
+      "Controller input debugger": "Controller input debugger",
+      "Start 30-second capture": "Start 30-second capture",
+      "Stop and review": "Stop and review",
+      "Report preview": "Report preview",
+      "Send this report to Sentry": "Send this report to Sentry",
+      "Recording controller input": "Controller-Eingaben werden aufgezeichnet",
+      "seconds remaining": "Sekunden verbleibend",
+      "Waiting for controller listener...": "Warte auf den Controller-Listener…",
+      "Events captured": "Erfasste Ereignisse",
+      "Controller interfaces": "Controller-Schnittstellen",
+      "Host metadata available": "Verfügbare Host-Metadaten",
+      "Unavailable values are omitted.": "Nicht verfügbare Werte werden ausgelassen.",
+      "Full sanitized report (scroll to inspect all fields)": "Vollständiger bereinigter Bericht (scrollen, um alle Felder zu sehen)",
+      "Could not read controller report": "Could not read controller report",
+      "Could not start controller debugger": "Could not start controller debugger",
+      "Could not stop capture": "Could not stop capture",
+      "Could not send controller report": "Could not send controller report",
+      capturing: capturing$2,
+      complete: complete$2,
+      stopped: stopped$2,
+      "Starting controller capture...": "Controller-Aufzeichnung wird gestartet…",
+      "Finalizing controller report...": "Controller-Bericht wird fertiggestellt…",
+      "Controller debugger did not respond. Try a new capture.": "Der Controller-Debugger antwortet nicht. Starte eine neue Aufzeichnung.",
+      "Reconnecting controller capture...": "Controller-Aufzeichnung wird wieder verbunden…",
+      "Retry controller status": "Controller-Status erneut abrufen",
+      "Controller report ready for review": "Controller-Bericht ist zur Prüfung bereit",
+      "Stop and review (touch or mouse)": "Stoppen und prüfen (Touch oder Maus)",
+      "Invalid controller capture status. Reopen Diagnostics to reconnect.": "Ungültiger Aufzeichnungsstatus. Öffne Diagnose erneut, um die Verbindung wiederherzustellen.",
+      "Controller debugger disconnected.": "Controller-Debugger getrennt.",
+      Source: Source$2,
+      "Last transition": "Letzter Wechsel",
+      Pressed: Pressed$2,
+      Released: Released$2,
+      "No buttons held": "Keine Taste gedrückt",
+      "No input yet": "Noch keine Eingabe",
+      "Live input unavailable": "Live-Eingabe nicht verfügbar",
+      ms: ms$2,
+      "Record up to 30 seconds of controller input.": "Bis zu 30 Sekunden Controller-Eingaben aufzeichnen.",
+      "Press each paddle, then A. Do not type.": "Drücke jede Rücktaste und dann A. Keinen Text eingeben.",
+      "Controller navigation is paused. Steam/Quick Access may open menus. Ends after 30 seconds; touch or mouse can stop early.": "Controller-Navigation pausiert. Steam/Schnellzugriff können Menüs öffnen. Endet nach 30 Sekunden; per Touch oder Maus früher stoppen.",
+      "Includes host/build details, controller interfaces and button transitions. Excludes typing, audio, transcripts, serials and input paths.": "Enthält System-/Builddaten, Controller-Schnittstellen und Tastenwechsel. Ohne Texteingaben, Audio, Transkripte, Seriennummern und Eingabepfade.",
+      "Nothing is sent automatically. Send shares only this report with Sentry.": "Nichts wird automatisch gesendet. Senden teilt nur diesen Bericht mit Sentry.",
+      "Capture continues if you close this panel.": "Die Aufzeichnung läuft weiter, wenn du dieses Panel schließt.",
+      "Report submitted. Event ID": "Bericht übermittelt. Ereignis-ID"
     };
 
     var Back$1 = "Retour";
@@ -2244,6 +2823,13 @@
     var Send$1 = "Envoyer";
     var Cancel$1 = "Annuler";
     var Updates$1 = "Mises à jour";
+    var capturing$1 = "capturing";
+    var complete$1 = "complete";
+    var stopped$1 = "stopped";
+    var Source$1 = "Source";
+    var Pressed$1 = "Appuyé";
+    var Released$1 = "Relâché";
+    var ms$1 = "ms";
     var fr = {
       Back: Back$1,
       Enable: Enable$1,
@@ -2437,7 +3023,51 @@
       "Use at most five buttons.": "Utilisez cinq boutons au maximum.",
       "Finish recording before changing the binding.": "Terminez l’enregistrement avant de modifier le raccourci.",
       "Controller listener unavailable.": "Le service de détection des manettes est indisponible.",
-      "Binding session ended.": "La session de configuration du raccourci est terminée."
+      "Binding session ended.": "La session de configuration du raccourci est terminée.",
+      "Controller input debugger": "Controller input debugger",
+      "Start 30-second capture": "Start 30-second capture",
+      "Stop and review": "Stop and review",
+      "Report preview": "Report preview",
+      "Send this report to Sentry": "Send this report to Sentry",
+      "Recording controller input": "Enregistrement des entrées de la manette",
+      "seconds remaining": "secondes restantes",
+      "Waiting for controller listener...": "En attente du détecteur de manette…",
+      "Events captured": "Événements capturés",
+      "Controller interfaces": "Interfaces de manette",
+      "Host metadata available": "Métadonnées système disponibles",
+      "Unavailable values are omitted.": "Les valeurs indisponibles sont omises.",
+      "Full sanitized report (scroll to inspect all fields)": "Rapport assaini complet (faites défiler pour voir tous les champs)",
+      "Could not read controller report": "Could not read controller report",
+      "Could not start controller debugger": "Could not start controller debugger",
+      "Could not stop capture": "Could not stop capture",
+      "Could not send controller report": "Could not send controller report",
+      capturing: capturing$1,
+      complete: complete$1,
+      stopped: stopped$1,
+      "Starting controller capture...": "Démarrage de la capture de la manette…",
+      "Finalizing controller report...": "Finalisation du rapport de la manette…",
+      "Controller debugger did not respond. Try a new capture.": "Le débogueur de manette ne répond pas. Essayez une nouvelle capture.",
+      "Reconnecting controller capture...": "Reconnexion de la capture de manette…",
+      "Retry controller status": "Réessayer le statut de la manette",
+      "Controller report ready for review": "Rapport de manette prêt à consulter",
+      "Stop and review (touch or mouse)": "Arrêter et consulter (tactile ou souris)",
+      "Invalid controller capture status. Reopen Diagnostics to reconnect.": "Statut de capture invalide. Rouvrez Diagnostics pour vous reconnecter.",
+      "Controller debugger disconnected.": "Débogueur de manette déconnecté.",
+      Source: Source$1,
+      "Last transition": "Dernier changement",
+      Pressed: Pressed$1,
+      Released: Released$1,
+      "No buttons held": "Aucun bouton maintenu",
+      "No input yet": "Aucune entrée pour le moment",
+      "Live input unavailable": "Entrée en direct indisponible",
+      ms: ms$1,
+      "Record up to 30 seconds of controller input.": "Enregistrez jusqu’à 30 secondes d’entrées de la manette.",
+      "Press each paddle, then A. Do not type.": "Appuyez sur chaque palette, puis sur A. Ne saisissez pas de texte.",
+      "Controller navigation is paused. Steam/Quick Access may open menus. Ends after 30 seconds; touch or mouse can stop early.": "La navigation à la manette est suspendue. Steam/Accès rapide peuvent ouvrir des menus. Fin après 30 secondes ; utilisez le tactile ou la souris pour arrêter avant.",
+      "Includes host/build details, controller interfaces and button transitions. Excludes typing, audio, transcripts, serials and input paths.": "Inclut les détails du système et de sa version, les interfaces de la manette et les changements des boutons. Exclut la saisie, l’audio, les transcriptions, les numéros de série et les chemins d’entrée.",
+      "Nothing is sent automatically. Send shares only this report with Sentry.": "Rien n’est envoyé automatiquement. Envoyer partage uniquement ce rapport avec Sentry.",
+      "Capture continues if you close this panel.": "L’enregistrement continue si vous fermez ce panneau.",
+      "Report submitted. Event ID": "Rapport envoyé. ID de l’événement"
     };
 
     var Back = "返回";
@@ -2470,6 +3100,13 @@
     var Send = "发送";
     var Cancel = "取消";
     var Updates = "更新";
+    var capturing = "capturing";
+    var complete = "complete";
+    var stopped = "stopped";
+    var Source = "输入来源";
+    var Pressed = "按下";
+    var Released = "松开";
+    var ms = "毫秒";
     var zh = {
       Back: Back,
       Enable: Enable,
@@ -2509,7 +3146,7 @@
       "Binding supported": "支持此按键组合",
       Yes: Yes,
       No: No,
-      "Held buttons": "正在按下的按键",
+      "Held buttons": "按住的按钮",
       "Keyboard helper": "键盘服务",
       Backend: Backend,
       Ready: Ready,
@@ -2663,7 +3300,51 @@
       "Use at most five buttons.": "最多可使用五个按键。",
       "Finish recording before changing the binding.": "更改按键组合前请先结束录音。",
       "Controller listener unavailable.": "控制器输入服务不可用。",
-      "Binding session ended.": "按键组合设置会话已结束。"
+      "Binding session ended.": "按键组合设置会话已结束。",
+      "Controller input debugger": "Controller input debugger",
+      "Start 30-second capture": "Start 30-second capture",
+      "Stop and review": "Stop and review",
+      "Report preview": "Report preview",
+      "Send this report to Sentry": "Send this report to Sentry",
+      "Recording controller input": "正在记录控制器输入",
+      "seconds remaining": "秒剩余",
+      "Waiting for controller listener...": "正在等待控制器监听器…",
+      "Events captured": "已采集事件",
+      "Controller interfaces": "控制器接口",
+      "Host metadata available": "可用主机元数据",
+      "Unavailable values are omitted.": "不可用的值将被省略。",
+      "Full sanitized report (scroll to inspect all fields)": "完整的脱敏报告（滚动查看所有字段）",
+      "Could not read controller report": "Could not read controller report",
+      "Could not start controller debugger": "Could not start controller debugger",
+      "Could not stop capture": "Could not stop capture",
+      "Could not send controller report": "Could not send controller report",
+      capturing: capturing,
+      complete: complete,
+      stopped: stopped,
+      "Starting controller capture...": "正在启动控制器采集…",
+      "Finalizing controller report...": "正在完成控制器报告…",
+      "Controller debugger did not respond. Try a new capture.": "控制器调试器未响应。请重新开始采集。",
+      "Reconnecting controller capture...": "正在重新连接控制器采集…",
+      "Retry controller status": "重试获取控制器状态",
+      "Controller report ready for review": "控制器报告可供查看",
+      "Stop and review (touch or mouse)": "停止并查看（触摸或鼠标）",
+      "Invalid controller capture status. Reopen Diagnostics to reconnect.": "控制器采集状态无效。请重新打开“诊断”以连接。",
+      "Controller debugger disconnected.": "控制器调试器已断开连接。",
+      Source: Source,
+      "Last transition": "上次变化",
+      Pressed: Pressed,
+      Released: Released,
+      "No buttons held": "没有按住的按钮",
+      "No input yet": "尚无输入",
+      "Live input unavailable": "实时输入不可用",
+      ms: ms,
+      "Record up to 30 seconds of controller input.": "记录最多30秒的控制器输入。",
+      "Press each paddle, then A. Do not type.": "依次按下各个背键，再按A。请勿输入文字。",
+      "Controller navigation is paused. Steam/Quick Access may open menus. Ends after 30 seconds; touch or mouse can stop early.": "控制器导航已暂停。Steam/快捷访问仍可能打开菜单。30秒后自动结束；可用触屏或鼠标提前停止。",
+      "Includes host/build details, controller interfaces and button transitions. Excludes typing, audio, transcripts, serials and input paths.": "包含系统和构建信息、控制器接口及按钮状态变化。不包含键盘输入、音频、转录、序列号或输入路径。",
+      "Nothing is sent automatically. Send shares only this report with Sentry.": "不会自动发送。点击发送仅将此报告分享给Sentry。",
+      "Capture continues if you close this panel.": "关闭此面板后仍会继续记录。",
+      "Report submitted. Event ID": "报告已提交。事件ID"
     };
 
     const catalogs = { en: en$1, es, ru, pt, pl, ko, ja, de, fr, zh };
@@ -2752,6 +3433,11 @@
     const startBindingCapture = callable("start_binding_capture");
     const getBindingCapture = callable("get_binding_capture");
     const cancelBindingCapture = callable("cancel_binding_capture");
+    const startControllerDebug = callable("start_controller_debug");
+    const getControllerDebug = callable("get_controller_debug");
+    const stopControllerDebug = callable("stop_controller_debug");
+    const uploadControllerDebug = callable("upload_controller_debug");
+    const resumeControllerDebug = callable("resume_controller_debug");
     const getButtonConfig = callable("get_button_config");
     const getPresets = callable("get_presets");
     const setEnabledRpc = callable("set_enabled");
@@ -3084,6 +3770,44 @@
         const [manualSend, setManualSend] = React.useState(false);
         const [rememberLastChannel, setRememberLastChannel] = React.useState(false);
         const [shareDiagnostics, setShareDiagnostics] = React.useState(false);
+        const [controllerClient] = React.useState(() => new ControllerDebugClient({
+            start: startControllerDebug, get: getControllerDebug, stop: stopControllerDebug,
+            resume: resumeControllerDebug, upload: uploadControllerDebug,
+        }));
+        const [controllerDebug, setControllerDebug] = React.useState(controllerClient.view);
+        React.useEffect(() => {
+            const unsubscribe = controllerClient.subscribe(setControllerDebug);
+            void controllerClient.connect();
+            return () => { unsubscribe(); controllerClient.dispose(); };
+        }, [controllerClient]);
+        const controllerSnapshot = controllerDebug.snapshot;
+        const controllerReport = controllerSnapshot.report;
+        const controllerDebugError = controllerDebug.error || controllerSnapshot.error || "";
+        const controllerSeconds = Math.ceil(controllerSnapshot.remaining_ms / 1000);
+        const debugCaptureFocusRef = React.useRef(null);
+        const debugCaptureActive = !controllerDebug.error && (controllerDebug.pending === "start" ||
+            ["starting", "recording", "stopping"].includes(controllerSnapshot.state));
+        React.useEffect(() => {
+            if (controllerSnapshot.state === "ready")
+                setPage("diagnostics");
+        }, [controllerSnapshot.state]);
+        React.useEffect(() => {
+            if (!debugCaptureActive)
+                return;
+            const frame = requestAnimationFrame(() => debugCaptureFocusRef.current?.focus());
+            return () => cancelAnimationFrame(frame);
+        }, [debugCaptureActive]);
+        // The primary control stays mounted and focusable: repeat Start is a no-op,
+        // never a Stop caused by Decky moving focus after an activation.
+        const controllerButtonLabel = controllerDebug.pending === "start" || controllerSnapshot.state === "starting"
+            ? t("Starting controller capture...")
+            : controllerDebug.pending === "stop" || controllerSnapshot.state === "stopping"
+                ? t("Finalizing controller report...")
+                : controllerDebug.pending === "resume" ? t("Reconnecting controller capture...")
+                    : controllerDebug.error ? t("Retry controller status")
+                        : controllerSnapshot.state === "recording"
+                            ? `${t("Recording controller input")} · ${controllerSeconds} ${t("seconds remaining")}`
+                            : t("Start 30-second capture");
         const [modelSize, setModelSize] = React.useState("base");
         const [transcriptionLanguage, setTranscriptionLanguage] = React.useState("auto");
         const [spokenPunctuation, setSpokenPunctuation] = React.useState(false);
@@ -3443,6 +4167,62 @@
                                         : !controllerReady ? t("Controller unavailable")
                                             : t("Ready");
         const statusProblem = !!(statusError || rpcError || (serviceReady && !inputReady) || (enabled && serviceReady && !controllerReady));
+        if (debugCaptureActive) {
+            const swallow = (event) => { event.preventDefault(); event.stopPropagation(); };
+            const stopping = controllerDebug.pending === "stop" || controllerSnapshot.state === "stopping";
+            const live = controllerSnapshot.live_input;
+            const last = live?.last_event;
+            return React__default["default"].createElement(deckyFrontendLib.Focusable, { ref: debugCaptureFocusRef, tabIndex: 0, onButtonDown: swallow, onButtonUp: swallow, onOKButton: swallow, onCancelButton: swallow, onGamepadDirection: swallow, onActivate: swallow, onCancel: swallow },
+                React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Controller input debugger") },
+                    React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                        React__default["default"].createElement("div", { role: "status", "aria-live": "polite" },
+                            React__default["default"].createElement("strong", null, stopping ? t("Finalizing controller report...")
+                                : controllerSnapshot.state === "recording" ? t("Recording controller input")
+                                    : t("Starting controller capture...")),
+                            controllerSnapshot.state === "recording" && React__default["default"].createElement("div", null,
+                                controllerSeconds,
+                                " ",
+                                t("seconds remaining")),
+                            React__default["default"].createElement("div", null,
+                                t("Events captured"),
+                                ": ",
+                                controllerSnapshot.event_count,
+                                " \u00B7 ",
+                                t("Controller interfaces"),
+                                ": ",
+                                controllerSnapshot.device_count))),
+                    controllerSnapshot.state === "recording" && !stopping && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                        React__default["default"].createElement("div", { role: "status", "aria-live": "polite", style: { overflowWrap: "anywhere" } }, live ? React__default["default"].createElement(React__default["default"].Fragment, null,
+                            React__default["default"].createElement("strong", null, t("Held buttons")),
+                            live.pressed.length ? live.pressed.map((entry, index) => React__default["default"].createElement("div", { key: `${entry.source}-${entry.button}-${index}` },
+                                entry.button,
+                                " \u00B7 ",
+                                t("Source"),
+                                ": ",
+                                entry.source))
+                                : React__default["default"].createElement("div", null, t("No buttons held")),
+                            last ? React__default["default"].createElement("div", null,
+                                t("Last transition"),
+                                ": ",
+                                last.button || last.code,
+                                " \u00B7 ",
+                                t(last.pressed ? "Pressed" : "Released"),
+                                " \u00B7 ",
+                                t("Source"),
+                                ": ",
+                                last.source,
+                                " \u00B7 ",
+                                last.at_ms,
+                                " ",
+                                t("ms"))
+                                : React__default["default"].createElement("div", null, t("No input yet"))) : t("Live input unavailable"))),
+                    React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                        React__default["default"].createElement("div", null, t("Press each paddle, then A. Do not type."))),
+                    React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                        React__default["default"].createElement("div", null, t("Controller navigation is paused. Steam/Quick Access may open menus. Ends after 30 seconds; touch or mouse can stop early."))),
+                    React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                        React__default["default"].createElement("button", { tabIndex: -1, disabled: !!controllerDebug.pending || stopping || !controllerSnapshot.session, onClick: () => controllerClient.stop(), style: { padding: "10px 20px", color: "white", background: "#3b4252", border: 0, borderRadius: "4px" } }, t("Stop and review (touch or mouse)")))));
+        }
         if (capture) {
             const swallow = (event) => { event.preventDefault(); event.stopPropagation(); };
             return React__default["default"].createElement(deckyFrontendLib.Focusable, { ref: captureFocusRef, tabIndex: 0, onButtonDown: swallow, onButtonUp: swallow, onOKButton: swallow, onCancelButton: swallow, onGamepadDirection: swallow, onActivate: swallow, onCancel: swallow },
@@ -3800,6 +4580,61 @@
                                 t(reviewBlockReason || "Ready"))),
                         (statusError || rpcError) && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement("div", { role: "alert" }, statusError || rpcError))),
+                    React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Controller input debugger") },
+                        React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement("div", null, t("Record up to 30 seconds of controller input."))),
+                        React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement("div", null, t("Press each paddle, then A. Do not type."))),
+                        React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement("div", { role: "status", "aria-live": "polite" },
+                                controllerSnapshot.state === "starting" && React__default["default"].createElement("div", null, t("Waiting for controller listener...")),
+                                controllerSnapshot.state === "recording" && React__default["default"].createElement("div", null,
+                                    t("Recording controller input"),
+                                    " \u00B7 ",
+                                    controllerSeconds,
+                                    " ",
+                                    t("seconds remaining")),
+                                controllerSnapshot.state === "stopping" && React__default["default"].createElement("div", null, t("Finalizing controller report...")),
+                                controllerSnapshot.state === "ready" && React__default["default"].createElement("div", null, t("Controller report ready for review")),
+                                React__default["default"].createElement("div", null,
+                                    t("Events captured"),
+                                    ": ",
+                                    controllerSnapshot.event_count,
+                                    " \u00B7 ",
+                                    t("Controller interfaces"),
+                                    ": ",
+                                    controllerSnapshot.device_count),
+                                controllerSnapshot.session && React__default["default"].createElement("div", null, t("Capture continues if you close this panel.")))),
+                        React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement(deckyFrontendLib.ButtonItem, { key: "controller-debug-start", layout: "below", onClick: () => controllerDebug.error ? controllerClient.refresh() : controllerClient.start() }, controllerButtonLabel)),
+                        React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement("div", { style: { fontSize: "12px" } }, t("Includes host/build details, controller interfaces and button transitions. Excludes typing, audio, transcripts, serials and input paths."))),
+                        React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement("div", null, t("Nothing is sent automatically. Send shares only this report with Sentry."))),
+                        controllerSnapshot.session && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement("div", null,
+                                React__default["default"].createElement("div", null,
+                                    t("Host metadata available"),
+                                    ": ",
+                                    Object.keys(controllerSnapshot.metadata).length,
+                                    "/16. ",
+                                    t("Unavailable values are omitted.")))),
+                        controllerReport && controllerSnapshot.state === "ready" && React__default["default"].createElement(React__default["default"].Fragment, null,
+                            !controllerSnapshot.event_id && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                                React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: !!controllerDebug.pending, onClick: () => controllerClient.upload() }, t("Send this report to Sentry"))),
+                            controllerDebug.pending === "upload" && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                                React__default["default"].createElement("div", { role: "status" }, t("Sending"))),
+                            controllerSnapshot.event_id && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                                React__default["default"].createElement("div", { role: "status" },
+                                    t("Report submitted. Event ID"),
+                                    ": ",
+                                    controllerSnapshot.event_id)),
+                            React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                                React__default["default"].createElement("div", null,
+                                    React__default["default"].createElement("strong", null, t("Full sanitized report (scroll to inspect all fields)")),
+                                    React__default["default"].createElement("pre", { style: { whiteSpace: "pre-wrap", overflowWrap: "anywhere", maxHeight: "480px", overflowY: "auto", fontSize: "11px" } }, JSON.stringify(controllerReport, null, 2))))),
+                        controllerDebugError && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement("div", { role: "alert" }, t(controllerDebugError)))),
                     React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Diagnostics sharing") },
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: t("Share"), description: t("Sends scrubbed errors, usage counts, and performance metrics to Sentry, including inference backend and coarse device/OS details. Audio and transcripts stay local."), checked: shareDiagnostics, onChange: async (next) => {
