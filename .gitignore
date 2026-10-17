@@ -45,3 +45,10 @@ bin/  # ydotool binaries built by build_ydotool.sh
 # User config
 .setup_status
 button_config.json
+
+# Integration and on-device test evidence (not plugin payload)
+playwright-report/
+test-results/
+.integration-artifacts/
+.device-artifacts/
+device-evidence/
