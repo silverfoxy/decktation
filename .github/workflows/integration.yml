@@ -1,0 +1,105 @@
+name: Integration test environment
+
+on:
+  push:
+    branches-ignore: [gh-pages]
+    paths:
+      - 'src/**'
+      - 'backend/**'
+      - 'main.py'
+      - 'tests/**'
+      - 'scripts/deck/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'requirements*.txt'
+      - '.github/workflows/integration.yml'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'backend/**'
+      - 'main.py'
+      - 'tests/**'
+      - 'scripts/deck/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'requirements*.txt'
+      - '.github/workflows/integration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integration-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-backend:
+    name: Chromium and real Python RPC integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '9.15.9'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+      - name: Install Python test dependencies
+        run: |
+          python -m pip install -r requirements-test.txt -r backend/src/requirements.txt
+          if [ -f requirements-integration.txt ]; then
+            python -m pip install -r requirements-integration.txt
+          fi
+          if [ -f requirements-device.txt ]; then
+            python -m pip install -r requirements-device.txt
+          fi
+      - name: Install frontend test dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run existing protocol and component regressions
+        run: |
+          python -m pytest tests/ -q
+          node --test tests/frontend-*.test.cjs
+      - name: Exercise the real panel and backend in Chromium
+        run: npm run test:integration
+      - name: Upload integration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-evidence-${{ github.sha }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  device-tooling:
+    name: Device runner safety and transport fixtures (not hardware)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install test dependencies
+        run: |
+          python -m pip install -r requirements-test.txt
+          if [ -f requirements-device.txt ]; then
+            python -m pip install -r requirements-device.txt
+          fi
+      - name: Verify device runner locally without a Steam device
+        run: python -m pytest tests/test_deck_*.py -q
