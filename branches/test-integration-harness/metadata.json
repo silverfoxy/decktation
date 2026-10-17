@@ -1,0 +1,8 @@
+{
+  "plugin": "Decktation",
+  "channel": "branch",
+  "ref": "test/integration-harness",
+  "commit": "1ff9bcd5730bd896b7b1c93b8e26b1c8e9dbefed",
+  "zip_url": "https://decktation.com/branches/test-integration-harness/Decktation.zip",
+  "generated_at": "2026-10-17T22:52:47Z"
+}
