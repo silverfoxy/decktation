@@ -6,6 +6,7 @@ import re
 import socket
 
 import sentry_sdk
+from controller_debug_report import sanitize_report
 
 
 SENTRY_DSN = (
@@ -248,6 +249,29 @@ def set_enabled(enabled, version):
 
 def is_enabled():
     return _enabled
+
+
+def upload_controller_report(report, version):
+    """One explicit event on a separate client; never change ambient consent."""
+    payload = json.dumps(sanitize_report(report), separators=(',', ':')).encode('utf-8')
+    with sentry_sdk.Client(
+        dsn=SENTRY_DSN, release=f'decktation@{version}',
+        default_integrations=False, send_default_pii=False, enable_logs=False,
+        traces_sample_rate=0, auto_session_tracking=False,
+        send_client_reports=False, include_local_variables=False,
+        before_send=_before_send,
+    ) as client:
+        scope = sentry_sdk.Scope()
+        scope.add_attachment(bytes=payload, filename='controller-input-report.json',
+                             content_type='application/json')
+        event_id = client.capture_event({'level': 'info',
+            'message': 'User-submitted controller input report'}, scope=scope)
+        if not event_id:
+            raise RuntimeError('Controller report was not accepted by Sentry SDK.')
+        # flush returns None in the pinned SDK; an event ID confirms queuing,
+        # not remote receipt. Do not claim network delivery from this API.
+        client.flush(timeout=5)
+        return event_id
 
 
 def count_metric(name, value=1, **attributes):

@@ -18,6 +18,7 @@ import {
 } from "decky-frontend-lib";
 
 import { requestPluginUpdate } from "./pluginUpdate";
+import { ControllerDebugClient } from "./controllerDebug";
 import { version as pluginVersion } from "../package.json";
 
 import { quickAccessVisibility } from "./quickAccessVisibility";
@@ -46,6 +47,11 @@ const getStatus = callable<[], RpcResponse>("get_status");
 const startBindingCapture = callable<[], RpcResponse>("start_binding_capture");
 const getBindingCapture = callable<[session: string], RpcResponse>("get_binding_capture");
 const cancelBindingCapture = callable<[session: string], RpcResponse>("cancel_binding_capture");
+const startControllerDebug = callable<[], RpcResponse>("start_controller_debug");
+const getControllerDebug = callable<[session: string], RpcResponse>("get_controller_debug");
+const stopControllerDebug = callable<[session: string], RpcResponse>("stop_controller_debug");
+const uploadControllerDebug = callable<[session: string, consent: boolean], RpcResponse>("upload_controller_debug");
+const resumeControllerDebug = callable<[], RpcResponse>("resume_controller_debug");
 const getButtonConfig = callable<[], RpcResponse>("get_button_config");
 const getPresets = callable<[], RpcResponse>("get_presets");
 const setEnabledRpc = callable<[enabled: boolean], RpcResponse>("set_enabled");
@@ -386,6 +392,42 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [manualSend, setManualSend] = useState<boolean>(false);
 	const [rememberLastChannel, setRememberLastChannel] = useState<boolean>(false);
 	const [shareDiagnostics, setShareDiagnostics] = useState<boolean>(false);
+	const [controllerClient] = useState(() => new ControllerDebugClient({
+        start: startControllerDebug, get: getControllerDebug, stop: stopControllerDebug,
+        resume: resumeControllerDebug, upload: uploadControllerDebug,
+    }));
+    const [controllerDebug, setControllerDebug] = useState(controllerClient.view);
+    useEffect(() => {
+        const unsubscribe = controllerClient.subscribe(setControllerDebug);
+        void controllerClient.connect();
+        return () => { unsubscribe(); controllerClient.dispose(); };
+    }, [controllerClient]);
+    const controllerSnapshot = controllerDebug.snapshot;
+    const controllerReport = controllerSnapshot.report;
+    const controllerDebugError = controllerDebug.error || controllerSnapshot.error || "";
+    const controllerSeconds = Math.ceil(controllerSnapshot.remaining_ms / 1000);
+    const debugCaptureFocusRef = useRef<HTMLDivElement>(null);
+    const debugCaptureActive = !controllerDebug.error && (controllerDebug.pending === "start" ||
+        ["starting", "recording", "stopping"].includes(controllerSnapshot.state));
+    useEffect(() => {
+        if (controllerSnapshot.state === "ready") setPage("diagnostics");
+    }, [controllerSnapshot.state]);
+    useEffect(() => {
+        if (!debugCaptureActive) return;
+        const frame = requestAnimationFrame(() => debugCaptureFocusRef.current?.focus());
+        return () => cancelAnimationFrame(frame);
+    }, [debugCaptureActive]);
+    // The primary control stays mounted and focusable: repeat Start is a no-op,
+    // never a Stop caused by Decky moving focus after an activation.
+    const controllerButtonLabel = controllerDebug.pending === "start" || controllerSnapshot.state === "starting"
+        ? t("Starting controller capture...")
+        : controllerDebug.pending === "stop" || controllerSnapshot.state === "stopping"
+        ? t("Finalizing controller report...")
+        : controllerDebug.pending === "resume" ? t("Reconnecting controller capture...")
+        : controllerDebug.error ? t("Retry controller status")
+        : controllerSnapshot.state === "recording"
+        ? `${t("Recording controller input")} · ${controllerSeconds} ${t("seconds remaining")}`
+        : t("Start 30-second capture");
 	const [modelSize, setModelSize] = useState<string>("base");
 	const [transcriptionLanguage, setTranscriptionLanguage] = useState<string>("auto");
 	const [spokenPunctuation, setSpokenPunctuation] = useState<boolean>(false);
@@ -711,6 +753,43 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 		: t("Ready");
 	const statusProblem = !!(statusError || rpcError || (serviceReady && !inputReady) || (enabled && serviceReady && !controllerReady));
 
+    if (debugCaptureActive) {
+        const swallow = (event: CustomEvent) => { event.preventDefault(); event.stopPropagation(); };
+        const stopping = controllerDebug.pending === "stop" || controllerSnapshot.state === "stopping";
+        const live = controllerSnapshot.live_input;
+        const last = live?.last_event;
+        return <Focusable ref={debugCaptureFocusRef} tabIndex={0}
+            onButtonDown={swallow} onButtonUp={swallow} onOKButton={swallow} onCancelButton={swallow}
+            onGamepadDirection={swallow} onActivate={swallow} onCancel={swallow}>
+            <PanelSection title={t("Controller input debugger")}>
+                <PanelSectionRow><div role="status" aria-live="polite">
+                    <strong>{stopping ? t("Finalizing controller report...")
+                        : controllerSnapshot.state === "recording" ? t("Recording controller input")
+                        : t("Starting controller capture...")}</strong>
+                    {controllerSnapshot.state === "recording" && <div>{controllerSeconds} {t("seconds remaining")}</div>}
+                    <div>{t("Events captured")}: {controllerSnapshot.event_count} · {t("Controller interfaces")}: {controllerSnapshot.device_count}</div>
+                </div></PanelSectionRow>
+                {controllerSnapshot.state === "recording" && !stopping && <PanelSectionRow><div role="status" aria-live="polite" style={{overflowWrap: "anywhere"}}>
+                    {live ? <>
+                        <strong>{t("Held buttons")}</strong>
+                        {live.pressed.length ? live.pressed.map((entry, index) =>
+                            <div key={`${entry.source}-${entry.button}-${index}`}>{entry.button} · {t("Source")}: {entry.source}</div>)
+                            : <div>{t("No buttons held")}</div>}
+                        {last ? <div>{t("Last transition")}: {last.button || last.code} · {t(last.pressed ? "Pressed" : "Released")} · {t("Source")}: {last.source} · {last.at_ms} {t("ms")}</div>
+                            : <div>{t("No input yet")}</div>}
+                    </> : t("Live input unavailable")}
+                </div></PanelSectionRow>}
+                <PanelSectionRow><div>{t("Press each paddle, then A. Do not type.")}</div></PanelSectionRow>
+                <PanelSectionRow><div>{t("Controller navigation is paused. Steam/Quick Access may open menus. Ends after 30 seconds; touch or mouse can stop early.")}</div></PanelSectionRow>
+                <PanelSectionRow><button tabIndex={-1} disabled={!!controllerDebug.pending || stopping || !controllerSnapshot.session}
+                    onClick={() => controllerClient.stop()}
+                    style={{padding: "10px 20px", color: "white", background: "#3b4252", border: 0, borderRadius: "4px"}}>
+                    {t("Stop and review (touch or mouse)")}
+                </button></PanelSectionRow>
+            </PanelSection>
+        </Focusable>;
+    }
+
     if (capture) {
         const swallow = (event: CustomEvent) => { event.preventDefault(); event.stopPropagation(); };
         return <Focusable ref={captureFocusRef} tabIndex={0} onButtonDown={swallow} onButtonUp={swallow}
@@ -967,6 +1046,36 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 						<PanelSectionRow><div>{t("Model")}: {modelLoading ? t("Loading") : modelReady ? t("Ready") : t("Unavailable")}</div></PanelSectionRow>
 						{pendingDraft && <PanelSectionRow><div>{t("Review confirmation")}: {t(reviewBlockReason || "Ready")}</div></PanelSectionRow>}
 						{(statusError || rpcError) && <PanelSectionRow><div role="alert">{statusError || rpcError}</div></PanelSectionRow>}
+					</PanelSection>
+					<PanelSection title={t("Controller input debugger")}>
+						<PanelSectionRow><div>{t("Record up to 30 seconds of controller input.")}</div></PanelSectionRow>
+						<PanelSectionRow><div>{t("Press each paddle, then A. Do not type.")}</div></PanelSectionRow>
+                        <PanelSectionRow><div role="status" aria-live="polite">
+                            {controllerSnapshot.state === "starting" && <div>{t("Waiting for controller listener...")}</div>}
+                            {controllerSnapshot.state === "recording" && <div>{t("Recording controller input")} · {controllerSeconds} {t("seconds remaining")}</div>}
+                            {controllerSnapshot.state === "stopping" && <div>{t("Finalizing controller report...")}</div>}
+                            {controllerSnapshot.state === "ready" && <div>{t("Controller report ready for review")}</div>}
+                            <div>{t("Events captured")}: {controllerSnapshot.event_count} · {t("Controller interfaces")}: {controllerSnapshot.device_count}</div>
+                            {controllerSnapshot.session && <div>{t("Capture continues if you close this panel.")}</div>}
+                        </div></PanelSectionRow>
+                        <PanelSectionRow><ButtonItem key="controller-debug-start" layout="below" onClick={() =>
+                            controllerDebug.error ? controllerClient.refresh() : controllerClient.start()
+                        }>{controllerButtonLabel}</ButtonItem></PanelSectionRow>
+                        <PanelSectionRow><div style={{fontSize: "12px"}}>{t("Includes host/build details, controller interfaces and button transitions. Excludes typing, audio, transcripts, serials and input paths.")}</div></PanelSectionRow>
+                        <PanelSectionRow><div>{t("Nothing is sent automatically. Send shares only this report with Sentry.")}</div></PanelSectionRow>
+                        {controllerSnapshot.session && <PanelSectionRow><div>
+                            <div>{t("Host metadata available")}: {Object.keys(controllerSnapshot.metadata).length}/16. {t("Unavailable values are omitted.")}</div>
+                        </div></PanelSectionRow>}
+                        {controllerReport && controllerSnapshot.state === "ready" && <>
+                            {!controllerSnapshot.event_id && <PanelSectionRow><ButtonItem layout="below"
+                                disabled={!!controllerDebug.pending} onClick={() => controllerClient.upload()}>{t("Send this report to Sentry")}</ButtonItem></PanelSectionRow>}
+                            {controllerDebug.pending === "upload" && <PanelSectionRow><div role="status">{t("Sending")}</div></PanelSectionRow>}
+                            {controllerSnapshot.event_id && <PanelSectionRow><div role="status">{t("Report submitted. Event ID")}: {controllerSnapshot.event_id}</div></PanelSectionRow>}
+                            <PanelSectionRow><div><strong>{t("Full sanitized report (scroll to inspect all fields)")}</strong>
+                                <pre style={{whiteSpace: "pre-wrap", overflowWrap: "anywhere", maxHeight: "480px", overflowY: "auto", fontSize: "11px"}}>{JSON.stringify(controllerReport, null, 2)}</pre>
+                            </div></PanelSectionRow>
+                        </>}
+                        {controllerDebugError && <PanelSectionRow><div role="alert">{t(controllerDebugError)}</div></PanelSectionRow>}
 					</PanelSection>
 					<PanelSection title={t("Diagnostics sharing")}>
 						<PanelSectionRow><ToggleField label={t("Share")} description={t("Sends scrubbed errors, usage counts, and performance metrics to Sentry, including inference backend and coarse device/OS details. Audio and transcripts stay local.")}

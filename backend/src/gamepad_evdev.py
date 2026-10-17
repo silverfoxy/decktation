@@ -96,7 +96,7 @@ def bits(data):
 
 
 class EvdevGamepad:
-    def __init__(self, path):
+    def __init__(self, path, diagnostic_only=False):
         self.fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
         try:
             keys = bits(ioctl_read(self.fd, 0x21, 96))
@@ -104,8 +104,11 @@ class EvdevGamepad:
             # Require gamepad buttons and two actual stick axes as Linux's
             # joystick classification does; do not treat that helper as a pad.
             axes = bits(ioctl_read(self.fd, 0x23, 8))
-            if not {0x130, 0x131}.issubset(keys) or not {0, 1}.issubset(axes):
+            self.rejected = not ({0x130, 0x131}.issubset(keys) and {0, 1}.issubset(axes))
+            if self.rejected and not diagnostic_only:
                 raise ValueError('not a gamepad')
+            self.capability_keys = keys
+            self.capability_axes = axes
             self.identity = {}
             try:
                 bus, vendor, product, version = struct.unpack('4H', ioctl_read(self.fd, 0x02, 8))
@@ -167,6 +170,9 @@ class EvdevGamepad:
             return self.states()
         elif not self.dropped:
             if event_type == 1:
+                callback = getattr(self, 'on_key', None)
+                if callback and value in (0, 1):
+                    callback(code, value)
                 if value:
                     self.keys.add(code)
                 else:

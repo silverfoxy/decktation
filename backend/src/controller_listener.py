@@ -15,6 +15,9 @@ import tempfile
 from deck_hid import STEAM_DECK_BUTTON_BITS, raw_button_states, triton_button_states
 from gamepad_evdev import EvdevGamepad
 from binding_capture import BindingCapture, read_json, write_json
+from controller_debug_report import InputReport, DURATION
+from controller_debug_session import PROTOCOL, START_TIMEOUT, finite_number, read_bounded
+import uuid
 
 STATE_FILE = "/tmp/decktation_l5"
 PREVIEW_FILE = "/tmp/decktation_button_preview"
@@ -59,6 +62,14 @@ for product, kind, suffixes, bus in (
     STEAM_CONTROLLER_TYPES[hid_id] = kind
 
 DIAGNOSTIC_PREFIX = 'DECKTATION_CONTROLLER '
+
+def inspect_rejected_device(device):
+    """Sample controller-only codes on rejected hybrid interfaces, never typing."""
+    keys = device.capability_keys
+    return any(type(key) is int and
+               (key in (0x116, 0x117) or 0x120 <= key <= 0x15f or
+                0x220 <= key <= 0x223 or 0x2c0 <= key <= 0x2ff)
+               for key in keys)
 
 
 def controller_details(device, controller_type):
@@ -150,6 +161,18 @@ class RawGamepad:
     def __init__(self, path):
         # Some hid-steam versions require read/write for input delivery.
         self.fd = os.open(path, os.O_RDWR | os.O_NONBLOCK)
+        self.identity = {}
+        try:
+            with open(f'/sys/class/hidraw/{os.path.basename(path)}/device/uevent') as source:
+                hid_id = next((line.strip().partition('=')[2] for line in source
+                               if line.startswith('HID_ID=')), '')
+            parts = hid_id.split(':')
+            if len(parts) == 3 and all(parts):
+                values = [int(part, 16) for part in parts]
+                if all(0 <= value <= 65535 for value in values):
+                    self.identity = dict(zip(('bus', 'vendor_id', 'product_id'), values))
+        except (OSError, ValueError):
+            pass  # Missing identity must not prevent observing input.
 
     def close(self):
         os.close(self.fd)
@@ -175,6 +198,143 @@ class TritonGamepad(RawGamepad):
         states = triton_button_states(report)
         if states is not None:
             yield states
+
+
+class ControllerDebug:
+    """Monotonic protocol-v2 producer, bound to one listener incarnation."""
+    def __init__(self, buttons=None, clock=None):
+        self.buttons = buttons or []
+        self.clock = clock or time.monotonic
+        self.listener_id = uuid.uuid4().hex
+        self.report = None
+        self.finished_written = False
+        self.terminal_phase = None
+        self.sequence = 0
+        self.resync_baselines = {}
+        self.release_required = False
+        self.request_file = os.path.join(CONFIG_DIR, 'controller_debug_request.json')
+        self.result_file = os.path.join(CONFIG_DIR, 'controller_debug_result.json')
+        self.heartbeat_file = os.path.join(CONFIG_DIR, 'controller_debug_heartbeat.json')
+
+    @property
+    def terminal_pending(self):
+        return self.terminal_phase is not None and not self.finished_written
+
+    def _publish(self, now, state, phase):
+        self.sequence += 1
+        snapshot = self.report.snapshot(now)
+        snapshot.update(phase=phase, ready=True)
+        write_json(self.result_file, {
+            'protocol': PROTOCOL, 'session': self.report.session,
+            'listener_id': self.listener_id, 'sequence': self.sequence,
+            'started_mono': self.report.started, 'observed_mono': now,
+            'state': state, 'report': snapshot, 'live_input': self.report.live_input()})
+
+    def refresh(self, now=None):
+        now = self.clock() if now is None else now
+        write_json(self.heartbeat_file, {
+            'protocol': PROTOCOL, 'listener_id': self.listener_id, 'observed_mono': now})
+        request = read_bounded(self.request_file)
+        session = request.get('session')
+        requested, expires = request.get('requested_mono'), request.get('expires_mono')
+        try:
+            valid_session = isinstance(session, str) and uuid.UUID(hex=session).hex == session
+        except (ValueError, AttributeError):
+            valid_session = False
+        valid_request = (type(request.get('protocol')) is int and request['protocol'] == PROTOCOL and valid_session and
+                         request.get('listener_id') == self.listener_id and
+                         finite_number(requested) and finite_number(expires) and
+                         expires == requested + START_TIMEOUT)
+        if (valid_request and session != getattr(self.report, 'session', None) and
+                requested <= now < expires and
+                (self.report is None or self.finished_written)):
+            # ACK, not the backend request, starts the full capture window.
+            self.report = InputReport(session, now, self.buttons, request.get('metadata'))
+            self.resync_baselines = {}
+            self.sequence = 0
+            self.release_required = True
+            self.finished_written = False
+            self.terminal_phase = None
+        if not self.report or self.finished_written:
+            return False
+        if valid_request and session == self.report.session and request.get('stopped') is True:
+            self.terminal_phase = 'stopped'
+        elif now >= self.report.started + DURATION and self.terminal_phase is None:
+            self.terminal_phase = 'complete'
+        if self.terminal_phase:
+            self.report.begin_drain(now)
+        self._publish(now, 'stopping' if self.terminal_pending else 'recording', 'capturing')
+        return True
+
+    def finish_if_drained(self, now=None, pending=False):
+        now = self.clock() if now is None else now
+        if (self.report is None or not self.terminal_pending or
+                (pending and now < self.report.drain_until)):
+            return False
+        self.report.stopped = self.terminal_phase == 'stopped'
+        self._publish(now, 'ready', self.terminal_phase)
+        self.finished_written = True
+        return True
+
+    def blocks_actions(self, sources):
+        if self.report is not None and not self.finished_written:
+            return True
+        if self.release_required and not any(any(states.values()) for states in sources.values()):
+            self.release_required = False
+        return self.release_required
+
+    def device(self, path, status, identity=None, keys=(), axes=(), errno=None):
+        if self.report and not self.finished_written:
+            self.report.device(path, status, identity, keys, axes, errno)
+
+    def observe_device(self, path, device, kind, states=None):
+        rejected = getattr(device, 'rejected', False)
+        keys = getattr(device, 'capability_keys', ())
+        axes = getattr(device, 'capability_axes', ())
+        identity = {**getattr(device, 'identity', {}),
+                    'input_backend': 'evdev' if kind == 'evdev_gamepad' else 'hidraw',
+                    'controller_type': kind, 'bindings_accepted': not rejected,
+                    'diagnostic_observed': True}
+        if rejected:
+            buttons_missing = not {0x130, 0x131}.issubset(keys)
+            axes_missing = not {0, 1}.issubset(axes)
+            identity['rejection_reason'] = ('missing_gamepad_buttons_and_stick_axes'
+                if buttons_missing and axes_missing else 'missing_gamepad_buttons'
+                if buttons_missing else 'missing_stick_axes')
+        self.device(path, 'rejected' if rejected else
+                    'accepted' if kind == 'evdev_gamepad' else 'hidraw', identity, keys, axes)
+        if self.report and not self.finished_written:
+            if kind == 'evdev_gamepad':
+                if rejected:
+                    states = {}  # Raw controller-only keys are observed, never mapped for bindings.
+                elif hasattr(device, 'states'):
+                    states = device.states()
+            self.report.initial(path, states, getattr(device, 'keys', ()), self.clock())
+            if path in self.report.sources:
+                self.resync_baselines[path] = getattr(device, 'resync_count', 0)
+                self.observe_loss(path, device)
+
+    def observe_loss(self, path, device):
+        if self.report and not self.finished_written:
+            source = self.report.sources.get(path)
+            count = max(0, getattr(device, 'resync_count', 0) - self.resync_baselines.get(path, 0))
+            for entry in self.report.devices:
+                if entry['source'] == source:
+                    entry['resync_count'] = min(65535, count)
+                    entry['input_dropped'] = (entry.get('input_dropped', False) or
+                                              bool(getattr(device, 'dropped', False)) or count > 0)
+
+    def disconnected(self, path, errno=None):
+        if self.report and not self.finished_written:
+            self.report.disconnected(path, errno)
+
+    def key(self, path, code, value, button, now):
+        if self.report and not self.finished_written:
+            self.report.key(path, code, value, button, now)
+
+    def transition(self, path, kind, name, pressed, now):
+        if self.report and not self.finished_written:
+            self.report.event(path, kind, now, button=name, pressed=pressed)
 
 
 class ComboTracker:
@@ -237,6 +397,8 @@ def main():
 
     capture = None
     capture_blocked = False
+    debug = ControllerDebug(button_names)
+    rejected = {}
     request_file = os.path.join(CONFIG_DIR, "binding_capture_request.json")
     result_file = os.path.join(CONFIG_DIR, "binding_capture_result.json")
 
@@ -275,7 +437,8 @@ def main():
 
     def update_combo():
         nonlocal combo_active
-        active = tracker.active and not capture_blocked
+        debug_blocked = debug.blocks_actions(tracker.sources)
+        active = tracker.active and not capture_blocked and not debug_blocked
         if active != combo_active:
             combo_active = active
             if combo_active:
@@ -296,6 +459,8 @@ def main():
 
     def publish(path, states, controller_type):
         nonlocal active_source
+        if debug.report and not debug.finished_written:
+            debug.report.initial(path, states, getattr(devices[path][0], 'keys', ()), time.monotonic())
         previous = tracker.sources.get(path, {})
         changed = {name: pressed for name, pressed in states.items()
                    if pressed != previous.get(name, False)}
@@ -306,6 +471,9 @@ def main():
             print(f"Controller input: path={path} type={details[path]['controller_type']} "
                   f"changed={changed} held={[name for name, down in states.items() if down]} "
                   f"evdev_keys={raw_keys}", flush=True)
+            for name, pressed in changed.items():
+                debug.transition(path, 'mapped' if isinstance(device, EvdevGamepad) else 'hid',
+                                 name, pressed, time.monotonic())
         # Keep the controller responsible for a held combo selected even when
         # another controller sends unrelated input or a virtual duplicate.
         owns_combo = active_source and all(tracker.sources.get(active_source, {}).get(b, False)
@@ -317,9 +485,13 @@ def main():
                 f.write(details[path]['controller_type'])
             if changed_source:
                 diagnostic('active_changed')
+                if debug.report and not debug.finished_written: debug.report.event(path, 'source', time.monotonic())
         if changed and any(states.values()):
             write_source(RECENT_SOURCE_FILE, source_snapshot(path))
         tracker.update(path, states)
+        if capture and capture.active:
+            for name, pressed in changed.items():
+                debug.transition(path, 'binding', name, pressed, time.monotonic())
         if changed:
             write_button_preview(tracker.sources.get(active_source, {}))
         update_capture()
@@ -327,6 +499,7 @@ def main():
 
     def remove(path, error=None):
         nonlocal active_source
+        debug.disconnected(path, getattr(error, 'errno', None))
         disconnected = details.pop(path)
         device, _ = devices.pop(path)
         selector.unregister(device.fd)
@@ -349,6 +522,27 @@ def main():
             f.write('unknown')
         diagnostic('started', process_identity=identity)
         while True:
+            previous_debug_session = getattr(debug.report, 'session', None)
+            debug_active = debug.refresh(time.monotonic())
+            if debug_active and debug.report.session != previous_debug_session:
+                # Populate every source before an early Stop can finalize.
+                next_scan = 0
+            for path in list(rejected):
+                if not debug_active:
+                    device = rejected.pop(path)
+                    selector.unregister(device.fd)
+                    device.close()
+                elif path not in debug.report.sources:
+                    debug.observe_device(path, rejected[path], 'evdev_gamepad')
+            for path, (device, kind) in devices.items():
+                if debug_active:
+                    if path not in debug.report.sources:
+                        debug.observe_device(path, device, kind, tracker.sources.get(path))
+                    if isinstance(device, EvdevGamepad):
+                        device.on_key = lambda code, value, p=path, d=device: debug.key(
+                            p, code, value, d.key_buttons.get(code), time.monotonic())
+                elif isinstance(device, EvdevGamepad):
+                    device.on_key = None
             update_capture()
             update_combo()
             if time.monotonic() >= next_scan:
@@ -358,17 +552,25 @@ def main():
                     if path not in candidates:
                         remove(path)
                 for path, controller_type in candidates.items():
-                    if path in devices:
+                    if path in devices or path in rejected:
                         continue
                     device = None
                     try:
                         reader = (EvdevGamepad if controller_type == 'evdev_gamepad' else
                                   TritonGamepad if controller_type.startswith('steam_controller_2026') else
                                   RawGamepad)
-                        device = reader(path)
+                        device = (reader(path, diagnostic_only=True)
+                                  if reader is EvdevGamepad and debug_active else reader(path))
+                        # Discard private keyboard interfaces before registration:
+                        # closing an fd does not remove DefaultSelector's map entry.
+                        if getattr(device, 'rejected', False) and not inspect_rejected_device(device):
+                            device.close()
+                            continue
                         selector.register(device.fd, selectors.EVENT_READ, path)
                     except ValueError:
-                        continue  # Not a gamepad; constructor closes its fd.
+                        if device is not None:
+                            device.close()
+                        continue  # Constructors close their own fd when rejecting.
                     except OSError as e:
                         if device is not None:
                             device.close()
@@ -378,8 +580,20 @@ def main():
                             print(f"Cannot open controller {path}: {e}", flush=True)
                             diagnostic('open_failed', errno=e.errno,
                                        input_backend='evdev' if controller_type == 'evdev_gamepad' else 'hidraw')
+                        if debug_active: debug.device(path, 'open_failed', errno=e.errno)
+                        continue
+                    if getattr(device, 'rejected', False):
+                        rejected[path] = device
+                        debug.observe_device(path, device, controller_type)
+                        device.on_key = lambda code, value, p=path: debug.key(
+                            p, code, value, None, time.monotonic())
                         continue
                     devices[path] = (device, controller_type)
+                    if debug_active:
+                        debug.observe_device(path, device, controller_type)
+                        if isinstance(device, EvdevGamepad):
+                            device.on_key = lambda code, value, p=path, d=device: debug.key(
+                                p, code, value, d.key_buttons.get(code), time.monotonic())
                     open_errors = {item for item in open_errors if item[0] != path}
                     details[path] = controller_details(device, controller_type)
                     details[path]['combo_supported'] = set(button_names).issubset(details[path]['supported_buttons'])
@@ -393,8 +607,20 @@ def main():
                     diagnostic('waiting')
                 waiting = not devices
                 next_scan = time.monotonic() + 2
-            for key, _ in selector.select(timeout=0.25):
+            ready_events = selector.select(timeout=0 if debug.terminal_pending else 0.25)
+            for key, _ in ready_events:
                 path = key.data
+                if path in rejected:
+                    device = rejected[path]
+                    try:
+                        for _ in device.read_states(): pass
+                        debug.observe_loss(path, device)
+                    except (OSError, ValueError):
+                        debug.disconnected(path)
+                        selector.unregister(device.fd)
+                        device.close()
+                        rejected.pop(path, None)
+                    continue
                 device, controller_type = devices[path]
                 try:
                     for states in device.read_states():
@@ -406,14 +632,18 @@ def main():
                             details[path]['resync_count'] = resync_count
                             diagnostic('resynced', affected_controller=details[path])
                         publish(path, states, controller_type)
+                    debug.observe_loss(path, device)
                 except BlockingIOError:
                     pass
                 except OSError as e:
                     print(f"Controller disconnected {path}: {e}", flush=True)
                     remove(path, e)
+            debug.finish_if_drained(time.monotonic(), pending=bool(ready_events))
     except KeyboardInterrupt:
         pass
     finally:
+        for device in rejected.values():
+            device.close()
         for device, _ in devices.values():
             device.close()
         selector.close()

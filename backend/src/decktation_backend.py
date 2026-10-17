@@ -38,6 +38,8 @@ from audio_runtime import ensure_audio_environment, setup_audio_environment
 from haptic_feedback import HapticFeedback
 from recording_overlay_manager import RecordingOverlay
 from binding_capture import read_json, write_json
+from controller_debug_report import collect_runtime_metadata
+from controller_debug_session import ControllerDebugSession, ACTIVE
 from review_gesture import ReviewGesture
 from plugin_update import PluginUpdater, cleanup_stale
 
@@ -68,6 +70,7 @@ sys.path.insert(0, plugin_path)
 # Import diagnostics support without connecting to Sentry. Collection is
 # opt-in and is initialized only after the persisted user preference is read.
 telemetry_available = False
+telemetry_upload_controller_report = None
 plugin_version = "unknown"
 try:
     with open(os.path.join(plugin_path, "plugin.json")) as version_file:
@@ -76,6 +79,7 @@ except (OSError, ValueError, AttributeError):
     logger.warning("updater: installed version unavailable")
 try:
     from telemetry import (
+        upload_controller_report as telemetry_upload_controller_report,
         breadcrumb as telemetry_breadcrumb,
         capture_error as telemetry_capture_error,
         controller_event as telemetry_controller_event,
@@ -347,7 +351,7 @@ class Plugin:
     poll_thread = None
     poll_running = False
     controller_enabled = False
-    # Serializes recording starts with disable requests to close the press/disable race.
+    # Serializes recording starts with disable requests and diagnostic entry.
     controller_lock = threading.Lock()
     # Serializes complete enable/disable transitions so an older disable cannot
     # finish its teardown after a newer enable has returned.
@@ -358,6 +362,7 @@ class Plugin:
     recording_start_count = 0  # Increments each time recording starts
     binding_session = None
     binding_deadline = 0
+    controller_debug = None
     active_preset = "wow"
     dictation_transaction = None
     haptic_feedback = None
@@ -628,7 +633,13 @@ class Plugin:
 
         while Plugin.poll_running:
             try:
-                if not Plugin.controller_enabled or (Plugin.binding_session and time.time() < Plugin.binding_deadline):
+                # The window can close without ending capture. Keep lifecycle
+                # timeouts/final publication advancing without renderer polls.
+                debug_active = (Plugin.controller_debug is not None and
+                                Plugin.controller_debug.resume()['state'] in ACTIVE)
+                if (not Plugin.controller_enabled or
+                        (Plugin.binding_session and time.time() < Plugin.binding_deadline) or
+                        debug_active):
                     last_state = False
                     gesture.suppress_until_release(True)
                     time.sleep(0.1)
@@ -659,7 +670,12 @@ class Plugin:
                     # Review presses are consumed, including release after cancellation.
                     if state and not last_state and not handled:
                         with Plugin.controller_lock:
-                            if Plugin.controller_enabled:
+                            # Capture may have entered since the loop's initial check.
+                            capture_active = (Plugin.controller_debug is not None and
+                                              Plugin.controller_debug.state in ACTIVE)
+                            if capture_active:
+                                gesture.suppress_until_release(True)
+                            if Plugin.controller_enabled and not capture_active:
                                 # Button pressed - cancel pending send if one is waiting
                                 if Plugin.voice_service and Plugin.voice_service.pending_text:
                                     cancelled = Plugin.voice_service.cancel_pending(source="controller_button")
@@ -1005,6 +1021,60 @@ class Plugin:
         except Exception as e:
             logger.error("Error saving haptic preference: %s", e)
             return {"success": False, "error": str(e)}
+
+    @staticmethod
+    def _controller_debug():
+        if Plugin.controller_debug is None:
+            Plugin.controller_debug = ControllerDebugSession(
+                CONFIG_DIR, listener_alive=lambda: bool(
+                    Plugin.listener_process and Plugin.listener_process.poll() is None))
+        return Plugin.controller_debug
+
+    async def start_controller_debug(self):
+        # No awaited work under this lock. PTT publishes recording busy before
+        # releasing it; the poller rechecks capture under the same lock.
+        with Plugin.controller_lock:
+            debug = Plugin._controller_debug()
+            if debug.state in ACTIVE or debug.uploading:
+                return debug.resume()
+            voice = Plugin.voice_service
+            if voice and (voice.is_recording or getattr(voice, 'is_transcribing', False) or
+                          voice.pending_snapshot()):
+                return debug.snapshot(False, 'Finish recording, transcription, or the pending draft before starting controller diagnostics.')
+            if not Plugin.listener_process or Plugin.listener_process.poll() is not None:
+                Plugin.start_controller_listener()
+            return debug.start(collect_runtime_metadata(plugin_version))
+
+    async def resume_controller_debug(self):
+        return Plugin._controller_debug().resume()
+
+    async def get_controller_debug(self, session: str):
+        return Plugin._controller_debug().get(session)
+
+    async def stop_controller_debug(self, session: str):
+        # Stop acknowledges intent immediately. Only producer publication can
+        # make a report ready; subsequent polls advance or time out this state.
+        return Plugin._controller_debug().stop(session)
+
+    async def upload_controller_debug(self, session: str, consent: bool):
+        debug = Plugin._controller_debug()
+        report = debug.begin_upload(session, consent)
+        if report is None:
+            return debug.snapshot(False, 'Review the completed report and explicitly consent before sending.')
+        if not telemetry_upload_controller_report:
+            return debug.finish_upload(error='Sentry SDK unavailable.')
+        async def send_reviewed_report():
+            try:
+                # Keep the claim until the worker actually finishes, even if
+                # the renderer closes and Decky cancels the awaiting RPC.
+                event_id = await asyncio.to_thread(telemetry_upload_controller_report, report, plugin_version)
+                return debug.finish_upload(event_id)
+            except Exception as error:
+                logger.error('Controller report upload failed: %s', error)
+                return debug.finish_upload(error='Upload failed. Please retry.')
+
+        debug.upload_task = asyncio.create_task(send_reviewed_report())
+        return await asyncio.shield(debug.upload_task)
 
     async def start_binding_capture(self):
         if Plugin.voice_service and (Plugin.voice_service.is_recording or getattr(Plugin.voice_service, "is_transcribing", False) or Plugin.voice_service.pending_snapshot()):
