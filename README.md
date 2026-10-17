@@ -90,6 +90,8 @@ If your microphone crackles or transcription is poor, see [microphone troublesho
 
 Audio, transcripts, and WoW context are processed locally and are not uploaded. Whisper model files are downloaded from Hugging Face on first use. Optional **Diagnostics → Share** is off by default; when enabled, Decktation sends scrubbed errors, usage counts, and performance metrics to Sentry. See [privacy and permissions](doc/PRIVACY_AND_PERMISSIONS.md) for what diagnostics include.
 
+The separate **Diagnostics → Controller input debugger** collects a bounded local 30-second input report. Review it before explicitly sending that single report to Sentry; it does not enable ongoing diagnostics sharing.
+
 ## Permissions
 
 Decktation uses Decky’s `_root` permission to read controller inputs and type the transcript through its bundled keyboard helper. Dictated text is passed as data, never run as a command. Read the [permissions details](doc/PRIVACY_AND_PERMISSIONS.md).

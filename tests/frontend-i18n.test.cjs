@@ -13,6 +13,24 @@ function load(saved, language='en-US', blocked=false, steam){
  vm.runInNewContext(ts.transpileModule(fs.readFileSync(source,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,esModuleInterop:true}}).outputText,{exports,require:createRequire(source),window:{localStorage:storage,SteamClient:steam},navigator:{language},Intl,setTimeout,clearTimeout});
  return {api:exports,values};
 }
+test('compact controller debugger copy and live status labels are translated in all ten locales', () => {
+ const keys = ['Held buttons', 'Source', 'Last transition', 'Pressed', 'Released', 'No buttons held',
+  'No input yet', 'Live input unavailable', 'ms', 'Record up to 30 seconds of controller input.',
+  'Press each paddle, then A. Do not type.',
+  'Controller navigation is paused. Steam/Quick Access may open menus. Ends after 30 seconds; touch or mouse can stop early.',
+  'Includes host/build details, controller interfaces and button transitions. Excludes typing, audio, transcripts, serials and input paths.',
+  'Nothing is sent automatically. Send shares only this report with Sentry.',
+  'Capture continues if you close this panel.', 'Report submitted. Event ID'];
+ for (const lang of ['en','es','ru','pt','pl','ko','ja','de','fr','zh']) {
+  const catalog = require('../src/locales/'+lang+'.json');
+  for (const key of keys) {
+   assert.ok(catalog[key]?.trim(), lang + ': ' + key);
+   if (lang !== 'en' && !['Source', 'ms'].includes(key)) assert.notEqual(catalog[key], key, lang + ': untranslated ' + key);
+  }
+  assert.ok(!Object.keys(catalog).some(key => key.includes('delivery not confirmed')));
+ }
+});
+
 test('catalog coverage and placeholders match',()=>{
  const en=require('../src/locales/en.json');
  for(const lang of ['es','ru','pt','pl','ko','ja','de','fr','zh']) {
