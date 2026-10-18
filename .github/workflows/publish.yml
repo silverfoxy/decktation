@@ -1,4 +1,4 @@
-name: Publish approved Decktation downloads
+name: Publish Decktation downloads and PR test builds
 
 # workflow_run uses the workflow on the default branch. Candidate builds only
 # upload an artifact with a read-only token; no candidate script runs here.
@@ -66,6 +66,7 @@ jobs:
         with:
           name: decktation.zip
           path: build-output
+          skip-decompress: true
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
       - name: Publish using trusted default-branch scripts
@@ -110,6 +111,7 @@ jobs:
         with:
           name: decktation.zip
           path: build-output
+          skip-decompress: true
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
       - name: Confirm artifact belongs to a current open PR
