@@ -6,7 +6,7 @@ test('Advanced Sending offers persisted keyboard injection without changing subm
   await page.getByRole('button', { name: 'Advanced settings', exact: true }).click();
   const toggle = page.getByRole('checkbox', { name: 'Type text as keystrokes' });
   await expect(toggle).toBeVisible();
-  await expect(page.getByText('For games that block paste, like Old School RuneScape. Slower; ASCII only.')).toBeVisible();
+  await expect(page.getByText('For games that block paste, like Old School RuneScape. Slower; US keyboard layout and ASCII only.')).toBeVisible();
   await expect(toggle).not.toBeChecked();
   await toggle.click();
   await expect(toggle).toBeChecked();

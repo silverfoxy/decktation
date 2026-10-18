@@ -1017,7 +1017,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 							else setRpcError(result.error || t("Could not update sending mode"));
 						}} /></PanelSectionRow>
 						{sendingMode === "review" && <PanelSectionRow><div style={{ fontSize: '13px', lineHeight: '1.5' }}>{t("Review stays visible until you decide. Tap {binding} to send; hold it to cancel. Open Decktation to review longer text.", {binding: buttons.join("+")})}</div></PanelSectionRow>}
-						<PanelSectionRow><ToggleField label={t("Type text as keystrokes")} description={t("For games that block paste, like Old School RuneScape. Slower; ASCII only.")} checked={typeAsKeys}
+						<PanelSectionRow><ToggleField label={t("Type text as keystrokes")} description={t("For games that block paste, like Old School RuneScape. Slower; US keyboard layout and ASCII only.")} checked={typeAsKeys}
 							onChange={async (next: boolean) => {
 								try {
 									const result = await setTypeAsKeysRpc(next);

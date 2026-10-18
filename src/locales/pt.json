@@ -113,7 +113,7 @@
   "Review before sending": "Rever antes de enviar",
   "Send after countdown": "Enviar após a contagem decrescente",
   "Type text as keystrokes": "Escrever texto como teclas premidas",
-  "For games that block paste, like Old School RuneScape. Slower; ASCII only.": "Para jogos que bloqueiam a colagem, como Old School RuneScape. Mais lento; apenas ASCII.",
+  "For games that block paste, like Old School RuneScape. Slower; US keyboard layout and ASCII only.": "Para jogos que bloqueiam a colagem, como Old School RuneScape. Mais lento; apenas teclado americano e ASCII.",
   "Could not update text insertion mode": "Não foi possível alterar o modo de introdução de texto",
   "Press Enter yourself": "Premir Enter manualmente",
   "Type into chat without submitting": "Escrever no chat sem enviar",

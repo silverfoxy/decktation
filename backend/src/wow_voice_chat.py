@@ -1029,7 +1029,13 @@ class WoWVoiceChat:
         chat_open_delay = float(self.preset.get("chat_open_delay", 0))
         chat_send_delay = float(self.preset.get("chat_send_delay", 0))
 
+        key_delay = self.preset.get("key_delay", 1)
+        key_hold = self.preset.get("key_hold", 0)
         try:
+            if type_as_keys:
+                if (type(key_delay) is not int or type(key_hold) is not int or
+                        not 0 <= key_delay <= 100 or not 0 <= key_hold <= 100):
+                    raise ValueError("Key timing must be an integer between 0 and 100 ms")
             if open_key == "enter":
                 result = subprocess.run(
                     [ydotool, "key", "28:1", "28:0"],
@@ -1045,10 +1051,10 @@ class WoWVoiceChat:
                     time.sleep(chat_open_delay)
 
             if type_as_keys:
-                # ydotool accepts stdin so leading dashes and quoted chat
-                # commands remain literal. Never touch the clipboard in this mode.
+                # Match the former fast path; per-preset timing can slow down
+                # games that drop rapid key events. Stdin keeps text literal.
                 result = subprocess.run(
-                    [ydotool, "type", "-f", "-"],
+                    [ydotool, "type", "-d", str(key_delay), "-H", str(key_hold), "-f", "-"],
                     input=full_message,
                     capture_output=True,
                     text=True,

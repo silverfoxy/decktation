@@ -113,7 +113,7 @@
   "Review before sending": "送信前に確認",
   "Send after countdown": "カウントダウン後に送信",
   "Type text as keystrokes": "テキストをキー入力として送信",
-  "For games that block paste, like Old School RuneScape. Slower; ASCII only.": "Old School RuneScape など、貼り付けを禁止するゲーム向け。低速・ASCII のみ。",
+  "For games that block paste, like Old School RuneScape. Slower; US keyboard layout and ASCII only.": "Old School RuneScape など、貼り付けを禁止するゲーム向け。低速・米国キーボード配列と ASCII のみ。",
   "Could not update text insertion mode": "テキスト入力方式を変更できませんでした",
   "Press Enter yourself": "Enterを自分で押す",
   "Type into chat without submitting": "送信せずにチャットへ入力",
