@@ -23,13 +23,13 @@ function withCors(response) {
   });
 }
 
-async function handleCatalog(request) {
+async function handleCatalog(request, testing = false) {
   const headers = new Headers({ Accept: "application/json" });
   const deckyVersion = request.headers.get("X-Decky-Version");
   if (deckyVersion) headers.set("X-Decky-Version", deckyVersion);
 
   try {
-    const upstream = await fetch(UPSTREAM_CATALOG, {
+    const upstream = await fetch(testing ? `${UPSTREAM_BASE}/store/testing/plugins.json` : UPSTREAM_CATALOG, {
       method: request.method,
       headers,
       redirect: "manual",
@@ -104,7 +104,21 @@ export default {
       url.protocol = "https:";
       return Response.redirect(url.href, 308);
     }
-    const isCatalog = url.pathname === "/plugins.json" || url.pathname === "/store/plugins.json";
+    const isTestingVersions = url.pathname === "/testing/plugins.json/versions";
+    if (isTestingVersions) {
+      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        return new Response("Method Not Allowed", { status: 405, headers: { ...CORS_HEADERS, Allow: "GET, HEAD, OPTIONS" } });
+      }
+      // Decky appends /versions to the Custom URL. Avoid surprising automatic
+      // upgrades between experimental branches; users choose versions manually.
+      return new Response(request.method === "HEAD" ? null : "{}", {
+        status: 200,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json; charset=utf-8" },
+      });
+    }
+    const isTestingCatalog = url.pathname === "/testing/plugins.json";
+    const isCatalog = isTestingCatalog || url.pathname === "/plugins.json" || url.pathname === "/store/plugins.json";
 
     if (isCatalog && request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -117,7 +131,7 @@ export default {
           : { Allow: "GET, HEAD" },
       });
     }
-    if (isCatalog) return handleCatalog(request);
+    if (isCatalog) return handleCatalog(request, isTestingCatalog);
     if (url.pathname === "/downloads") {
       return new Response(null, {
         status: 308,

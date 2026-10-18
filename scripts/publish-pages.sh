@@ -11,6 +11,10 @@ GITHUB_SHA="${GITHUB_SHA:-}"
 REF_NAME="${REF_NAME:-}"
 REF_TYPE="${REF_TYPE:-}"
 RELEASE_TAG="${RELEASE_TAG:-$REF_NAME}"
+PR_NUMBER="${PR_NUMBER:-}"
+PR_RUN_ID="${PR_RUN_ID:-}"
+PR_RUN_ATTEMPT="${PR_RUN_ATTEMPT:-}"
+PR_HEAD_REPO="${PR_HEAD_REPO:-}"
 WORKSPACE_DIR="$(pwd)"
 PAGES_DIR=/tmp/decktation-gh-pages
 ZIP_SOURCE="$WORKSPACE_DIR/build-output/decktation.zip"
@@ -24,6 +28,10 @@ if [ "$CLEANUP_ONLY" != "true" ]; then
   : "${GITHUB_SHA:?GITHUB_SHA is required}"
   : "${REF_NAME:?REF_NAME is required}"
   : "${REF_TYPE:?REF_TYPE is required}"
+  if [ "$REF_TYPE" = "pull_request" ]; then
+    [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ && "$PR_RUN_ID" =~ ^[1-9][0-9]*$ && "$PR_RUN_ATTEMPT" =~ ^[1-9][0-9]*$ ]] || exit 1
+    [ -n "$PR_HEAD_REPO" ] || exit 1
+  fi
 fi
 
 normalize_ref() {
@@ -36,6 +44,10 @@ encode_url_path() {
 
 escape_json() {
   printf '%s' "$1" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'
+}
+
+escape_html() {
+  python3 -c 'import html,sys; print(html.escape(sys.argv[1], quote=True))' "$1"
 }
 
 write_metadata() {
@@ -60,6 +72,7 @@ write_download_page() {
   local title="$2"
   local zip_url="$3"
   local metadata_url="$4"
+  title="$(escape_html "$title")"
   cat >"$output_path" <<EOF
 <!doctype html>
 <html lang="en">
@@ -174,10 +187,11 @@ render_index_list() {
     dir="$(dirname "$rel")"
     local name
     name="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["ref"])' "$metadata")"
+    name="$(escape_html "$name")"
     local url_dir
     url_dir="$(encode_url_path "$dir")"
     printf '  <li><a href="%s/%s/">%s</a> <span>%s</span></li>\n' \
-      "$base_url" "$url_dir" "$name" "$dir"
+      "$base_url" "$url_dir" "$name" "$(escape_html "$dir")"
   done
   printf '</ul></section>\n'
 }
@@ -295,9 +309,61 @@ assert_branch_target_available() {
   fi
 }
 
+assert_release_is_not_older() {
+  local latest="$PAGES_DIR/releases/latest/metadata.json"
+  [ "$REF_TYPE" = "tag" ] && [ -f "$latest" ] || return 0
+  python3 - "$RELEASE_TAG" "$GITHUB_SHA" "$latest" "$WORKSPACE_DIR/scripts/generate-store-catalog.py" <<'PY_RELEASE_ORDER'
+import importlib.util
+import json
+import sys
+
+new_tag, new_sha, metadata, catalog_script = sys.argv[1:]
+spec = importlib.util.spec_from_file_location('store_catalog', catalog_script)
+store = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(store)
+old = json.load(open(metadata, encoding='utf-8'))
+old_tag = old['ref']
+if not new_tag.startswith('v') or not old_tag.startswith('v'):
+    raise SystemExit('Refusing invalid release tag')
+new_version, old_version = new_tag[1:], old_tag[1:]
+if (store.compare_versions({'name': new_version}, {'name': old_version}) < 0 or
+        (new_tag == old_tag and old.get('commit') != new_sha)):
+    raise SystemExit('Refusing older release or rewritten tag to protect latest download')
+PY_RELEASE_ORDER
+}
+
+render_pr_content() {
+  local dir="$PAGES_DIR/pulls/$PR_NUMBER/$PR_RUN_ID/$PR_RUN_ATTEMPT"
+  local url="$PAGES_BASE_URL/pulls/$PR_NUMBER/$PR_RUN_ID/$PR_RUN_ATTEMPT/Decktation.zip"
+  if [ -e "$dir/Decktation.zip" ] && ! cmp -s "$ZIP_SOURCE" "$dir/Decktation.zip"; then
+    echo "Refusing to overwrite immutable PR ZIP" >&2
+    return 1
+  fi
+  mkdir -p "$dir"
+  cp "$ZIP_SOURCE" "$dir/Decktation.zip"
+  local digest
+  digest="$(sha256sum "$dir/Decktation.zip")"
+  digest="${digest%% *}"
+  PR_ZIP_URL="$url" PR_ZIP_SHA256="$digest" python3 - "$dir/metadata.json" <<'PY_PR_METADATA'
+import json, os, sys
+from pathlib import Path
+Path(sys.argv[1]).write_text(json.dumps({
+    'channel': 'pull_request', 'number': int(os.environ['PR_NUMBER']),
+    'run_id': int(os.environ['PR_RUN_ID']), 'run_attempt': int(os.environ['PR_RUN_ATTEMPT']),
+    'commit': os.environ['GITHUB_SHA'],
+    'head_repository': os.environ['PR_HEAD_REPO'],
+    'zip_url': os.environ['PR_ZIP_URL'], 'sha256': os.environ['PR_ZIP_SHA256'],
+}, indent=2) + '\n')
+PY_PR_METADATA
+}
+
 render_pages_content() {
+  if [ "$CLEANUP_ONLY" != "true" ] && [ "$REF_TYPE" = "pull_request" ]; then
+    render_pr_content
+  fi
+  assert_release_is_not_older
   migrate_branch_dirs
-  if [ "$CLEANUP_ONLY" != "true" ]; then
+  if [ "$CLEANUP_ONLY" != "true" ] && [ "$REF_TYPE" != "pull_request" ]; then
     local branch_key
     branch_key="$(normalize_ref "$REF_NAME")"
     assert_branch_target_available "$branch_key"
@@ -364,13 +430,27 @@ render_pages_content() {
       catalog_artifact_url="$PAGES_BASE_URL/branches/master/Decktation.zip"
     fi
     mkdir -p "$PAGES_DIR/store"
+    local catalog_plugin_manifest="$WORKSPACE_DIR/plugin.json"
+    local catalog_package_manifest="$WORKSPACE_DIR/package.json"
+    if [ "$REF_TYPE" = "tag" ]; then
+      # Trusted publisher code is checked out from master; release manifests
+      # must still reflect the built tag rather than today's master version.
+      git -C "$WORKSPACE_DIR" fetch origin "refs/tags/$RELEASE_TAG"
+      local tag_manifests
+      tag_manifests="$(mktemp -d)"
+      git -C "$WORKSPACE_DIR" show "$GITHUB_SHA:plugin.json" >"$tag_manifests/plugin.json"
+      git -C "$WORKSPACE_DIR" show "$GITHUB_SHA:package.json" >"$tag_manifests/package.json"
+      catalog_plugin_manifest="$tag_manifests/plugin.json"
+      catalog_package_manifest="$tag_manifests/package.json"
+    fi
     python3 "$WORKSPACE_DIR/scripts/generate-store-catalog.py" \
-      --plugin-manifest "$WORKSPACE_DIR/plugin.json" \
-      --package-manifest "$WORKSPACE_DIR/package.json" \
+      --plugin-manifest "$catalog_plugin_manifest" \
+      --package-manifest "$catalog_package_manifest" \
       --artifact "$ZIP_SOURCE" \
       --artifact-url "$catalog_artifact_url" \
       --github-repository "$GITHUB_REPOSITORY" \
       --output "$PAGES_DIR/store/plugins.json"
+    if [ "$REF_TYPE" = "tag" ]; then rm -rf "$tag_manifests"; fi
   fi
 
   # Keep the stable short URL's filename equal to plugin.json's name.
@@ -496,8 +576,43 @@ EOF
   touch "$PAGES_DIR/.nojekyll"
 }
 
-publish_pages() {
+refresh_testing_catalog() {
+  # Trusted publisher code queries live open PRs; no manual approval file.
+  git -C "$WORKSPACE_DIR" fetch origin master
+  local manifest heads
+  manifest="$(mktemp)"
+  heads="$(mktemp)"
+  git -C "$WORKSPACE_DIR" show FETCH_HEAD:plugin.json >"$manifest"
+  git -C "$WORKSPACE_DIR" ls-remote --heads origin >"$heads"
+  python3 "$WORKSPACE_DIR/scripts/generate-pr-catalog.py" \
+    --pages-root "$PAGES_DIR" \
+    --current-refs "$heads" \
+    --plugin-manifest "$manifest" \
+    --repository "$GITHUB_REPOSITORY" \
+    --base-url "$PAGES_BASE_URL" \
+    --output "$PAGES_DIR/store/testing/plugins.json"
+  rm -f "$manifest" "$heads"
+}
+
+publish_pages() (
   cd "$PAGES_DIR"
+  # A newer push or deletion may happen while rendering this checkout.
+  if [ "$CLEANUP_ONLY" != "true" ]; then
+    if [ "$REF_TYPE" = "pull_request" ]; then
+      python3 "$WORKSPACE_DIR/scripts/verify-current-pr.py" \
+        --repository "$GITHUB_REPOSITORY" --number "$PR_NUMBER" \
+        --sha "$GITHUB_SHA" --head-repository "$PR_HEAD_REPO" || {
+          echo "PR closed or changed before publication" >&2
+          return 1
+        }
+    else
+      bash "$WORKSPACE_DIR/scripts/verify-current-ref.sh" \
+        "https://github.com/${GITHUB_REPOSITORY}.git" "$REF_TYPE" "$REF_NAME" "$GITHUB_SHA" || {
+          echo "Ref moved or was deleted before publication; refusing stale ZIP" >&2
+          return 1
+        }
+    fi
+  fi
   git config user.name "github-actions[bot]"
   git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
@@ -508,7 +623,32 @@ publish_pages() {
   else
     echo "No gh-pages changes to publish."
   fi
-}
+  if [ "$CLEANUP_ONLY" != "true" ] && [ "$REF_TYPE" = "pull_request" ] && \
+     ! python3 "$WORKSPACE_DIR/scripts/verify-current-pr.py" \
+       --repository "$GITHUB_REPOSITORY" --number "$PR_NUMBER" \
+       --sha "$GITHUB_SHA" --head-repository "$PR_HEAD_REPO"; then
+    echo "PR moved during publication; removing stale catalog entry" >&2
+    refresh_testing_catalog
+    git add store/testing/plugins.json
+    if ! git diff --cached --quiet; then
+      git commit -m "Reconcile test catalog after PR moved"
+      git push origin gh-pages
+    fi
+  fi
+  # A ref may move between the pre-push check and the gh-pages push. Remove
+  # its catalog entry promptly; Decky also verifies the pinned ZIP hash.
+  if [ "$CLEANUP_ONLY" != "true" ] && [ "$REF_TYPE" = "branch" ] && \
+     ! bash "$WORKSPACE_DIR/scripts/verify-current-ref.sh" \
+       "https://github.com/${GITHUB_REPOSITORY}.git" "$REF_TYPE" "$REF_NAME" "$GITHUB_SHA"; then
+    echo "Ref moved during publication; reconciling test catalog" >&2
+    refresh_testing_catalog
+    git add store/testing/plugins.json
+    if ! git diff --cached --quiet; then
+      git commit -m "Reconcile test catalog after branch moved"
+      git push origin gh-pages
+    fi
+  fi
+)
 
 for attempt in 1 2 3; do
   # Never remove the directory that is the shell's current working directory.
@@ -517,6 +657,7 @@ for attempt in 1 2 3; do
   rm -rf "$PAGES_DIR"
   checkout_pages_branch
   render_pages_content
+  refresh_testing_catalog
   if publish_pages; then
     exit 0
   fi
