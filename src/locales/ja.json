@@ -238,5 +238,12 @@
   "Includes host/build details, controller interfaces and button transitions. Excludes typing, audio, transcripts, serials and input paths.": "システム・ビルド情報、コントローラーのインターフェース、ボタンの状態変化を含みます。文字入力、音声、文字起こし、シリアル番号、入力パスは含みません。",
   "Nothing is sent automatically. Send shares only this report with Sentry.": "自動では送信されません。送信ボタンで、このレポートだけをSentryに共有します。",
   "Capture continues if you close this panel.": "このパネルを閉じても記録は続きます。",
-  "Report submitted. Event ID": "レポートを送信しました。イベントID"
+  "Report submitted. Event ID": "レポートを送信しました。イベントID",
+  "Text insertion": "テキスト入力",
+  "Paste (default)": "貼り付け（既定）",
+  "ydotool typing (experimental)": "ydotoolで入力（実験的）",
+  "Gamescope typing (experimental)": "Gamescopeで入力（実験的）",
+  "Experimental: compare typing backends on your Steam Deck before sending in a game.": "実験的な機能です。ゲーム内で送信する前に、Steam Deckで入力方式を比較してください。",
+  "ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.": "ydotool入力は米国式キーボード配列とASCII文字のみに対応します。それ以外の文字は入力・送信されません。",
+  "Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.": "Gamescope入力ではEnterキーを押しません。入力内容を確認してから手動で送信してください。チャンネルの接頭辞を含めて最大40文字です。"
 }
