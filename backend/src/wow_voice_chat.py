@@ -167,7 +167,7 @@ def _format_casual_message(text: str, preserve_punctuation=False) -> str:
 
 
 class WoWVoiceChat:
-    def __init__(self, context_file="wow_context.json", sample_rate=44100, default_channel="say", lazy_load=False, test_mode=False, test_audio_file=None, preset=None, confirm_delay=0, manual_send=False, transcription_language=None, model_size="base", diagnostic_reporter=None, remember_last_channel=False, last_channel=None, channel_rememberer=None, recording_state_callback=None, review_mode=False, pending_callback=None, metric_reporter=None, spoken_punctuation=False):
+    def __init__(self, context_file="wow_context.json", sample_rate=44100, default_channel="say", lazy_load=False, test_mode=False, test_audio_file=None, preset=None, confirm_delay=0, manual_send=False, transcription_language=None, model_size="base", diagnostic_reporter=None, remember_last_channel=False, last_channel=None, channel_rememberer=None, recording_state_callback=None, review_mode=False, pending_callback=None, metric_reporter=None, spoken_punctuation=False, type_as_keys=False):
         self.preset = preset or {}
         self.diagnostic_reporter = diagnostic_reporter
         self.metric_reporter = metric_reporter
@@ -182,6 +182,7 @@ class WoWVoiceChat:
         self._draft_generation = 0
         self.confirm_delay = confirm_delay  # seconds to wait before auto-sending (0 = disabled)
         self.manual_send = manual_send  # if True, skip final Enter press (user sends manually)
+        self.type_as_keys = type_as_keys  # opt-in for games that reject clipboard paste
         self.remember_last_channel = remember_last_channel
         self.last_channel = last_channel
         self.channel_rememberer = channel_rememberer
@@ -962,7 +963,7 @@ class WoWVoiceChat:
         return channel, message
 
     def send_to_wow_chat(self, text, channel=None):
-        """Paste a transcription into the focused game using the clipboard."""
+        """Insert a transcription into the focused game via paste or keystrokes."""
         if not text or self._closing.is_set():
             return False
 
@@ -977,13 +978,20 @@ class WoWVoiceChat:
         channel_cmd = "" if channel == "command" else self.channel_commands.get(channel, "/s ")
 
         full_message = f"{channel_cmd}{text}"
+        type_as_keys = self.type_as_keys  # One insertion method for this entire send.
         if any(ord(char) < 32 or ord(char) == 127 for char in full_message):
             self._report_diagnostic("text_injection.failed")
             return False
-
         import logging
 
         logger = logging.getLogger()
+        # ydotool's type command maps only 7-bit ASCII to keycodes. Do not
+        # silently drop non-ASCII characters or fall back to paste in a game
+        # whose chat rejects pasting.
+        if type_as_keys and not full_message.isascii():
+            logger.warning("Keyboard text insertion supports ASCII only")
+            self._report_diagnostic("text_injection.failed")
+            return False
         logger.info("Injecting transcription into the %s channel", channel)
 
         plugin_dir = os.environ.get(
@@ -1021,7 +1029,13 @@ class WoWVoiceChat:
         chat_open_delay = float(self.preset.get("chat_open_delay", 0))
         chat_send_delay = float(self.preset.get("chat_send_delay", 0))
 
+        key_delay = self.preset.get("key_delay", 1)
+        key_hold = self.preset.get("key_hold", 0)
         try:
+            if type_as_keys:
+                if (type(key_delay) is not int or type(key_hold) is not int or
+                        not 0 <= key_delay <= 100 or not 0 <= key_hold <= 100):
+                    raise ValueError("Key timing must be an integer between 0 and 100 ms")
             if open_key == "enter":
                 result = subprocess.run(
                     [ydotool, "key", "28:1", "28:0"],
@@ -1036,26 +1050,40 @@ class WoWVoiceChat:
                 if chat_open_delay > 0:
                     time.sleep(chat_open_delay)
 
-            # Paste the whole message, including any game channel prefix, so
-            # punctuation is independent of the host keyboard layout.
-            with temporary_clipboard(full_message, plugin_dir):
+            if type_as_keys:
+                # Match the former fast path; per-preset timing can slow down
+                # games that drop rapid key events. Stdin keeps text literal.
                 result = subprocess.run(
-                    [ydotool, "key", "29:1", "47:1", "47:0", "29:0"],
+                    [ydotool, "type", "-d", str(key_delay), "-H", str(key_hold), "-f", "-"],
+                    input=full_message,
                     capture_output=True,
                     text=True,
                     env=env,
                 )
                 if result.returncode != 0:
                     raise RuntimeError(
-                        f"ydotool Ctrl+V failed (exit {result.returncode})"
+                        f"ydotool type failed (exit {result.returncode})"
                     )
+            else:
+                # Paste the whole message, including any game channel prefix, so
+                # punctuation is independent of the host keyboard layout.
+                with temporary_clipboard(full_message, plugin_dir):
+                    result = subprocess.run(
+                        [ydotool, "key", "29:1", "47:1", "47:0", "29:0"],
+                        capture_output=True,
+                        text=True,
+                        env=env,
+                    )
+                    if result.returncode != 0:
+                        raise RuntimeError(
+                            f"ydotool Ctrl+V failed (exit {result.returncode})"
+                        )
 
             if chat_send_delay > 0:
                 time.sleep(chat_send_delay)
 
-            # Only submit after the clipboard write and Ctrl+V command succeed.
-            # This records command success, not confirmation that the game
-            # actually consumed or displayed the pasted text.
+            # Only submit after text insertion succeeds. This records command
+            # success, not confirmation that the game displayed the text.
             if send_key == "enter":
                 result = subprocess.run(
                     [ydotool, "key", "28:1", "28:0"],

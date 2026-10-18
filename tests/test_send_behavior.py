@@ -101,6 +101,106 @@ class TestWoWSendBehavior:
         assert all(command[0] != "type" for command in commands(mock_run))
 
 
+class TestKeyboardInjection:
+    @patch("subprocess.run")
+    def test_opt_in_types_full_message_without_touching_clipboard(self, mock_run):
+        mock_run.return_value = MagicMock(returncode=0)
+        svc = WoWVoiceChat(preset=WOW_PRESET, lazy_load=True, type_as_keys=True)
+        assert svc.send_to_wow_chat("hello world", channel="party")
+        assert commands(mock_run) == [ENTER, ["type", "-d", "1", "-H", "0", "-f", "-"], ENTER]
+        assert mock_run.call_args_list[1].kwargs["input"] == "/p hello world"
+        assert PASTED_TEXT == []
+
+    @patch("subprocess.run")
+    def test_typing_failure_does_not_submit_or_fall_back_to_paste(self, mock_run):
+        mock_run.side_effect = [MagicMock(returncode=0), MagicMock(returncode=1)]
+        svc = WoWVoiceChat(preset=WOW_PRESET, lazy_load=True, type_as_keys=True)
+        assert not svc.send_to_wow_chat("hello", channel="say")
+        assert commands(mock_run) == [ENTER, ["type", "-d", "1", "-H", "0", "-f", "-"]]
+        assert PASTED_TEXT == []
+
+    @patch("subprocess.run")
+    def test_unsupported_unicode_fails_closed_before_opening_chat(self, mock_run):
+        svc = WoWVoiceChat(preset=WOW_PRESET, lazy_load=True, type_as_keys=True)
+        assert not svc.send_to_wow_chat("Mañana 中文", channel="say")
+        mock_run.assert_not_called()
+        assert PASTED_TEXT == []
+
+    @patch("subprocess.run")
+    def test_mode_change_during_chat_open_uses_validated_paste_mode(self, mock_run):
+        svc = WoWVoiceChat(preset=WOW_PRESET, lazy_load=True, type_as_keys=False)
+        def run(*args, **kwargs):
+            if len(mock_run.call_args_list) == 1:
+                svc.type_as_keys = True
+            return MagicMock(returncode=0)
+        mock_run.side_effect = run
+        assert svc.send_to_wow_chat("Mañana 中文", channel="say")
+        assert commands(mock_run) == [ENTER, PASTE, ENTER]
+        assert PASTED_TEXT == ["/s Mañana 中文"]
+
+    @patch("subprocess.run")
+    def test_mode_change_during_chat_open_keeps_validated_keystroke_mode(self, mock_run):
+        svc = WoWVoiceChat(preset=WOW_PRESET, lazy_load=True, type_as_keys=True)
+        def run(*args, **kwargs):
+            if len(mock_run.call_args_list) == 1:
+                svc.type_as_keys = False
+            return MagicMock(returncode=0)
+        mock_run.side_effect = run
+        assert svc.send_to_wow_chat("hello", channel="say")
+        assert commands(mock_run) == [ENTER, ["type", "-d", "1", "-H", "0", "-f", "-"], ENTER]
+        assert PASTED_TEXT == []
+
+    @patch("subprocess.run")
+    def test_generic_preset_keystrokes_into_focused_field_without_enter(self, mock_run):
+        mock_run.return_value = MagicMock(returncode=0)
+        svc = WoWVoiceChat(preset=GENERIC_PRESET, lazy_load=True, type_as_keys=True)
+        assert svc.send_to_wow_chat("hello world")
+        assert commands(mock_run) == [["type", "-d", "1", "-H", "0", "-f", "-"]]
+        assert mock_run.call_args.kwargs["input"] == "hello world"
+        assert PASTED_TEXT == []
+
+    @patch("subprocess.run")
+    def test_typing_uses_preset_key_timing_when_configured(self, mock_run):
+        mock_run.return_value = MagicMock(returncode=0)
+        svc = WoWVoiceChat(preset={**GENERIC_PRESET, "key_delay": 5, "key_hold": 2},
+                           lazy_load=True, type_as_keys=True)
+        assert svc.send_to_wow_chat("ready")
+        assert commands(mock_run) == [["type", "-d", "5", "-H", "2", "-f", "-"]]
+
+    @pytest.mark.parametrize("timing", [
+        {"key_delay": -1}, {"key_hold": 1000000},
+        {"key_delay": -0.5}, {"key_hold": 100.9},
+        {"key_delay": True}, {"key_hold": "5"},
+    ])
+    @patch("subprocess.run")
+    def test_invalid_preset_timing_does_not_open_chat_type_or_submit(self, mock_run, timing):
+        mock_run.return_value = MagicMock(returncode=0)
+        svc = WoWVoiceChat(preset={**WOW_PRESET, **timing}, lazy_load=True, type_as_keys=True)
+        assert not svc.send_to_wow_chat("ready", channel="say")
+        mock_run.assert_not_called()
+        assert PASTED_TEXT == []
+
+    @pytest.mark.parametrize("timing", [{"key_delay": 0, "key_hold": 100},
+                                        {"key_delay": 100, "key_hold": 0}])
+    @patch("subprocess.run")
+    def test_boundary_preset_timing_is_accepted(self, mock_run, timing):
+        mock_run.return_value = MagicMock(returncode=0)
+        svc = WoWVoiceChat(preset={**GENERIC_PRESET, **timing}, lazy_load=True, type_as_keys=True)
+        assert svc.send_to_wow_chat("ready")
+        assert commands(mock_run) == [["type", "-d", str(timing["key_delay"]),
+                                       "-H", str(timing["key_hold"]), "-f", "-"]]
+
+    @patch("subprocess.run")
+    def test_manual_send_and_raw_text_still_skip_enter(self, mock_run):
+        mock_run.return_value = MagicMock(returncode=0)
+        svc = WoWVoiceChat(preset=WOW_PRESET, lazy_load=True, type_as_keys=True, manual_send=True)
+        assert svc.send_to_wow_chat("hello", channel="say")
+        assert svc.send_to_wow_chat("-help", channel="type")
+        assert commands(mock_run) == [ENTER, ["type", "-d", "1", "-H", "0", "-f", "-"], ["type", "-d", "1", "-H", "0", "-f", "-"]]
+        assert [c.kwargs["input"] for c in mock_run.call_args_list if c.args[0][1] == "type"] == ["/s hello", "-help"]
+        assert PASTED_TEXT == []
+
+
 class TestReplyChannel:
     @patch("subprocess.run")
     def test_reply_pastes_reply_command_without_player_name(self, mock_run):

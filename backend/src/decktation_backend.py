@@ -179,6 +179,7 @@ DEFAULT_BUTTON_CONFIG = {
     "confirmMode": False,
     "sendingMode": "immediate",
     "manualSend": False,
+    "typeAsKeys": False,
     "rememberLastChannel": False,
     "lastChannel": None,
     "shareDiagnostics": False,
@@ -825,6 +826,7 @@ class Plugin:
                 review_mode=saved_config.get("sendingMode") == "review",
                 pending_callback=Plugin._pending_changed,
                 manual_send=manual_send,
+                type_as_keys=saved_config.get("typeAsKeys", False) is True,
                 remember_last_channel=remember_last_channel,
                 last_channel=last_channel,
                 channel_rememberer=Plugin._remember_channel,
@@ -1256,6 +1258,23 @@ class Plugin:
             return {"success": True}
         except Exception as e:
             logger.error(f"Error setting manual send mode: {traceback.format_exc()}")
+            return {"success": False, "error": str(e)}
+
+    async def set_type_as_keys(self, enabled: bool):
+        """Use synthetic keystrokes rather than clipboard paste for text insertion."""
+        if type(enabled) is not bool:
+            return {"success": False, "error": "Expected a boolean"}
+        try:
+            config = _read_button_config()
+            if Plugin.voice_service:
+                Plugin.voice_service.cancel_pending()
+            config["typeAsKeys"] = enabled
+            _write_button_config(config)
+            if Plugin.voice_service:
+                Plugin.voice_service.type_as_keys = enabled
+            return {"success": True}
+        except Exception as e:
+            logger.error("Error setting text insertion mode: %s", type(e).__name__)
             return {"success": False, "error": str(e)}
 
     @staticmethod

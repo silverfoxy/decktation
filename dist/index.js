@@ -525,6 +525,9 @@
       "Send immediately": "Send immediately",
       "Review before sending": "Review before sending",
       "Send after countdown": "Send after countdown",
+      "Type text as keystrokes": "Type text as keystrokes",
+      "For games that block paste, like Old School RuneScape. Slower; US keyboard layout and ASCII only.": "For games that block paste, like Old School RuneScape. Slower; US keyboard layout and ASCII only.",
+      "Could not update text insertion mode": "Could not update text insertion mode",
       "Press Enter yourself": "Press Enter yourself",
       "Type into chat without submitting": "Type into chat without submitting",
       Send: Send$9,
@@ -1005,6 +1008,9 @@
       "Send immediately": "Enviar inmediatamente",
       "Review before sending": "Revisar antes de enviar",
       "Send after countdown": "Enviar tras la cuenta atrás",
+      "Type text as keystrokes": "Escribir texto como pulsaciones de teclas",
+      "For games that block paste, like Old School RuneScape. Slower; US keyboard layout and ASCII only.": "Para juegos que bloquean el pegado, como Old School RuneScape. Más lento; solo distribución de teclado estadounidense y ASCII.",
+      "Could not update text insertion mode": "No se pudo cambiar el modo de entrada de texto",
       "Press Enter yourself": "Pulsar Enter manualmente",
       "Type into chat without submitting": "Escribir en el chat sin enviar",
       Send: Send$8,
@@ -1282,6 +1288,9 @@
       "Send immediately": "Отправить сразу",
       "Review before sending": "Проверить перед отправкой",
       "Send after countdown": "Отправить после отсчёта",
+      "Type text as keystrokes": "Вводить текст нажатием клавиш",
+      "For games that block paste, like Old School RuneScape. Slower; US keyboard layout and ASCII only.": "Для игр, блокирующих вставку, например Old School RuneScape. Медленнее; только раскладка США и ASCII.",
+      "Could not update text insertion mode": "Не удалось изменить режим ввода текста",
       "Press Enter yourself": "Нажать Enter самостоятельно",
       "Type into chat without submitting": "Ввести в чат без отправки",
       Send: Send$7,
@@ -1559,6 +1568,9 @@
       "Send immediately": "Enviar imediatamente",
       "Review before sending": "Rever antes de enviar",
       "Send after countdown": "Enviar após a contagem decrescente",
+      "Type text as keystrokes": "Escrever texto como teclas premidas",
+      "For games that block paste, like Old School RuneScape. Slower; US keyboard layout and ASCII only.": "Para jogos que bloqueiam a colagem, como Old School RuneScape. Mais lento; apenas teclado americano e ASCII.",
+      "Could not update text insertion mode": "Não foi possível alterar o modo de introdução de texto",
       "Press Enter yourself": "Premir Enter manualmente",
       "Type into chat without submitting": "Escrever no chat sem enviar",
       Send: Send$6,
@@ -1836,6 +1848,9 @@
       "Send immediately": "Wyślij od razu",
       "Review before sending": "Sprawdź przed wysłaniem",
       "Send after countdown": "Wyślij po odliczaniu",
+      "Type text as keystrokes": "Wpisuj tekst jako naciśnięcia klawiszy",
+      "For games that block paste, like Old School RuneScape. Slower; US keyboard layout and ASCII only.": "Dla gier blokujących wklejanie, takich jak Old School RuneScape. Wolniejsze; tylko układ klawiatury US i ASCII.",
+      "Could not update text insertion mode": "Nie udało się zmienić trybu wprowadzania tekstu",
       "Press Enter yourself": "Naciśnij Enter samodzielnie",
       "Type into chat without submitting": "Wpisz na czacie bez wysyłania",
       Send: Send$5,
@@ -2113,6 +2128,9 @@
       "Send immediately": "즉시 전송",
       "Review before sending": "전송 전에 확인",
       "Send after countdown": "카운트다운 후 전송",
+      "Type text as keystrokes": "텍스트를 키 입력으로 입력",
+      "For games that block paste, like Old School RuneScape. Slower; US keyboard layout and ASCII only.": "Old School RuneScape처럼 붙여넣기를 막는 게임용입니다. 느리며 미국식 키보드 배열과 ASCII만 지원합니다.",
+      "Could not update text insertion mode": "텍스트 입력 모드를 변경할 수 없습니다",
       "Press Enter yourself": "Enter 직접 누르기",
       "Type into chat without submitting": "전송하지 않고 채팅에 입력",
       Send: Send$4,
@@ -2390,6 +2408,9 @@
       "Send immediately": "すぐに送信",
       "Review before sending": "送信前に確認",
       "Send after countdown": "カウントダウン後に送信",
+      "Type text as keystrokes": "テキストをキー入力として送信",
+      "For games that block paste, like Old School RuneScape. Slower; US keyboard layout and ASCII only.": "Old School RuneScape など、貼り付けを禁止するゲーム向け。低速・米国キーボード配列と ASCII のみ。",
+      "Could not update text insertion mode": "テキスト入力方式を変更できませんでした",
       "Press Enter yourself": "Enterを自分で押す",
       "Type into chat without submitting": "送信せずにチャットへ入力",
       Send: Send$3,
@@ -2667,6 +2688,9 @@
       "Send immediately": "Sofort senden",
       "Review before sending": "Vor dem Senden prüfen",
       "Send after countdown": "Nach Countdown senden",
+      "Type text as keystrokes": "Text als Tastenanschläge eingeben",
+      "For games that block paste, like Old School RuneScape. Slower; US keyboard layout and ASCII only.": "Für Spiele, die Einfügen blockieren, wie Old School RuneScape. Langsamer; nur US-Tastaturlayout und ASCII.",
+      "Could not update text insertion mode": "Texteingabemodus konnte nicht geändert werden",
       "Press Enter yourself": "Enter selbst drücken",
       "Type into chat without submitting": "In den Chat schreiben, ohne zu senden",
       Send: Send$2,
@@ -2944,6 +2968,9 @@
       "Send immediately": "Envoyer immédiatement",
       "Review before sending": "Relire avant d’envoyer",
       "Send after countdown": "Envoyer après le compte à rebours",
+      "Type text as keystrokes": "Saisir le texte touche par touche",
+      "For games that block paste, like Old School RuneScape. Slower; US keyboard layout and ASCII only.": "Pour les jeux qui bloquent le collage, comme Old School RuneScape. Plus lent ; clavier américain et ASCII uniquement.",
+      "Could not update text insertion mode": "Impossible de modifier le mode de saisie du texte",
       "Press Enter yourself": "Appuyer sur Entrée soi-même",
       "Type into chat without submitting": "Écrire dans le chat sans envoyer",
       Send: Send$1,
@@ -3221,6 +3248,9 @@
       "Send immediately": "立即发送",
       "Review before sending": "发送前检查",
       "Send after countdown": "倒计时后发送",
+      "Type text as keystrokes": "以按键方式输入文本",
+      "For games that block paste, like Old School RuneScape. Slower; US keyboard layout and ASCII only.": "适用于禁止粘贴的游戏，例如 Old School RuneScape。速度较慢；仅支持美式键盘布局和 ASCII。",
+      "Could not update text insertion mode": "无法更改文本输入模式",
       "Press Enter yourself": "自行按 Enter",
       "Type into chat without submitting": "输入到聊天框但不发送",
       Send: Send,
@@ -3451,6 +3481,7 @@
     const setReviewContextRpc = callable("set_review_context");
     const sendArmedDraftRpc = callable("send_armed_draft");
     const setManualSendRpc = callable("set_manual_send");
+    const setTypeAsKeysRpc = callable("set_type_as_keys");
     const setRememberLastChannelRpc = callable("set_remember_last_channel");
     const setShareDiagnosticsRpc = callable("set_share_diagnostics");
     const setRecordingIndicatorRpc = callable("set_recording_indicator");
@@ -3768,6 +3799,7 @@
             return () => { clearInterval(interval); logic.readQamVisibility = null; logic.qamKnown = false; };
         }, []);
         const [manualSend, setManualSend] = React.useState(false);
+        const [typeAsKeys, setTypeAsKeys] = React.useState(false);
         const [rememberLastChannel, setRememberLastChannel] = React.useState(false);
         const [shareDiagnostics, setShareDiagnostics] = React.useState(false);
         const [controllerClient] = React.useState(() => new ControllerDebugClient({
@@ -3934,6 +3966,7 @@
                         if (config.manualSend !== undefined) {
                             setManualSend(config.manualSend);
                         }
+                        setTypeAsKeys(config.typeAsKeys === true);
                         if (config.rememberLastChannel !== undefined) {
                             setRememberLastChannel(config.rememberLastChannel);
                         }
@@ -4484,6 +4517,21 @@
                                 } })),
                         sendingMode === "review" && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement("div", { style: { fontSize: '13px', lineHeight: '1.5' } }, t("Review stays visible until you decide. Tap {binding} to send; hold it to cancel. Open Decktation to review longer text.", { binding: buttons.join("+") }))),
+                        React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: t("Type text as keystrokes"), description: t("For games that block paste, like Old School RuneScape. Slower; US keyboard layout and ASCII only."), checked: typeAsKeys, onChange: async (next) => {
+                                    try {
+                                        const result = await setTypeAsKeysRpc(next);
+                                        if (result.success) {
+                                            setTypeAsKeys(next);
+                                            setRpcError("");
+                                        }
+                                        else
+                                            setRpcError(result.error || t("Could not update text insertion mode"));
+                                    }
+                                    catch (error) {
+                                        setRpcError(String(error));
+                                    }
+                                } })),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: t("Press Enter yourself"), description: t("Type into chat without submitting"), checked: manualSend, onChange: async (next) => { setManualSend(next); await setManualSendRpc(next); } })),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
