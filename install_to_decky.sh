@@ -18,6 +18,13 @@ fi
 PLUGIN_DIR="$PLUGINS_DIR/decktation"
 SOURCE_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Native wheels must run in the matching packaged interpreter, never Decky's
+# or the system Python. Refuse incomplete source-only installs before changes.
+if [ ! -x "$SOURCE_DIR/bin/runtime/bin/python3.11" ] || [ ! -d "$SOURCE_DIR/bin/python/numpy" ]; then
+    echo "Error: the built private Python runtime is missing. Install the complete plugin ZIP or build the backend artifact first."
+    exit 1
+fi
+
 echo "Source: $SOURCE_DIR"
 echo "Target: $PLUGIN_DIR"
 echo ""
@@ -38,6 +45,8 @@ mkdir -p "$PLUGIN_DIR/bin"
 echo "Copying files..."
 cp "$SOURCE_DIR/main.py" "$PLUGIN_DIR/"
 cp "$SOURCE_DIR/backend/src/decktation_backend.py" "$PLUGIN_DIR/bin/"
+cp "$SOURCE_DIR/backend/src/runtime_proxy.py" "$PLUGIN_DIR/bin/"
+cp "$SOURCE_DIR/backend/src/runtime_worker.py" "$PLUGIN_DIR/bin/"
 cp "$SOURCE_DIR/backend/src/plugin_update.py" "$PLUGIN_DIR/bin/"
 cp "$SOURCE_DIR/backend/src/audio_runtime.py" "$PLUGIN_DIR/bin/"
 cp "$SOURCE_DIR/backend/src/controller_listener.py" "$PLUGIN_DIR/bin/"
@@ -88,33 +97,8 @@ fi
 echo "✓ Files copied"
 echo ""
 
-# Install Python dependencies
-echo "Installing Python dependencies..."
-echo "This may take a few minutes..."
-
-# Use the venv pip if available, otherwise try to find pip
-if [ -f "$SOURCE_DIR/venv/bin/pip" ]; then
-    PIP="$SOURCE_DIR/venv/bin/pip"
-elif [ -f "$SOURCE_DIR/.venv/bin/pip" ]; then
-    PIP="$SOURCE_DIR/.venv/bin/pip"
-elif command -v pip3 &> /dev/null; then
-    PIP="pip3"
-elif command -v pip &> /dev/null; then
-    PIP="pip"
-else
-    echo "Error: pip not found!"
-    echo "Creating a temporary venv..."
-    python3 -m venv /tmp/decktation_venv
-    PIP="/tmp/decktation_venv/bin/pip"
-fi
-
-echo "Using pip: $PIP"
-echo ""
-
-$PIP install --target "$PLUGIN_DIR/lib" \
-    -r "$SOURCE_DIR/backend/src/requirements.txt"
-
-echo "✓ Dependencies installed"
+# Dependencies and their matching interpreter came from the built bin/ tree.
+echo "✓ Private Python runtime and dependencies copied"
 echo ""
 
 # Set permissions
@@ -135,7 +119,7 @@ echo ""
 
 # Verify installation
 echo "Verifying installation..."
-if [ -d "$PLUGIN_DIR/lib/numpy" ]; then
+if [ -d "$PLUGIN_DIR/bin/python/numpy" ]; then
     echo "✓ numpy installed"
 else
     echo "✗ numpy missing!"

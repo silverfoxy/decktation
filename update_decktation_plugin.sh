@@ -28,6 +28,13 @@ echo "Plugin directory: $PLUGIN_DIR"
 
 # Source directory (where this script is)
 SOURCE_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Native wheels must run in the matching packaged interpreter, never Decky's
+# or the system Python. Refuse incomplete source-only installs before changes.
+if [ ! -x "$SOURCE_DIR/bin/runtime/bin/python3.11" ] || [ ! -d "$SOURCE_DIR/bin/python/numpy" ]; then
+    echo "Error: the built private Python runtime is missing. Install the complete plugin ZIP or build the backend artifact first."
+    exit 1
+fi
 echo "Source directory: $SOURCE_DIR"
 echo ""
 
@@ -50,6 +57,8 @@ echo "  → Core Python files..."
 sudo cp "$SOURCE_DIR/main.py" "$PLUGIN_DIR/"
 sudo mkdir -p "$PLUGIN_DIR/bin"
 sudo cp "$SOURCE_DIR/backend/src/decktation_backend.py" "$PLUGIN_DIR/bin/"
+sudo cp "$SOURCE_DIR/backend/src/runtime_proxy.py" "$PLUGIN_DIR/bin/"
+sudo cp "$SOURCE_DIR/backend/src/runtime_worker.py" "$PLUGIN_DIR/bin/"
 sudo cp "$SOURCE_DIR/backend/src/plugin_update.py" "$PLUGIN_DIR/bin/"
 sudo cp "$SOURCE_DIR/backend/src/audio_runtime.py" "$PLUGIN_DIR/bin/"
 sudo cp "$SOURCE_DIR/backend/src/controller_listener.py" "$PLUGIN_DIR/bin/"
@@ -69,21 +78,11 @@ sudo cp "$SOURCE_DIR/backend/src/recording_overlay_manager.py" "$PLUGIN_DIR/bin/
 sudo cp "$SOURCE_DIR/backend/src/overlay_render.py" "$PLUGIN_DIR/bin/"
 sudo cp "$SOURCE_DIR/backend/src/review_gesture.py" "$PLUGIN_DIR/bin/"
 
-# Install the same slim Python runtime used by marketplace artifacts.
-echo "  → Python runtime..."
-if [ -x "$SOURCE_DIR/venv/bin/pip" ]; then
-  PIP="$SOURCE_DIR/venv/bin/pip"
-elif [ -x "$SOURCE_DIR/.venv/bin/pip" ]; then
-  PIP="$SOURCE_DIR/.venv/bin/pip"
-else
-  PIP="python3 -m pip"
-fi
-SDK_TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$SDK_TMP_DIR"' EXIT
-$PIP install --target "$SDK_TMP_DIR" -r "$SOURCE_DIR/backend/src/requirements.txt"
-sudo rm -rf "$PLUGIN_DIR/lib"
-sudo mkdir -p "$PLUGIN_DIR/lib"
-sudo cp -R "$SDK_TMP_DIR/." "$PLUGIN_DIR/lib/"
+# Copy the interpreter and its prebuilt native wheels as one ABI-matched unit.
+echo "  → Private Python runtime..."
+sudo rm -rf "$PLUGIN_DIR/bin/runtime" "$PLUGIN_DIR/bin/python"
+sudo cp -R "$SOURCE_DIR/bin/runtime" "$PLUGIN_DIR/bin/"
+sudo cp -R "$SOURCE_DIR/bin/python" "$PLUGIN_DIR/bin/"
 
 # Built frontend
 echo "  → Frontend (dist/index.js)..."

@@ -3,11 +3,11 @@ FROM ghcr.io/steamdeckhomebrew/holo-base:latest
 ARG YDOTOOL_COMMIT=57ba7d0af525e82da2de0e275d169477f293b197
 ARG WHISPER_CPP_COMMIT=f24588a272ae8e23280d9c220536437164e6ed28
 
-# holo-base already ships glslc, shaderc, and the Vulkan headers. Installing
-# their packages again fails because those files are not tracked by its pacman
-# database, so install only the additional build/runtime dependencies here.
+# holo-base already ships glslc, shaderc, the Vulkan headers, and binutils.
+# Reinstalling those packages fails because their files are untracked by pacman.
 RUN pacman -Sydd --noconfirm --dbpath /var/lib/pacman \
         alsa-lib cmake cppdap git libuv python-pip rhash spirv-headers vulkan-icd-loader xclip \
+    && command -v strip \
     && cmake --version \
     && glslc --version
 
@@ -19,6 +19,11 @@ RUN git clone --depth 1 --branch v19.7.0 https://github.com/PortAudio/portaudio.
         -DPA_BUILD_SHARED=ON -DPA_BUILD_STATIC=OFF \
         -DPA_USE_ALSA=ON -DPA_USE_JACK=OFF -DPA_BUILD_EXAMPLES=OFF -DPA_BUILD_TESTS=OFF \
     && cmake --build /portaudio-build -j2
+
+# The private interpreter and native wheels are deliberately the same ABI.
+# Decky itself only loads the standard-library RPC bridge.
+COPY prepare_runtime.py /tmp/decktation-prepare-runtime.py
+RUN python3 /tmp/decktation-prepare-runtime.py /runtime/interpreter
 
 COPY src/requirements.txt /tmp/decktation-requirements.txt
 

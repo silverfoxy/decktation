@@ -22,6 +22,19 @@ on:
   workflow_dispatch:
 
 jobs:
+  bridge-compatibility:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.11', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install pytest
+      - run: pytest tests/test_private_runtime.py -v
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -93,6 +106,9 @@ jobs:
           unzip -l build-output/decktation.zip | grep -q 'decktation/game_presets.json'
           unzip -l build-output/decktation.zip | grep -q 'decktation/channel_languages.json'
           unzip -l build-output/decktation.zip | grep -q 'cpython-311'
+          unzip -l build-output/decktation.zip | grep -q 'decktation/bin/runtime/bin/python3.11'
+          unzip -l build-output/decktation.zip | grep -q 'decktation/bin/runtime_worker.py'
+          unzip -l build-output/decktation.zip | grep -q 'decktation/bin/runtime_proxy.py'
           ! unzip -l build-output/decktation.zip | grep -q 'cpython-313'
           ! unzip -l build-output/decktation.zip | grep -q 'decktation/bin/python/av/'
           ! unzip -l build-output/decktation.zip | grep -q 'decktation/bin/python/ctranslate2'

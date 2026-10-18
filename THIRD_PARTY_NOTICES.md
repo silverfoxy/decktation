@@ -19,3 +19,20 @@ shared library used by `sounddevice`:
 - SteamOS package: `portaudio`
 - License: MIT
 - Packaged license: `bin/licenses/portaudio-MIT.txt`
+
+The private interpreter under `bin/runtime` is CPython 3.11.17 from Astral's
+python-build-standalone release 20261013 (Linux x86_64 GNU). The download is
+SHA-256 pinned in `backend/prepare_runtime.py`. This runtime is independent of
+Decky's Python; native packages under `bin/python` target its CPython 3.11 ABI.
+
+- Source and build instructions: <https://github.com/astral-sh/python-build-standalone/tree/20261013>
+- CPython source: <https://github.com/python/cpython/tree/v3.11.17>
+- CPython license: `bin/licenses/runtime/LICENSE.cpython.txt`
+- Statically bundled component notices: `bin/licenses/runtime/`
+
+The interpreter is stripped of debugging symbols. Development headers, shared
+libpython (the executable does not depend on it), pip, setuptools, Tk/Tcl,
+IDLE, documentation, tests and bytecode caches are omitted. Retained standard
+library modules and native extensions support the engine's HTTPS, subprocess,
+threading, audio, JSON and file-handling needs. No system Python installation
+or runtime package download is required on the device.
