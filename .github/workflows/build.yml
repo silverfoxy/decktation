@@ -4,12 +4,6 @@ on:
   push:
     branches: ['**']
     tags: ['v*']
-    paths-ignore:
-      - 'site/**'
-      - 'cloudflare/**'
-      - '.github/workflows/website.yml'
-      - 'doc/CLOUDFLARE_WORKER.md'
-      - 'doc/DOMAIN_SETUP.md'
   pull_request:
     branches: [master, main]
     paths-ignore:
@@ -18,8 +12,10 @@ on:
       - '.github/workflows/website.yml'
       - 'doc/CLOUDFLARE_WORKER.md'
       - 'doc/DOMAIN_SETUP.md'
-  delete:
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   bridge-compatibility:
@@ -55,10 +51,7 @@ jobs:
       - run: python -m py_compile main.py backend/src/decktation_backend.py backend/src/plugin_update.py backend/src/wow_voice_chat.py backend/src/controller_listener.py backend/src/deck_hid.py backend/src/gamepad_evdev.py backend/src/telemetry.py backend/src/haptic_feedback.py
 
   build:
-    if: github.event_name != 'delete'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -73,9 +66,20 @@ jobs:
         if: startsWith(github.ref, 'refs/heads/')
         env:
           COMMIT_SHA: ${{ github.sha }}
+          BRANCH_NAME: ${{ github.ref_name }}
         run: |
           BASE_VERSION="$(node scripts/release-version.mjs print)"
-          DEV_VERSION="$(node scripts/release-version.mjs next-dev "$BASE_VERSION" "$COMMIT_SHA")"
+          DEV_VERSION="$(node scripts/release-version.mjs next-dev "$BASE_VERSION" "$COMMIT_SHA" "$BRANCH_NAME")"
+          node scripts/release-version.mjs set "$DEV_VERSION"
+
+      - name: Set development version for PR builds
+        if: github.event_name == 'pull_request'
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          BASE_VERSION="$(node scripts/release-version.mjs print)"
+          DEV_VERSION="$(node scripts/release-version.mjs next-dev "$BASE_VERSION" "$HEAD_SHA" "pr-$PR_NUMBER")"
           node scripts/release-version.mjs set "$DEV_VERSION"
 
       - name: Download Decky CLI
@@ -134,6 +138,7 @@ jobs:
         id: plugin-artifact
         uses: actions/upload-artifact@v7
         with:
+          name: decktation.zip
           path: build-output/decktation.zip
           archive: false
 
@@ -155,86 +160,3 @@ jobs:
               echo "- Public branch URL (when GitHub Pages is enabled): [$PAGES_BASE_URL/branches/$BRANCH_PATH/Decktation.zip]($PAGES_BASE_URL/branches/$BRANCH_PATH/Decktation.zip)"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Publish Pages downloads
-        if: github.event_name != 'pull_request'
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_SHA: ${{ github.sha }}
-          PAGES_BASE_URL: ${{ vars.DECKTATION_PAGES_BASE_URL || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
-          REF_NAME: ${{ github.ref_name }}
-          REF_TYPE: ${{ github.ref_type }}
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: bash scripts/publish-pages.sh
-
-      - name: Upload release archive
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: build-output/decktation.zip
-          body: |
-            ## Installation
-
-            Download **decktation.zip** from the Assets section and import it
-            with Decky's **Install Plugin from ZIP** option.
-
-            **Do not download “Source code (zip)” or “Source code (tar.gz)”.**
-            GitHub adds those archives automatically, but they do not contain
-            Decktation's bundled Python dependencies and will not run.
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-
-  cleanup-pages:
-    if: github.event_name == 'delete'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Prune deleted branch downloads
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          PAGES_BASE_URL: ${{ vars.DECKTATION_PAGES_BASE_URL || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
-          CLEANUP_ONLY: "true"
-        run: bash scripts/publish-pages.sh
-
-  deploy-pages:
-    # Publishing gh-pages with GITHUB_TOKEN does not itself trigger a Pages deployment.
-    needs: [build, cleanup-pages]
-    if: >-
-      ${{
-        !cancelled() &&
-        github.event_name != 'pull_request' &&
-        (needs.build.result == 'success' || needs.cleanup-pages.result == 'success')
-      }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    # GitHub's default Pages environment may be limited to protected branches.
-    # This dedicated environment lets every branch in this fork publish previews.
-    environment:
-      name: decktation-previews
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Checkout generated download site
-        uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          path: pages-site
-          persist-credentials: false
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: pages-site
-          include-hidden-files: true
-
-      - name: Deploy site
-        id: deployment
-        uses: actions/deploy-pages@v4

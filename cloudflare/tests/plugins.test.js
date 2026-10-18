@@ -27,6 +27,36 @@ test("OPTIONS permits Decky's custom header", async () => {
   );
 });
 
+test("GET and OPTIONS serve the opt-in test catalog without changing stable", async (t) => {
+  const fetch = t.mock.method(globalThis, "fetch", async (url, init) => {
+    assert.equal(url, "https://silverfoxy.github.io/decktation/store/testing/plugins.json");
+    assert.equal(init.redirect, "manual");
+    return new Response('[{"name":"Decktation","versions":[]}]', {
+      headers: { "Content-Type": "application/json" },
+    });
+  });
+  const url = "https://decktation.com/testing/plugins.json";
+  const preflight = await worker.fetch(new Request(url, { method: "OPTIONS" }));
+  assert.equal(preflight.status, 204);
+  assert.equal(preflight.headers.get("Access-Control-Allow-Origin"), "*");
+  const response = await worker.fetch(new Request(url));
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "*");
+  assert.equal((await response.json())[0].name, "Decktation");
+  assert.equal(fetch.mock.callCount(), 1);
+  assert.equal((await worker.fetch(new Request(url, { method: "POST" }))).status, 405);
+});
+
+test("test catalog disables automatic branch updates but keeps manual versions", async () => {
+  const response = await worker.fetch(new Request("https://decktation.com/testing/plugins.json/versions"));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {});
+  assert.equal(response.headers.get("access-control-allow-origin"), "*");
+  const preflight = await worker.fetch(new Request("https://decktation.com/testing/plugins.json/versions", { method: "OPTIONS" }));
+  assert.equal(preflight.status, 204);
+  assert.equal((await worker.fetch(new Request("https://decktation.com/testing/plugins.json/versions", { method: "POST" }))).status, 405);
+});
+
 test("GET proxies the catalog and adds CORS headers", async () => {
   const originalFetch = globalThis.fetch;
 

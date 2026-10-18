@@ -38,7 +38,7 @@ test("download index, branch pages and metadata use the Pages origin", async (t)
 test("ZIP redirects preserve release/branch paths and queries without fetching bytes", async (t) => {
   const fetch = t.mock.method(globalThis, "fetch", () => { throw new Error("Unexpected fetch"); });
   for (const method of ["GET", "HEAD"]) {
-    for (const path of ["/latest.zip", "/releases/latest/decktation.zip", "/releases/v1.0/decktation.zip", "/branches/feature%2Btest/decktation.zip?download=1", "//external.example/file.zip"]) {
+    for (const path of ["/latest.zip", "/releases/latest/decktation.zip", "/releases/v1.0/decktation.zip", "/branches/feature%2Btest/decktation.zip?download=1", "/pulls/81/123/1/Decktation.zip", "//external.example/file.zip"]) {
       const response = await worker.fetch(request(path, method));
       assert.equal(response.status, 302);
       assert.equal(response.headers.get("Location"), `${origin}${path}`);

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
@@ -34,14 +35,24 @@ function fail(message) {
   process.exitCode = 1;
 }
 
-export function nextDevelopmentVersion(version, commitSha) {
+export function nextDevelopmentVersion(version, commitSha, branch) {
   const match = VERSION_RE.exec(version);
   if (!match || !commitSha) {
     return null;
   }
 
   const [, major, minor, patch] = match;
-  return `${major}.${minor}.${Number(patch) + 1}-dev.${commitSha.slice(0, 7)}`;
+  let branchLabel = "";
+  if (branch && branch !== "master") {
+    if (typeof branch !== "string") return null;
+    const slug = branch.replace(/[^A-Za-z0-9-]+/g, "-").replace(/^-|-$/g, "");
+    if (!slug) return null;
+    const label = /^\d+$/.test(slug) ? `branch-${slug}` : slug;
+    const needsHash = label.length > 36 || /[^A-Za-z0-9/-]/.test(branch);
+    const suffix = needsHash ? `-${createHash("sha256").update(branch).digest("hex").slice(0, 8)}` : "";
+    branchLabel = `${label.slice(0, 36).replace(/-$/g, "")}${suffix}.`;
+  }
+  return `${major}.${minor}.${Number(patch) + 1}-dev.${branchLabel}${commitSha.slice(0, 7)}`;
 }
 
 function exactHeadTags() {
@@ -79,7 +90,7 @@ function check(expectedTag) {
 }
 
 function main() {
-  const [command = "check", argument, extraArgument] = process.argv.slice(2);
+  const [command = "check", argument, extraArgument, branch] = process.argv.slice(2);
 
   if (command === "print") {
     console.log(versions().version);
@@ -97,9 +108,9 @@ function main() {
       console.log(`Updated release manifests to ${argument}.`);
     }
   } else if (command === "next-dev") {
-    const version = nextDevelopmentVersion(argument, extraArgument);
+    const version = nextDevelopmentVersion(argument, extraArgument, branch);
     if (!version) {
-      fail("usage: release-version.mjs next-dev X.Y.Z COMMIT_SHA");
+      fail("usage: release-version.mjs next-dev X.Y.Z COMMIT_SHA [BRANCH]");
     } else {
       console.log(version);
     }

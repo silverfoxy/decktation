@@ -1,0 +1,219 @@
+name: Publish approved Decktation downloads
+
+# workflow_run uses the workflow on the default branch. Candidate builds only
+# upload an artifact with a read-only token; no candidate script runs here.
+on:
+  workflow_run:
+    workflows: ['Build Decktation Plugin']
+    types: [completed]
+  delete:
+  # Trusted default-branch cleanup only; never check out or execute PR code.
+  pull_request_target:
+    types: [opened, reopened, synchronize, closed]
+
+concurrency:
+  group: decktation-pages-publisher
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      ${{ github.event_name == 'workflow_run' &&
+          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'push' &&
+          github.event.workflow_run.head_repository.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          persist-credentials: false
+      - name: Verify the source ref still points at the built commit
+        id: source-ref
+        env:
+          SOURCE_REF: ${{ github.event.workflow_run.head_branch }}
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          remote="https://github.com/${GITHUB_REPOSITORY}.git"
+          if [[ "$SOURCE_REF" == v* ]] && \
+             bash scripts/verify-current-ref.sh "$remote" tag "$SOURCE_REF" "$SOURCE_SHA" && \
+             bash scripts/verify-current-ref.sh "$remote" branch "$SOURCE_REF" "$SOURCE_SHA"; then
+            echo 'Ambiguous branch and release tag at the same commit; no artifact promoted.'
+            echo 'current=false' >> "$GITHUB_OUTPUT"
+          elif [[ "$SOURCE_REF" == v* ]] && bash scripts/verify-current-ref.sh "$remote" tag "$SOURCE_REF" "$SOURCE_SHA"; then
+            # A newly created tag from an unreviewed branch must not update stable downloads.
+            status="$(gh api "repos/${GITHUB_REPOSITORY}/compare/${SOURCE_SHA}...master" --jq .status)"
+            if [ "$status" = 'identical' ] || [ "$status" = 'ahead' ]; then
+              echo 'current=true' >> "$GITHUB_OUTPUT"
+              echo 'ref_type=tag' >> "$GITHUB_OUTPUT"
+            else
+              echo 'Release tag is not on master; no artifact promoted.'
+              echo 'current=false' >> "$GITHUB_OUTPUT"
+            fi
+          elif bash scripts/verify-current-ref.sh "$remote" branch "$SOURCE_REF" "$SOURCE_SHA"; then
+            echo 'current=true' >> "$GITHUB_OUTPUT"
+            echo 'ref_type=branch' >> "$GITHUB_OUTPUT"
+          else
+            echo 'Obsolete or deleted build; no package promoted.'
+            echo 'current=false' >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/download-artifact@v8
+        if: steps.source-ref.outputs.current == 'true'
+        with:
+          name: decktation.zip
+          path: build-output
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - name: Publish using trusted default-branch scripts
+        if: steps.source-ref.outputs.current == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_SHA: ${{ github.event.workflow_run.head_sha }}
+          REF_NAME: ${{ github.event.workflow_run.head_branch }}
+          REF_TYPE: ${{ steps.source-ref.outputs.ref_type }}
+          RELEASE_TAG: ${{ github.event.workflow_run.head_branch }}
+          PAGES_BASE_URL: ${{ vars.DECKTATION_PAGES_BASE_URL || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
+        run: bash scripts/publish-pages.sh
+      - name: Upload release archive
+        if: steps.source-ref.outputs.current == 'true' && steps.source-ref.outputs.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.workflow_run.head_branch }}
+          files: build-output/decktation.zip
+          body: |
+            ## Installation
+            Download **decktation.zip** from Assets and import it with Decky's **Install Plugin from ZIP** option.
+            Do not download GitHub's automatic Source code archives; they lack bundled dependencies.
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+
+  publish-pr:
+    if: >-
+      ${{ github.event_name == 'workflow_run' &&
+          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: decktation.zip
+          path: build-output
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - name: Confirm artifact belongs to a current open PR
+        id: candidate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_REPOSITORY: ${{ github.event.workflow_run.head_repository.full_name }}
+        run: |
+          python3 scripts/verify-current-pr.py \
+            --repository "$GITHUB_REPOSITORY" --sha "$SOURCE_SHA" \
+            --head-repository "$HEAD_REPOSITORY" \
+            --artifact build-output/decktation.zip --output "$GITHUB_OUTPUT"
+      - name: Publish immutable PR build through trusted scripts
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_SHA: ${{ github.event.workflow_run.head_sha }}
+          REF_NAME: pr-${{ steps.candidate.outputs.number }}
+          REF_TYPE: pull_request
+          PR_NUMBER: ${{ steps.candidate.outputs.number }}
+          PR_HEAD_REPO: ${{ steps.candidate.outputs.head_repository }}
+          PR_RUN_ID: ${{ github.event.workflow_run.id }}
+          PR_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          PAGES_BASE_URL: ${{ vars.DECKTATION_PAGES_BASE_URL || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
+        run: bash scripts/publish-pages.sh
+
+  reconcile-pages:
+    if: >-
+      ${{ github.event_name == 'workflow_run' &&
+          github.event.workflow_run.event == 'push' &&
+          github.event.workflow_run.conclusion != 'success' &&
+          github.event.workflow_run.head_repository.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          persist-credentials: false
+      - name: Remove stale approvals after an unsuccessful candidate build
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PAGES_BASE_URL: ${{ vars.DECKTATION_PAGES_BASE_URL || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
+          CLEANUP_ONLY: 'true'
+        run: bash scripts/publish-pages.sh
+
+  cleanup-pages:
+    if: github.event_name == 'delete' && github.event.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          persist-credentials: false
+      - name: Prune deleted branch downloads
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PAGES_BASE_URL: ${{ vars.DECKTATION_PAGES_BASE_URL || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
+          CLEANUP_ONLY: 'true'
+        run: bash scripts/publish-pages.sh
+
+  refresh-pr-catalog:
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          persist-credentials: false
+      - name: Reconcile current open PRs without running candidate code
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PAGES_BASE_URL: ${{ vars.DECKTATION_PAGES_BASE_URL || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
+          CLEANUP_ONLY: 'true'
+        run: bash scripts/publish-pages.sh
+
+  deploy-pages:
+    needs: [publish, publish-pr, reconcile-pages, cleanup-pages, refresh-pr-catalog]
+    if: >-
+      ${{ !cancelled() &&
+          (needs.publish.result == 'success' || needs.publish-pr.result == 'success' ||
+           needs.reconcile-pages.result == 'success' || needs.cleanup-pages.result == 'success' ||
+           needs.refresh-pr-catalog.result == 'success') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: decktation-previews
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: pages-site
+          persist-credentials: false
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: pages-site
+      - uses: actions/deploy-pages@v4
+        id: deployment
