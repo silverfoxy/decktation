@@ -6,7 +6,9 @@
     "build": "shx rm -rf dist && rollup -c",
     "watch": "rollup -c -w",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "test:update": "node --test tests/frontend-plugin-update.test.cjs"
+    "test:update": "node --test tests/frontend-plugin-update.test.cjs",
+    "test:integration": "playwright test --config tests/integration/playwright.config.ts",
+    "dev:integration": "node tests/integration/server.mjs"
   },
   "repository": {
     "type": "git",
@@ -26,18 +28,21 @@
   "author": "silverfoxy",
   "license": "MIT",
   "devDependencies": {
+    "@playwright/test": "1.58.2",
     "@rollup/plugin-commonjs": "^21.1.0",
     "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^13.3.0",
     "@rollup/plugin-replace": "^4.0.0",
     "@rollup/plugin-typescript": "^8.5.0",
     "react": "19.2.7",
+    "react-dom": "19.2.7",
     "react-test-renderer": "19.2.7",
     "rollup": "^2.79.2",
     "rollup-plugin-import-assets": "^1.1.1",
     "shx": "^0.3.4",
     "tslib": "^2.4.0",
-    "typescript": "^4.7.4"
+    "typescript": "^4.7.4",
+    "vite": "6.4.4"
   },
   "dependencies": {
     "@decky/api": "^1.1.3",
