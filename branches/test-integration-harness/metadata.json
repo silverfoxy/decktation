@@ -2,7 +2,7 @@
   "plugin": "Decktation",
   "channel": "branch",
   "ref": "test/integration-harness",
-  "commit": "fd1a8b424beeb1b5f9b29cb329f1e933d8245854",
+  "commit": "8b2ccc4f7f7b99183c5e27716a7ee043283e451a",
   "zip_url": "https://decktation.com/branches/test-integration-harness/Decktation.zip",
-  "generated_at": "2026-10-18T00:59:44Z"
+  "generated_at": "2026-10-18T01:58:25Z"
 }
