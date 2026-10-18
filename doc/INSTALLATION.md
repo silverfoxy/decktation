@@ -31,6 +31,8 @@ For details about the optional Decktation Custom Store and its effect on the sel
 
 ## Branch builds
 
+For repeated Deck testing, configure the [opt-in testing catalog](TESTING_STORE.md) once at `https://decktation.com/testing/plugins.json`. It lists successful builds of **open PRs, including forks, without approval**; select a PR version deliberately. The direct branch ZIP URLs below remain useful for one-off installs. A PR listed in the testing store has **not** been reviewed for safety.
+
 When GitHub Pages is enabled for a repository, branch packages use this URL pattern:
 
 ```text
