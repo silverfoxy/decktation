@@ -35,6 +35,16 @@ if ! find out/python -type f -name '*cpython-311*' | grep -q .; then
 fi
 
 cp /ydotool-build/ydotool /ydotool-build/ydotoold out/
+# Build against the same SteamOS-like image used by Decky; do not ship a
+# binary built against the developer VM's libc.
+mkdir -p out/.gamescope-build
+wayland-scanner client-header src/gamescope-input-method.xml out/.gamescope-build/gamescope-input-method-client-protocol.h
+wayland-scanner private-code src/gamescope-input-method.xml out/.gamescope-build/gamescope-input-method-protocol.c
+cc -std=c11 -O2 -Wall -Wextra -Werror -Iout/.gamescope-build \
+    src/gamescope_inject.c out/.gamescope-build/gamescope-input-method-protocol.c \
+    -lwayland-client -o out/gamescope-inject
+rm -rf out/.gamescope-build
+cp src/gamescope-input-method.xml out/licenses/gamescope-input-method-MIT.xml
 cp /whisper.cpp/build/bin/whisper-server out/
 cp /usr/bin/xclip out/
 cp -L /portaudio-build/libportaudio.so out/lib/libportaudio.so.2

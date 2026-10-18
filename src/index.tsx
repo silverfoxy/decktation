@@ -66,7 +66,7 @@ const setReviewContextRpc = callable<[visible: boolean, known: boolean], RpcResp
 const sendArmedDraftRpc = callable<[draftId: string], RpcResponse>("send_armed_draft");
 type PendingDraft = { id: string; text: string; destination: string; action: string; mode: string; error: string; sending: boolean; manual: boolean };
 const setManualSendRpc = callable<[enabled: boolean], RpcResponse>("set_manual_send");
-const setTypeAsKeysRpc = callable<[enabled: boolean], RpcResponse>("set_type_as_keys");
+const setTextInsertionModeRpc = callable<[mode: string], RpcResponse>("set_text_insertion_mode");
 const setRememberLastChannelRpc = callable<[enabled: boolean], RpcResponse>("set_remember_last_channel");
 const setShareDiagnosticsRpc = callable<[enabled: boolean], RpcResponse>("set_share_diagnostics");
 const setRecordingIndicatorRpc = callable<[mode: string], RpcResponse>("set_recording_indicator");
@@ -391,7 +391,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 		return () => { clearInterval(interval); logic.readQamVisibility = null; logic.qamKnown = false; };
 	}, []);
 	const [manualSend, setManualSend] = useState<boolean>(false);
-	const [typeAsKeys, setTypeAsKeys] = useState<boolean>(false);
+	const [textInsertionMode, setTextInsertionMode] = useState<string>("paste");
 	const [rememberLastChannel, setRememberLastChannel] = useState<boolean>(false);
 	const [shareDiagnostics, setShareDiagnostics] = useState<boolean>(false);
 	const [controllerClient] = useState(() => new ControllerDebugClient({
@@ -548,7 +548,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					if (config.manualSend !== undefined) {
 						setManualSend(config.manualSend);
 					}
-					setTypeAsKeys(config.typeAsKeys === true);
+					setTextInsertionMode(config.textInsertionMode || (config.typeAsKeys === true ? "ydotool" : "paste"));
 					if (config.rememberLastChannel !== undefined) {
 						setRememberLastChannel(config.rememberLastChannel);
 					}
@@ -1017,15 +1017,20 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 							else setRpcError(result.error || t("Could not update sending mode"));
 						}} /></PanelSectionRow>
 						{sendingMode === "review" && <PanelSectionRow><div style={{ fontSize: '13px', lineHeight: '1.5' }}>{t("Review stays visible until you decide. Tap {binding} to send; hold it to cancel. Open Decktation to review longer text.", {binding: buttons.join("+")})}</div></PanelSectionRow>}
-						<PanelSectionRow><ToggleField label={t("Type text as keystrokes")} description={t("For games that block paste, like Old School RuneScape. Slower; US keyboard layout and ASCII only.")} checked={typeAsKeys}
-							onChange={async (next: boolean) => {
+						<PanelSectionRow><DropdownItem label={t("Text insertion")} menuLabel={t("Text insertion")}
+							rgOptions={[{data:"paste",label:t("Paste (default)")},{data:"ydotool",label:t("ydotool typing (experimental)")},{data:"gamescope",label:t("Gamescope typing (experimental)")}]}
+							selectedOption={textInsertionMode} onChange={async (option) => {
 								try {
-									const result = await setTypeAsKeysRpc(next);
-									if (result.success) { setTypeAsKeys(next); setRpcError(""); }
+									const next = String(option.data);
+									const result = await setTextInsertionModeRpc(next);
+									if (result.success) { setTextInsertionMode(next); setRpcError(""); }
 									else setRpcError(result.error || t("Could not update text insertion mode"));
 								} catch (error) { setRpcError(String(error)); }
 							}} /></PanelSectionRow>
-						<PanelSectionRow><ToggleField label={t("Press Enter yourself")} description={t("Type into chat without submitting")} checked={manualSend}
+						<PanelSectionRow><div style={{ fontSize: '12px', opacity: 0.85 }}>{t("Experimental: compare typing backends on your Steam Deck before sending in a game.")}</div></PanelSectionRow>
+						{textInsertionMode === "ydotool" && <PanelSectionRow><div style={{ fontSize: '12px' }}>{t("ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.")}</div></PanelSectionRow>}
+						{textInsertionMode === "gamescope" && <PanelSectionRow><div style={{ fontSize: '12px' }}>{t("Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.")}</div></PanelSectionRow>}
+						<PanelSectionRow><ToggleField label={t("Press Enter yourself")} description={t("Type into chat without submitting")} checked={manualSend || textInsertionMode === "gamescope"} disabled={textInsertionMode === "gamescope"}
 							onChange={async (next) => { setManualSend(next); await setManualSendRpc(next); }} /></PanelSectionRow>
 						<PanelSectionRow><ToggleField label={t("Remember channel")} description={t("Reuse the last spoken channel")} checked={rememberLastChannel}
 							onChange={async (next) => {

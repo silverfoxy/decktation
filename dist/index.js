@@ -528,6 +528,13 @@
       "Type text as keystrokes": "Type text as keystrokes",
       "For games that block paste, like Old School RuneScape. Slower; US keyboard layout and ASCII only.": "For games that block paste, like Old School RuneScape. Slower; US keyboard layout and ASCII only.",
       "Could not update text insertion mode": "Could not update text insertion mode",
+      "Text insertion": "Text insertion",
+      "Paste (default)": "Paste (default)",
+      "ydotool typing (experimental)": "ydotool typing (experimental)",
+      "Gamescope typing (experimental)": "Gamescope typing (experimental)",
+      "Experimental: compare typing backends on your Steam Deck before sending in a game.": "Experimental: compare typing backends on your Steam Deck before sending in a game.",
+      "ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.": "ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.",
+      "Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.": "Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.",
       "Press Enter yourself": "Press Enter yourself",
       "Type into chat without submitting": "Type into chat without submitting",
       Send: Send$9,
@@ -3481,7 +3488,7 @@
     const setReviewContextRpc = callable("set_review_context");
     const sendArmedDraftRpc = callable("send_armed_draft");
     const setManualSendRpc = callable("set_manual_send");
-    const setTypeAsKeysRpc = callable("set_type_as_keys");
+    const setTextInsertionModeRpc = callable("set_text_insertion_mode");
     const setRememberLastChannelRpc = callable("set_remember_last_channel");
     const setShareDiagnosticsRpc = callable("set_share_diagnostics");
     const setRecordingIndicatorRpc = callable("set_recording_indicator");
@@ -3799,7 +3806,7 @@
             return () => { clearInterval(interval); logic.readQamVisibility = null; logic.qamKnown = false; };
         }, []);
         const [manualSend, setManualSend] = React.useState(false);
-        const [typeAsKeys, setTypeAsKeys] = React.useState(false);
+        const [textInsertionMode, setTextInsertionMode] = React.useState("paste");
         const [rememberLastChannel, setRememberLastChannel] = React.useState(false);
         const [shareDiagnostics, setShareDiagnostics] = React.useState(false);
         const [controllerClient] = React.useState(() => new ControllerDebugClient({
@@ -3966,7 +3973,7 @@
                         if (config.manualSend !== undefined) {
                             setManualSend(config.manualSend);
                         }
-                        setTypeAsKeys(config.typeAsKeys === true);
+                        setTextInsertionMode(config.textInsertionMode || (config.typeAsKeys === true ? "ydotool" : "paste"));
                         if (config.rememberLastChannel !== undefined) {
                             setRememberLastChannel(config.rememberLastChannel);
                         }
@@ -4518,11 +4525,12 @@
                         sendingMode === "review" && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement("div", { style: { fontSize: '13px', lineHeight: '1.5' } }, t("Review stays visible until you decide. Tap {binding} to send; hold it to cancel. Open Decktation to review longer text.", { binding: buttons.join("+") }))),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                            React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: t("Type text as keystrokes"), description: t("For games that block paste, like Old School RuneScape. Slower; US keyboard layout and ASCII only."), checked: typeAsKeys, onChange: async (next) => {
+                            React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: t("Text insertion"), menuLabel: t("Text insertion"), rgOptions: [{ data: "paste", label: t("Paste (default)") }, { data: "ydotool", label: t("ydotool typing (experimental)") }, { data: "gamescope", label: t("Gamescope typing (experimental)") }], selectedOption: textInsertionMode, onChange: async (option) => {
                                     try {
-                                        const result = await setTypeAsKeysRpc(next);
+                                        const next = String(option.data);
+                                        const result = await setTextInsertionModeRpc(next);
                                         if (result.success) {
-                                            setTypeAsKeys(next);
+                                            setTextInsertionMode(next);
                                             setRpcError("");
                                         }
                                         else
@@ -4533,7 +4541,13 @@
                                     }
                                 } })),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                            React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: t("Press Enter yourself"), description: t("Type into chat without submitting"), checked: manualSend, onChange: async (next) => { setManualSend(next); await setManualSendRpc(next); } })),
+                            React__default["default"].createElement("div", { style: { fontSize: '12px', opacity: 0.85 } }, t("Experimental: compare typing backends on your Steam Deck before sending in a game."))),
+                        textInsertionMode === "ydotool" && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement("div", { style: { fontSize: '12px' } }, t("ydotool typing: US keyboard layout and ASCII only. Other text fails without sending."))),
+                        textInsertionMode === "gamescope" && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement("div", { style: { fontSize: '12px' } }, t("Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix."))),
+                        React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: t("Press Enter yourself"), description: t("Type into chat without submitting"), checked: manualSend || textInsertionMode === "gamescope", disabled: textInsertionMode === "gamescope", onChange: async (next) => { setManualSend(next); await setManualSendRpc(next); } })),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: t("Remember channel"), description: t("Reuse the last spoken channel"), checked: rememberLastChannel, onChange: async (next) => {
                                     setRememberLastChannel(next);

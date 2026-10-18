@@ -67,6 +67,8 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Install Chromium
         run: pnpm exec playwright install --with-deps chromium
+      - name: Install Wayland helper test dependencies
+        run: sudo apt-get update -qq && sudo apt-get install -y libwayland-dev libwayland-bin
       - name: Run existing protocol and component regressions
         run: |
           python -m pytest tests/ -q
