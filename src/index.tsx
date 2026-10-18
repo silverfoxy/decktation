@@ -66,6 +66,7 @@ const setReviewContextRpc = callable<[visible: boolean, known: boolean], RpcResp
 const sendArmedDraftRpc = callable<[draftId: string], RpcResponse>("send_armed_draft");
 type PendingDraft = { id: string; text: string; destination: string; action: string; mode: string; error: string; sending: boolean; manual: boolean };
 const setManualSendRpc = callable<[enabled: boolean], RpcResponse>("set_manual_send");
+const setTypeAsKeysRpc = callable<[enabled: boolean], RpcResponse>("set_type_as_keys");
 const setRememberLastChannelRpc = callable<[enabled: boolean], RpcResponse>("set_remember_last_channel");
 const setShareDiagnosticsRpc = callable<[enabled: boolean], RpcResponse>("set_share_diagnostics");
 const setRecordingIndicatorRpc = callable<[mode: string], RpcResponse>("set_recording_indicator");
@@ -390,6 +391,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 		return () => { clearInterval(interval); logic.readQamVisibility = null; logic.qamKnown = false; };
 	}, []);
 	const [manualSend, setManualSend] = useState<boolean>(false);
+	const [typeAsKeys, setTypeAsKeys] = useState<boolean>(false);
 	const [rememberLastChannel, setRememberLastChannel] = useState<boolean>(false);
 	const [shareDiagnostics, setShareDiagnostics] = useState<boolean>(false);
 	const [controllerClient] = useState(() => new ControllerDebugClient({
@@ -546,6 +548,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					if (config.manualSend !== undefined) {
 						setManualSend(config.manualSend);
 					}
+					setTypeAsKeys(config.typeAsKeys === true);
 					if (config.rememberLastChannel !== undefined) {
 						setRememberLastChannel(config.rememberLastChannel);
 					}
@@ -1014,6 +1017,14 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 							else setRpcError(result.error || t("Could not update sending mode"));
 						}} /></PanelSectionRow>
 						{sendingMode === "review" && <PanelSectionRow><div style={{ fontSize: '13px', lineHeight: '1.5' }}>{t("Review stays visible until you decide. Tap {binding} to send; hold it to cancel. Open Decktation to review longer text.", {binding: buttons.join("+")})}</div></PanelSectionRow>}
+						<PanelSectionRow><ToggleField label={t("Type text as keystrokes")} description={t("For games that block paste, like Old School RuneScape. Slower; ASCII only.")} checked={typeAsKeys}
+							onChange={async (next: boolean) => {
+								try {
+									const result = await setTypeAsKeysRpc(next);
+									if (result.success) { setTypeAsKeys(next); setRpcError(""); }
+									else setRpcError(result.error || t("Could not update text insertion mode"));
+								} catch (error) { setRpcError(String(error)); }
+							}} /></PanelSectionRow>
 						<PanelSectionRow><ToggleField label={t("Press Enter yourself")} description={t("Type into chat without submitting")} checked={manualSend}
 							onChange={async (next) => { setManualSend(next); await setManualSendRpc(next); }} /></PanelSectionRow>
 						<PanelSectionRow><ToggleField label={t("Remember channel")} description={t("Reuse the last spoken channel")} checked={rememberLastChannel}

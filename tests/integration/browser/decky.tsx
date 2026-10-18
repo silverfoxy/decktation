@@ -10,7 +10,7 @@ export const GamepadButton = { OK: 1, CANCEL: 2, DIR_UP: 9, DIR_DOWN: 10 };
 export const PanelSection = ({ title, children }: any) => <section><h2>{title}</h2>{children}</section>;
 export const PanelSectionRow = ({ children }: any) => <div>{children}</div>;
 export const ButtonItem = ({ children, onClick, disabled }: any) => <button disabled={disabled} onClick={onClick}>{children}</button>;
-export const ToggleField = ({ label, checked, disabled, onChange }: any) => <label><input type="checkbox" checked={checked} disabled={disabled} onChange={e => onChange(e.target.checked)} />{label}</label>;
+export const ToggleField = ({ label, description, checked, disabled, onChange }: any) => <div><label><input type="checkbox" checked={checked} disabled={disabled} onChange={e => onChange(e.target.checked)} />{label}</label>{description && <div className="toggle-description">{description}</div>}</div>;
 export const DropdownItem = ({ label, rgOptions, selectedOption, onChange }: any) => <label>{label}<select value={selectedOption} onChange={e => onChange(rgOptions.find((option: any) => String(option.data) === e.target.value))}>{rgOptions.map((option: any) => <option key={option.data} value={option.data}>{option.label}</option>)}</select></label>;
 export const Menu = PanelSection;
 export const MenuItem = ButtonItem;
