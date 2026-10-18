@@ -1,4 +1,4 @@
-name: Publish approved Decktation downloads
+name: Publish Decktation downloads and PR test builds
 
 # workflow_run uses the workflow on the default branch. Candidate builds only
 # upload an artifact with a read-only token; no candidate script runs here.
@@ -66,6 +66,7 @@ jobs:
         with:
           name: decktation.zip
           path: build-output
+          skip-decompress: true
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
       - name: Publish using trusted default-branch scripts
@@ -78,15 +79,20 @@ jobs:
           RELEASE_TAG: ${{ github.event.workflow_run.head_branch }}
           PAGES_BASE_URL: ${{ vars.DECKTATION_PAGES_BASE_URL || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
         run: bash scripts/publish-pages.sh
+      - name: Name the public release download
+        if: steps.source-ref.outputs.current == 'true' && steps.source-ref.outputs.ref_type == 'tag'
+        run: cp build-output/decktation.zip build-output/Decktation.zip
       - name: Upload release archive
         if: steps.source-ref.outputs.current == 'true' && steps.source-ref.outputs.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.workflow_run.head_branch }}
-          files: build-output/decktation.zip
+          files: |
+            build-output/Decktation.zip
+            build-output/decktation.zip
           body: |
             ## Installation
-            Download **decktation.zip** from Assets and import it with Decky's **Install Plugin from ZIP** option.
+            Download **Decktation.zip** from Assets and import it with Decky's **Install Plugin from ZIP** option.
             Do not download GitHub's automatic Source code archives; they lack bundled dependencies.
           draft: false
           prerelease: false
@@ -110,6 +116,7 @@ jobs:
         with:
           name: decktation.zip
           path: build-output
+          skip-decompress: true
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
       - name: Confirm artifact belongs to a current open PR

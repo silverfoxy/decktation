@@ -6,6 +6,21 @@ import subprocess
 REPO = Path(__file__).resolve().parents[1]
 
 
+def test_trusted_publisher_keeps_canonical_and_catalog_release_assets(tmp_path):
+    workflow = (REPO / '.github/workflows/publish.yml').read_text()
+    step = workflow.split('- name: Name the public release download', 1)[1].split('- name:', 1)[0]
+    command = step.split('run: ', 1)[1].strip()
+    output = tmp_path / 'build-output'
+    output.mkdir()
+    (output / 'decktation.zip').write_bytes(b'installable plugin')
+    subprocess.run(['bash', '-c', command], cwd=tmp_path, check=True)
+    assert (output / 'Decktation.zip').read_bytes() == b'installable plugin'
+    assert (output / 'decktation.zip').read_bytes() == b'installable plugin'
+    upload = workflow.split('- name: Upload release archive', 1)[1].split('  publish-pr:', 1)[0]
+    assert 'build-output/Decktation.zip' in upload
+    assert 'build-output/decktation.zip' in upload
+
+
 def test_publisher_refreshes_testing_catalog_after_branch_package_is_written():
     script = (REPO / 'scripts/publish-pages.sh').read_text()
     assert 'git -C "$WORKSPACE_DIR" fetch origin master' in script

@@ -22,6 +22,7 @@ def test_publisher_uses_default_branch_code_after_build_completion():
     assert 'ref: master' in workflow
     assert 'actions/download-artifact@v8' in workflow
     assert 'name: decktation.zip' in workflow
+    assert workflow.count('skip-decompress: true') == 2
     assert 'scripts/publish-pages.sh' in workflow
     assert 'verify-current-ref.sh' in workflow
     assert 'concurrency:' in workflow
