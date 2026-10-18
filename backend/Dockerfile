@@ -6,7 +6,7 @@ ARG WHISPER_CPP_COMMIT=f24588a272ae8e23280d9c220536437164e6ed28
 # holo-base already ships glslc, shaderc, the Vulkan headers, and binutils.
 # Reinstalling those packages fails because their files are untracked by pacman.
 RUN pacman -Sydd --noconfirm --dbpath /var/lib/pacman \
-        alsa-lib cmake cppdap git libuv python-pip rhash spirv-headers vulkan-icd-loader xclip \
+        alsa-lib cmake cppdap git libuv python-pip rhash spirv-headers vulkan-icd-loader xclip wayland \
     && command -v strip \
     && cmake --version \
     && glslc --version

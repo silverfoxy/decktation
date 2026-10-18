@@ -34,6 +34,7 @@ class VoiceFixture:
         self.is_recording = self.is_transcribing = self.model_loading = False
         self.manual_send = False
         self.type_as_keys = False
+        self.text_insertion_mode = 'paste'
         self.inference_device = 'fixture'
         self.pending_text = ''
         self.confirm_delay = 0
@@ -66,7 +67,7 @@ class Runtime:
     }
     # UI-only unrelated native/network services; never masquerade as capture RPCs.
     UI_RPC = {'get_plugin_update': 1, 'set_overlay_transcribing_label': 1,
-              'set_type_as_keys': 1}
+              'set_type_as_keys': 1, 'set_text_insertion_mode': 1}
 
     def __init__(self):
         self.lock = threading.RLock()

@@ -238,5 +238,12 @@
   "Includes host/build details, controller interfaces and button transitions. Excludes typing, audio, transcripts, serials and input paths.": "Enthält System-/Builddaten, Controller-Schnittstellen und Tastenwechsel. Ohne Texteingaben, Audio, Transkripte, Seriennummern und Eingabepfade.",
   "Nothing is sent automatically. Send shares only this report with Sentry.": "Nichts wird automatisch gesendet. Senden teilt nur diesen Bericht mit Sentry.",
   "Capture continues if you close this panel.": "Die Aufzeichnung läuft weiter, wenn du dieses Panel schließt.",
-  "Report submitted. Event ID": "Bericht übermittelt. Ereignis-ID"
+  "Report submitted. Event ID": "Bericht übermittelt. Ereignis-ID",
+  "Text insertion": "Texteingabe",
+  "Paste (default)": "Einfügen (Standard)",
+  "ydotool typing (experimental)": "Eingabe mit ydotool (experimentell)",
+  "Gamescope typing (experimental)": "Eingabe mit Gamescope (experimentell)",
+  "Experimental: compare typing backends on your Steam Deck before sending in a game.": "Experimentell: Vergleiche die Eingabemethoden auf deinem Steam Deck, bevor du Text im Spiel sendest.",
+  "ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.": "ydotool: nur ASCII und US-Tastaturbelegung. Anderer Text wird weder eingegeben noch gesendet.",
+  "Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.": "Gamescope drückt niemals Enter. Prüfe den Text und sende ihn selbst. Höchstens 40 Zeichen einschließlich Kanalpräfix."
 }

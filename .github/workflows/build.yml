@@ -44,6 +44,7 @@ jobs:
           python-version: '3.13'
       - run: node scripts/release-version.mjs check
       - run: node --test cloudflare/tests/*.test.js
+      - run: sudo apt-get update -qq && sudo apt-get install -y libwayland-dev libwayland-bin
       - run: pip install pytest sentry-sdk==2.66.0 certifi==2026.1.4
       - run: pytest tests/ -v
       - uses: actions/setup-node@v4
@@ -90,6 +91,8 @@ jobs:
         run: |
           unzip -t build-output/decktation.zip
           unzip -l build-output/decktation.zip | grep -q 'decktation/bin/ydotoold'
+          unzip -l build-output/decktation.zip | grep -q 'decktation/bin/gamescope-inject'
+          unzip -l build-output/decktation.zip | grep -q 'decktation/bin/licenses/gamescope-input-method-MIT.xml'
           unzip -l build-output/decktation.zip | grep -q 'decktation/bin/whisper-server'
           ! unzip -l build-output/decktation.zip | grep -q 'decktation/bin/whisper-cli'
           unzip -l build-output/decktation.zip | grep -q 'decktation/bin/resident_whisper.py'

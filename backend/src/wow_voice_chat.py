@@ -167,7 +167,16 @@ def _format_casual_message(text: str, preserve_punctuation=False) -> str:
 
 
 class WoWVoiceChat:
-    def __init__(self, context_file="wow_context.json", sample_rate=44100, default_channel="say", lazy_load=False, test_mode=False, test_audio_file=None, preset=None, confirm_delay=0, manual_send=False, transcription_language=None, model_size="base", diagnostic_reporter=None, remember_last_channel=False, last_channel=None, channel_rememberer=None, recording_state_callback=None, review_mode=False, pending_callback=None, metric_reporter=None, spoken_punctuation=False, type_as_keys=False):
+    @property
+    def type_as_keys(self):
+        """Compatibility with the original binary insertion preference."""
+        return self.text_insertion_mode != "paste"
+
+    @type_as_keys.setter
+    def type_as_keys(self, enabled):
+        self.text_insertion_mode = "ydotool" if enabled else "paste"
+
+    def __init__(self, context_file="wow_context.json", sample_rate=44100, default_channel="say", lazy_load=False, test_mode=False, test_audio_file=None, preset=None, confirm_delay=0, manual_send=False, transcription_language=None, model_size="base", diagnostic_reporter=None, remember_last_channel=False, last_channel=None, channel_rememberer=None, recording_state_callback=None, review_mode=False, pending_callback=None, metric_reporter=None, spoken_punctuation=False, type_as_keys=False, text_insertion_mode=None):
         self.preset = preset or {}
         self.diagnostic_reporter = diagnostic_reporter
         self.metric_reporter = metric_reporter
@@ -182,7 +191,7 @@ class WoWVoiceChat:
         self._draft_generation = 0
         self.confirm_delay = confirm_delay  # seconds to wait before auto-sending (0 = disabled)
         self.manual_send = manual_send  # if True, skip final Enter press (user sends manually)
-        self.type_as_keys = type_as_keys  # opt-in for games that reject clipboard paste
+        self.text_insertion_mode = text_insertion_mode or ("ydotool" if type_as_keys else "paste")
         self.remember_last_channel = remember_last_channel
         self.last_channel = last_channel
         self.channel_rememberer = channel_rememberer
@@ -615,7 +624,8 @@ class WoWVoiceChat:
                 return
             draft_id = uuid.uuid4().hex
             delay = self._confirm_delay_for(message) if not self.review_mode else 0
-            typing_only = self.manual_send or channel == "type" or (
+            gamescope_manual = self.text_insertion_mode == "gamescope"
+            typing_only = self.manual_send or gamescope_manual or channel == "type" or (
                 channel == "command" and self.preset.get("chat_send_key", "enter") is None
             )
             self.pending_text = message
@@ -625,7 +635,7 @@ class WoWVoiceChat:
                 "mode": "review" if self.review_mode else "countdown",
                 "deadline": time.time() + delay if delay else None,
                 "action": "Type into chat" if typing_only else "Send",
-                "manual": self.manual_send, "explicit_channel": explicit,
+                "manual": self.manual_send or gamescope_manual, "explicit_channel": explicit,
                 "error": "", "sending": False,
             }
             self._publish_pending()
@@ -978,7 +988,10 @@ class WoWVoiceChat:
         channel_cmd = "" if channel == "command" else self.channel_commands.get(channel, "/s ")
 
         full_message = f"{channel_cmd}{text}"
-        type_as_keys = self.type_as_keys  # One insertion method for this entire send.
+        insertion_mode = self.text_insertion_mode  # Snapshot validation and insertion together.
+        if insertion_mode not in {"paste", "ydotool", "gamescope"}:
+            self._report_diagnostic("text_injection.failed")
+            return False
         if any(ord(char) < 32 or ord(char) == 127 for char in full_message):
             self._report_diagnostic("text_injection.failed")
             return False
@@ -988,7 +1001,7 @@ class WoWVoiceChat:
         # ydotool's type command maps only 7-bit ASCII to keycodes. Do not
         # silently drop non-ASCII characters or fall back to paste in a game
         # whose chat rejects pasting.
-        if type_as_keys and not full_message.isascii():
+        if insertion_mode == "ydotool" and not full_message.isascii():
             logger.warning("Keyboard text insertion supports ASCII only")
             self._report_diagnostic("text_injection.failed")
             return False
@@ -1017,13 +1030,31 @@ class WoWVoiceChat:
         env = os.environ.copy()
         env["YDOTOOL_SOCKET"] = "/tmp/decktation-ydotool.sock"
 
+        gamescope_helper = os.path.join(plugin_dir, "bin", "gamescope-inject")
+        if insertion_mode == "gamescope":
+            try:
+                encoded = full_message.encode("utf-8")
+                if not encoded or len(encoded) > 160 or len(full_message) > 40:
+                    raise ValueError("Gamescope test messages are limited to 40 characters")
+                if not os.path.isfile(gamescope_helper) or not os.access(gamescope_helper, os.X_OK):
+                    raise RuntimeError("Gamescope helper is missing or not executable")
+                probe = subprocess.run([gamescope_helper, "--probe"],
+                                       capture_output=True, text=True, env=env, timeout=3)
+                if probe.returncode != 0:
+                    raise RuntimeError("Gamescope input method is unavailable")
+            except (OSError, ValueError, RuntimeError, UnicodeError, subprocess.TimeoutExpired) as exc:
+                logger.warning("Gamescope input method unavailable: %s", type(exc).__name__)
+                self._report_diagnostic("text_injection.failed")
+                return False
+
         if channel == "type":
             open_key = None
             send_key = None
         else:
             open_key = self.preset.get("chat_open_key", "enter")
             send_key = self.preset.get("chat_send_key", "enter")
-            if self.manual_send:
+            if self.manual_send or insertion_mode == "gamescope":
+                # Experimental IME commits have no target-delivery acknowledgement.
                 send_key = None
 
         chat_open_delay = float(self.preset.get("chat_open_delay", 0))
@@ -1032,7 +1063,7 @@ class WoWVoiceChat:
         key_delay = self.preset.get("key_delay", 1)
         key_hold = self.preset.get("key_hold", 0)
         try:
-            if type_as_keys:
+            if insertion_mode == "ydotool":
                 if (type(key_delay) is not int or type(key_hold) is not int or
                         not 0 <= key_delay <= 100 or not 0 <= key_hold <= 100):
                     raise ValueError("Key timing must be an integer between 0 and 100 ms")
@@ -1050,7 +1081,7 @@ class WoWVoiceChat:
                 if chat_open_delay > 0:
                     time.sleep(chat_open_delay)
 
-            if type_as_keys:
+            if insertion_mode == "ydotool":
                 # Match the former fast path; per-preset timing can slow down
                 # games that drop rapid key events. Stdin keeps text literal.
                 result = subprocess.run(
@@ -1064,6 +1095,13 @@ class WoWVoiceChat:
                     raise RuntimeError(
                         f"ydotool type failed (exit {result.returncode})"
                     )
+            elif insertion_mode == "gamescope":
+                # The bundled helper sends one UTF-8 commit to Gamescope. A zero
+                # exit is not proof the game accepted the text: never auto-submit.
+                result = subprocess.run([gamescope_helper], input=full_message,
+                                        capture_output=True, text=True, env=env, timeout=5)
+                if result.returncode != 0:
+                    raise RuntimeError("Gamescope input method failed")
             else:
                 # Paste the whole message, including any game channel prefix, so
                 # punctuation is independent of the host keyboard layout.
