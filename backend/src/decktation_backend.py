@@ -252,7 +252,7 @@ def _read_button_config():
 
     if "textInsertionMode" not in saved_config:
         config["textInsertionMode"] = "ydotool" if config.get("typeAsKeys") is True else "paste"
-    if type(config["textInsertionMode"]) is not str or config["textInsertionMode"] not in {"paste", "ydotool", "gamescope"}:
+    if type(config["textInsertionMode"]) is not str or config["textInsertionMode"] not in {"paste", "ydotool"}:
         config["textInsertionMode"] = "paste"
     config["typeAsKeys"] = config["textInsertionMode"] != "paste"
     config["transcriptionLanguage"] = _normalize_transcription_language(
@@ -269,7 +269,7 @@ def _read_button_config():
 def _write_button_config(config):
     normalized_config = dict(DEFAULT_BUTTON_CONFIG)
     normalized_config.update(config)
-    if type(normalized_config.get("textInsertionMode")) is not str or normalized_config["textInsertionMode"] not in {"paste", "ydotool", "gamescope"}:
+    if type(normalized_config.get("textInsertionMode")) is not str or normalized_config["textInsertionMode"] not in {"paste", "ydotool"}:
         raise ValueError("Unsupported text insertion mode")
     normalized_config["typeAsKeys"] = normalized_config["textInsertionMode"] != "paste"
     normalized_config["transcriptionLanguage"] = _normalize_transcription_language(
@@ -1291,7 +1291,7 @@ class Plugin:
 
     async def set_text_insertion_mode(self, mode: str):
         """Select a single insertion backend for the next transcription."""
-        if type(mode) is not str or mode not in {"paste", "ydotool", "gamescope"}:
+        if type(mode) is not str or mode not in {"paste", "ydotool"}:
             return {"success": False, "error": "Unsupported text insertion mode"}
         try:
             config = _read_button_config()

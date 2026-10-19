@@ -117,11 +117,6 @@
   "Could not update text insertion mode": "Could not update text insertion mode",
   "Text insertion": "Text insertion",
   "Paste (default)": "Paste (default)",
-  "ydotool typing (experimental)": "ydotool typing (experimental)",
-  "Gamescope typing (experimental)": "Gamescope typing (experimental)",
-  "Experimental: compare typing backends on your Steam Deck before sending in a game.": "Experimental: compare typing backends on your Steam Deck before sending in a game.",
-  "ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.": "ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.",
-  "Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.": "Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.",
   "Press Enter yourself": "Press Enter yourself",
   "Type into chat without submitting": "Type into chat without submitting",
   "Send": "Send",
@@ -245,5 +240,8 @@
   "Includes host/build details, controller interfaces and button transitions. Excludes typing, audio, transcripts, serials and input paths.": "Includes host/build details, controller interfaces and button transitions. Excludes typing, audio, transcripts, serials and input paths.",
   "Nothing is sent automatically. Send shares only this report with Sentry.": "Nothing is sent automatically. Send shares only this report with Sentry.",
   "Capture continues if you close this panel.": "Capture continues if you close this panel.",
-  "Report submitted. Event ID": "Report submitted. Event ID"
+  "Report submitted. Event ID": "Report submitted. Event ID",
+  "Type (only English keyboard)": "Type (only English keyboard)",
+  "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.",
+  "Paste": "Paste (default)"
 }

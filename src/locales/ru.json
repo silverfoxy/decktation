@@ -241,9 +241,7 @@
   "Report submitted. Event ID": "Отчёт отправлен. ID события",
   "Text insertion": "Ввод текста",
   "Paste (default)": "Вставка (по умолчанию)",
-  "ydotool typing (experimental)": "Ввод через ydotool (экспериментально)",
-  "Gamescope typing (experimental)": "Ввод через Gamescope (экспериментально)",
-  "Experimental: compare typing backends on your Steam Deck before sending in a game.": "Экспериментально: сравните способы ввода на Steam Deck, прежде чем отправлять сообщения в игре.",
-  "ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.": "ydotool: только ASCII и американская раскладка клавиатуры. Другой текст не будет введён или отправлен.",
-  "Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.": "Gamescope не нажимает Enter. Проверьте набранный текст и отправьте его вручную. Не более 40 символов, включая префикс канала."
+  "Type (only English keyboard)": "Ввод (только английская раскладка)",
+  "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Для ввода нужны английская раскладка (США) и текст ASCII. Другие символы не будут введены или отправлены.",
+  "Paste": "Вставка (по умолчанию)"
 }
