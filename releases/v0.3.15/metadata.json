@@ -3,6 +3,6 @@
   "channel": "release",
   "ref": "v0.3.15",
   "commit": "630e63588d3e3c247addd2b01aedae02a3d9fdf3",
-  "zip_url": "https://silverfoxy.github.io/decktation/releases/v0.3.15/decktation.zip",
+  "zip_url": "https://github.com/silverfoxy/decktation/releases/download/v0.3.15/decktation.zip",
   "generated_at": "2026-09-13T03:08:27Z"
 }
