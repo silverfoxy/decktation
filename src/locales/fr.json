@@ -241,9 +241,7 @@
   "Report submitted. Event ID": "Rapport envoyé. ID de l’événement",
   "Text insertion": "Saisie du texte",
   "Paste (default)": "Coller (par défaut)",
-  "ydotool typing (experimental)": "Saisie avec ydotool (expérimental)",
-  "Gamescope typing (experimental)": "Saisie avec Gamescope (expérimental)",
-  "Experimental: compare typing backends on your Steam Deck before sending in a game.": "Expérimental : comparez les méthodes de saisie sur votre Steam Deck avant tout envoi dans un jeu.",
-  "ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.": "ydotool : disposition de clavier américaine et ASCII uniquement. Les autres caractères ne sont ni saisis ni envoyés.",
-  "Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.": "Gamescope n’appuie jamais sur Entrée. Vérifiez le texte puis envoyez-le vous-même. Maximum 40 caractères, préfixe de canal compris."
+  "Type (only English keyboard)": "Saisir (clavier anglais uniquement)",
+  "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "La saisie nécessite un clavier anglais (US) et du texte ASCII. Les autres caractères ne sont ni saisis ni envoyés.",
+  "Paste": "Coller (par défaut)"
 }

@@ -241,9 +241,7 @@
   "Report submitted. Event ID": "レポートを送信しました。イベントID",
   "Text insertion": "テキスト入力",
   "Paste (default)": "貼り付け（既定）",
-  "ydotool typing (experimental)": "ydotoolで入力（実験的）",
-  "Gamescope typing (experimental)": "Gamescopeで入力（実験的）",
-  "Experimental: compare typing backends on your Steam Deck before sending in a game.": "実験的な機能です。ゲーム内で送信する前に、Steam Deckで入力方式を比較してください。",
-  "ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.": "ydotool入力は米国式キーボード配列とASCII文字のみに対応します。それ以外の文字は入力・送信されません。",
-  "Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.": "Gamescope入力ではEnterキーを押しません。入力内容を確認してから手動で送信してください。チャンネルの接頭辞を含めて最大40文字です。"
+  "Type (only English keyboard)": "入力（英語キーボードのみ）",
+  "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "入力には英語（米国）キーボード配列とASCII文字が必要です。それ以外の文字は入力・送信されません。",
+  "Paste": "貼り付け（既定）"
 }

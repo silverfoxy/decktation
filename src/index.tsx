@@ -1018,7 +1018,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 						}} /></PanelSectionRow>
 						{sendingMode === "review" && <PanelSectionRow><div style={{ fontSize: '13px', lineHeight: '1.5' }}>{t("Review stays visible until you decide. Tap {binding} to send; hold it to cancel. Open Decktation to review longer text.", {binding: buttons.join("+")})}</div></PanelSectionRow>}
 						<PanelSectionRow><DropdownItem label={t("Text insertion")} menuLabel={t("Text insertion")}
-							rgOptions={[{data:"paste",label:t("Paste (default)")},{data:"ydotool",label:t("ydotool typing (experimental)")},{data:"gamescope",label:t("Gamescope typing (experimental)")}]}
+							rgOptions={[{data:"paste",label:t("Paste")},{data:"ydotool",label:t("Type (only English keyboard)")}]}
 							selectedOption={textInsertionMode} onChange={async (option) => {
 								try {
 									const next = String(option.data);
@@ -1027,10 +1027,8 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 									else setRpcError(result.error || t("Could not update text insertion mode"));
 								} catch (error) { setRpcError(String(error)); }
 							}} /></PanelSectionRow>
-						<PanelSectionRow><div style={{ fontSize: '12px', opacity: 0.85 }}>{t("Experimental: compare typing backends on your Steam Deck before sending in a game.")}</div></PanelSectionRow>
-						{textInsertionMode === "ydotool" && <PanelSectionRow><div style={{ fontSize: '12px' }}>{t("ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.")}</div></PanelSectionRow>}
-						{textInsertionMode === "gamescope" && <PanelSectionRow><div style={{ fontSize: '12px' }}>{t("Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.")}</div></PanelSectionRow>}
-						<PanelSectionRow><ToggleField label={t("Press Enter yourself")} description={t("Type into chat without submitting")} checked={manualSend || textInsertionMode === "gamescope"} disabled={textInsertionMode === "gamescope"}
+						{textInsertionMode === "ydotool" && <PanelSectionRow><div style={{ fontSize: '12px' }}>{t("Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.")}</div></PanelSectionRow>}
+						<PanelSectionRow><ToggleField label={t("Press Enter yourself")} description={t("Type into chat without submitting")} checked={manualSend}
 							onChange={async (next) => { setManualSend(next); await setManualSendRpc(next); }} /></PanelSectionRow>
 						<PanelSectionRow><ToggleField label={t("Remember channel")} description={t("Reuse the last spoken channel")} checked={rememberLastChannel}
 							onChange={async (next) => {

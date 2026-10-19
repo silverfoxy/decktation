@@ -241,9 +241,7 @@
   "Report submitted. Event ID": "报告已提交。事件ID",
   "Text insertion": "文本输入",
   "Paste (default)": "粘贴（默认）",
-  "ydotool typing (experimental)": "ydotool 输入（实验性）",
-  "Gamescope typing (experimental)": "Gamescope 输入（实验性）",
-  "Experimental: compare typing backends on your Steam Deck before sending in a game.": "实验性功能：在游戏中发送之前，请先在 Steam Deck 上比较输入方式。",
-  "ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.": "ydotool 输入：仅支持美式键盘布局和 ASCII 字符。其他字符不会输入或发送。",
-  "Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.": "Gamescope 输入不会按回车键。请检查草稿并自行发送。最多 40 个字符，包括频道前缀。"
+  "Type (only English keyboard)": "键入（仅限英文键盘）",
+  "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "键入需要英语（美国）键盘布局和 ASCII 文本。其他字符不会输入或发送。",
+  "Paste": "粘贴（默认）"
 }

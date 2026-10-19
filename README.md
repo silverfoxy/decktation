@@ -71,6 +71,8 @@ Decktation has been [submitted to the official Decky Plugin Store](https://githu
 2. Under **Game**, choose **WoW**, **GW2**, or **Generic**.
 3. Turn **Enable** on and wait for the status to show **Ready**. The first use of a model may need an internet connection to download it.
 4. Select **Test Recording (3s)**, speak, and check **Last Transcription** in the panel. A test recording displays the transcript without typing it into the active app.
+
+Under **Advanced → Sending → Text insertion**, choose **Paste** or **Type (only English keyboard)**. Type requires an English (US) keyboard layout and ASCII text. Gamescope typing is disabled pending testing of a keymap patch; see the [test results and follow-up](doc/gamescope-typing-research.md).
 5. Focus the game or text field. Hold **L1 + R1**, speak, then release to transcribe and enter the text. You can change this default combination in the Decktation panel’s **Input** settings.
 
 WoW and GW2 presets normally open game chat, add the selected channel command, and send the message; the spoken **type** channel enters text without opening chat. **Generic** also enters text directly in the focused field. See [channel and preset configuration](doc/ADVANCED_CONFIGURATION.md) for details.

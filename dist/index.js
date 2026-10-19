@@ -411,6 +411,7 @@
     var Pressed$9 = "Pressed";
     var Released$9 = "Released";
     var ms$a = "ms";
+    var Paste$9 = "Paste (default)";
     var en$1 = {
       Back: Back$9,
       Enable: Enable$9,
@@ -530,11 +531,6 @@
       "Could not update text insertion mode": "Could not update text insertion mode",
       "Text insertion": "Text insertion",
       "Paste (default)": "Paste (default)",
-      "ydotool typing (experimental)": "ydotool typing (experimental)",
-      "Gamescope typing (experimental)": "Gamescope typing (experimental)",
-      "Experimental: compare typing backends on your Steam Deck before sending in a game.": "Experimental: compare typing backends on your Steam Deck before sending in a game.",
-      "ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.": "ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.",
-      "Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.": "Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.",
       "Press Enter yourself": "Press Enter yourself",
       "Type into chat without submitting": "Type into chat without submitting",
       Send: Send$9,
@@ -658,7 +654,10 @@
       "Includes host/build details, controller interfaces and button transitions. Excludes typing, audio, transcripts, serials and input paths.": "Includes host/build details, controller interfaces and button transitions. Excludes typing, audio, transcripts, serials and input paths.",
       "Nothing is sent automatically. Send shares only this report with Sentry.": "Nothing is sent automatically. Send shares only this report with Sentry.",
       "Capture continues if you close this panel.": "Capture continues if you close this panel.",
-      "Report submitted. Event ID": "Report submitted. Event ID"
+      "Report submitted. Event ID": "Report submitted. Event ID",
+      "Type (only English keyboard)": "Type (only English keyboard)",
+      "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.",
+      Paste: Paste$9
     };
 
     var af = "Afrikaans";
@@ -901,6 +900,7 @@
     var Pressed$8 = "Pulsado";
     var Released$8 = "Soltado";
     var ms$8 = "ms";
+    var Paste$8 = "Pegar (predeterminado)";
     var es = {
       Back: Back$8,
       Enable: Enable$8,
@@ -1144,11 +1144,9 @@
       "Report submitted. Event ID": "Informe enviado. ID del evento",
       "Text insertion": "Inserción de texto",
       "Paste (default)": "Pegar (predeterminado)",
-      "ydotool typing (experimental)": "Escribir con ydotool (experimental)",
-      "Gamescope typing (experimental)": "Escribir con Gamescope (experimental)",
-      "Experimental: compare typing backends on your Steam Deck before sending in a game.": "Experimental: compara los métodos de escritura en tu Steam Deck antes de enviar mensajes en un juego.",
-      "ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.": "ydotool: solo admite ASCII y la distribución de teclado estadounidense. Los demás caracteres fallan sin enviar el mensaje.",
-      "Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.": "Gamescope nunca pulsa Intro. Revisa el texto y envíalo tú mismo. Máximo 40 caracteres, incluido el prefijo del canal."
+      "Type (only English keyboard)": "Escribir (solo teclado inglés)",
+      "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Escribir requiere un teclado inglés (EE. UU.) y texto ASCII. Los demás caracteres no se introducen ni se envían.",
+      Paste: Paste$8
     };
 
     var Back$7 = "Назад";
@@ -1188,6 +1186,7 @@
     var Pressed$7 = "Нажата";
     var Released$7 = "Отпущена";
     var ms$7 = "мс";
+    var Paste$7 = "Вставка (по умолчанию)";
     var ru = {
       Back: Back$7,
       Enable: Enable$7,
@@ -1431,11 +1430,9 @@
       "Report submitted. Event ID": "Отчёт отправлен. ID события",
       "Text insertion": "Ввод текста",
       "Paste (default)": "Вставка (по умолчанию)",
-      "ydotool typing (experimental)": "Ввод через ydotool (экспериментально)",
-      "Gamescope typing (experimental)": "Ввод через Gamescope (экспериментально)",
-      "Experimental: compare typing backends on your Steam Deck before sending in a game.": "Экспериментально: сравните способы ввода на Steam Deck, прежде чем отправлять сообщения в игре.",
-      "ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.": "ydotool: только ASCII и американская раскладка клавиатуры. Другой текст не будет введён или отправлен.",
-      "Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.": "Gamescope не нажимает Enter. Проверьте набранный текст и отправьте его вручную. Не более 40 символов, включая префикс канала."
+      "Type (only English keyboard)": "Ввод (только английская раскладка)",
+      "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Для ввода нужны английская раскладка (США) и текст ASCII. Другие символы не будут введены или отправлены.",
+      Paste: Paste$7
     };
 
     var Back$6 = "Voltar";
@@ -1475,6 +1472,7 @@
     var Pressed$6 = "Pressionado";
     var Released$6 = "Solto";
     var ms$6 = "ms";
+    var Paste$6 = "Colar (padrão)";
     var pt = {
       Back: Back$6,
       Enable: Enable$6,
@@ -1718,11 +1716,9 @@
       "Report submitted. Event ID": "Relatório enviado. ID do evento",
       "Text insertion": "Inserção de texto",
       "Paste (default)": "Colar (padrão)",
-      "ydotool typing (experimental)": "Digitar com ydotool (experimental)",
-      "Gamescope typing (experimental)": "Digitar com Gamescope (experimental)",
-      "Experimental: compare typing backends on your Steam Deck before sending in a game.": "Experimental: compare os métodos de digitação no Steam Deck antes de enviar mensagens em um jogo.",
-      "ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.": "ydotool: somente ASCII e layout de teclado dos EUA. Outros caracteres falham sem enviar a mensagem.",
-      "Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.": "Gamescope nunca pressiona Enter. Confira o texto e envie você mesmo. Máximo de 40 caracteres, incluindo o prefixo do canal."
+      "Type (only English keyboard)": "Digitar (somente teclado inglês)",
+      "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Digitar requer layout de teclado inglês (EUA) e texto ASCII. Outros caracteres não serão digitados nem enviados.",
+      Paste: Paste$6
     };
 
     var Back$5 = "Wstecz";
@@ -1762,6 +1758,7 @@
     var Pressed$5 = "Wciśnięty";
     var Released$5 = "Zwolniony";
     var ms$5 = "ms";
+    var Paste$5 = "Wklej (domyślnie)";
     var pl = {
       Back: Back$5,
       Enable: Enable$5,
@@ -2005,11 +2002,9 @@
       "Report submitted. Event ID": "Raport wysłany. ID zdarzenia",
       "Text insertion": "Wprowadzanie tekstu",
       "Paste (default)": "Wklej (domyślnie)",
-      "ydotool typing (experimental)": "Pisanie przez ydotool (eksperymentalne)",
-      "Gamescope typing (experimental)": "Pisanie przez Gamescope (eksperymentalne)",
-      "Experimental: compare typing backends on your Steam Deck before sending in a game.": "Eksperymentalne: porównaj metody pisania na Steam Decku przed wysłaniem wiadomości w grze.",
-      "ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.": "ydotool: tylko ASCII i amerykański układ klawiatury. Inny tekst nie zostanie wpisany ani wysłany.",
-      "Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.": "Gamescope nie naciska Enter. Sprawdź wpisany tekst i wyślij go ręcznie. Maksymalnie 40 znaków, łącznie z prefiksem kanału."
+      "Type (only English keyboard)": "Wpisuj (tylko klawiatura angielska)",
+      "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Wpisywanie wymaga angielskiego (US) układu klawiatury i tekstu ASCII. Inny tekst nie zostanie wpisany ani wysłany.",
+      Paste: Paste$5
     };
 
     var Back$4 = "뒤로";
@@ -2049,6 +2044,7 @@
     var Pressed$4 = "누름";
     var Released$4 = "뗌";
     var ms$4 = "밀리초";
+    var Paste$4 = "붙여넣기 (기본값)";
     var ko = {
       Back: Back$4,
       Enable: Enable$4,
@@ -2292,11 +2288,9 @@
       "Report submitted. Event ID": "보고서 제출됨. 이벤트 ID",
       "Text insertion": "텍스트 입력",
       "Paste (default)": "붙여넣기 (기본값)",
-      "ydotool typing (experimental)": "ydotool 입력 (실험적)",
-      "Gamescope typing (experimental)": "Gamescope 입력 (실험적)",
-      "Experimental: compare typing backends on your Steam Deck before sending in a game.": "실험적 기능: 게임에서 전송하기 전에 Steam Deck에서 입력 방식을 비교하세요.",
-      "ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.": "ydotool 입력: 미국식 키보드 배열과 ASCII만 지원합니다. 다른 문자는 입력하거나 전송하지 않습니다.",
-      "Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.": "Gamescope 입력은 Enter를 누르지 않습니다. 입력된 내용을 확인한 뒤 직접 전송하세요. 채널 접두사를 포함해 최대 40자입니다."
+      "Type (only English keyboard)": "입력 (영어 키보드만)",
+      "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "입력에는 영어(미국) 키보드 배열과 ASCII 텍스트가 필요합니다. 다른 문자는 입력하거나 전송하지 않습니다.",
+      Paste: Paste$4
     };
 
     var Back$3 = "戻る";
@@ -2336,6 +2330,7 @@
     var Pressed$3 = "押下";
     var Released$3 = "解放";
     var ms$3 = "ミリ秒";
+    var Paste$3 = "貼り付け（既定）";
     var ja = {
       Back: Back$3,
       Enable: Enable$3,
@@ -2579,11 +2574,9 @@
       "Report submitted. Event ID": "レポートを送信しました。イベントID",
       "Text insertion": "テキスト入力",
       "Paste (default)": "貼り付け（既定）",
-      "ydotool typing (experimental)": "ydotoolで入力（実験的）",
-      "Gamescope typing (experimental)": "Gamescopeで入力（実験的）",
-      "Experimental: compare typing backends on your Steam Deck before sending in a game.": "実験的な機能です。ゲーム内で送信する前に、Steam Deckで入力方式を比較してください。",
-      "ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.": "ydotool入力は米国式キーボード配列とASCII文字のみに対応します。それ以外の文字は入力・送信されません。",
-      "Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.": "Gamescope入力ではEnterキーを押しません。入力内容を確認してから手動で送信してください。チャンネルの接頭辞を含めて最大40文字です。"
+      "Type (only English keyboard)": "入力（英語キーボードのみ）",
+      "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "入力には英語（米国）キーボード配列とASCII文字が必要です。それ以外の文字は入力・送信されません。",
+      Paste: Paste$3
     };
 
     var Back$2 = "Zurück";
@@ -2623,6 +2616,7 @@
     var Pressed$2 = "Gedrückt";
     var Released$2 = "Losgelassen";
     var ms$2 = "ms";
+    var Paste$2 = "Einfügen (Standard)";
     var de = {
       Back: Back$2,
       Enable: Enable$2,
@@ -2866,11 +2860,9 @@
       "Report submitted. Event ID": "Bericht übermittelt. Ereignis-ID",
       "Text insertion": "Texteingabe",
       "Paste (default)": "Einfügen (Standard)",
-      "ydotool typing (experimental)": "Eingabe mit ydotool (experimentell)",
-      "Gamescope typing (experimental)": "Eingabe mit Gamescope (experimentell)",
-      "Experimental: compare typing backends on your Steam Deck before sending in a game.": "Experimentell: Vergleiche die Eingabemethoden auf deinem Steam Deck, bevor du Text im Spiel sendest.",
-      "ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.": "ydotool: nur ASCII und US-Tastaturbelegung. Anderer Text wird weder eingegeben noch gesendet.",
-      "Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.": "Gamescope drückt niemals Enter. Prüfe den Text und sende ihn selbst. Höchstens 40 Zeichen einschließlich Kanalpräfix."
+      "Type (only English keyboard)": "Tippen (nur englische Tastatur)",
+      "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Tippen erfordert eine englische US-Tastaturbelegung und ASCII-Text. Anderer Text wird weder eingegeben noch gesendet.",
+      Paste: Paste$2
     };
 
     var Back$1 = "Retour";
@@ -2910,6 +2902,7 @@
     var Pressed$1 = "Appuyé";
     var Released$1 = "Relâché";
     var ms$1 = "ms";
+    var Paste$1 = "Coller (par défaut)";
     var fr = {
       Back: Back$1,
       Enable: Enable$1,
@@ -3153,11 +3146,9 @@
       "Report submitted. Event ID": "Rapport envoyé. ID de l’événement",
       "Text insertion": "Saisie du texte",
       "Paste (default)": "Coller (par défaut)",
-      "ydotool typing (experimental)": "Saisie avec ydotool (expérimental)",
-      "Gamescope typing (experimental)": "Saisie avec Gamescope (expérimental)",
-      "Experimental: compare typing backends on your Steam Deck before sending in a game.": "Expérimental : comparez les méthodes de saisie sur votre Steam Deck avant tout envoi dans un jeu.",
-      "ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.": "ydotool : disposition de clavier américaine et ASCII uniquement. Les autres caractères ne sont ni saisis ni envoyés.",
-      "Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.": "Gamescope n’appuie jamais sur Entrée. Vérifiez le texte puis envoyez-le vous-même. Maximum 40 caractères, préfixe de canal compris."
+      "Type (only English keyboard)": "Saisir (clavier anglais uniquement)",
+      "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "La saisie nécessite un clavier anglais (US) et du texte ASCII. Les autres caractères ne sont ni saisis ni envoyés.",
+      Paste: Paste$1
     };
 
     var Back = "返回";
@@ -3197,6 +3188,7 @@
     var Pressed = "按下";
     var Released = "松开";
     var ms = "毫秒";
+    var Paste = "粘贴（默认）";
     var zh = {
       Back: Back,
       Enable: Enable,
@@ -3440,11 +3432,9 @@
       "Report submitted. Event ID": "报告已提交。事件ID",
       "Text insertion": "文本输入",
       "Paste (default)": "粘贴（默认）",
-      "ydotool typing (experimental)": "ydotool 输入（实验性）",
-      "Gamescope typing (experimental)": "Gamescope 输入（实验性）",
-      "Experimental: compare typing backends on your Steam Deck before sending in a game.": "实验性功能：在游戏中发送之前，请先在 Steam Deck 上比较输入方式。",
-      "ydotool typing: US keyboard layout and ASCII only. Other text fails without sending.": "ydotool 输入：仅支持美式键盘布局和 ASCII 字符。其他字符不会输入或发送。",
-      "Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix.": "Gamescope 输入不会按回车键。请检查草稿并自行发送。最多 40 个字符，包括频道前缀。"
+      "Type (only English keyboard)": "键入（仅限英文键盘）",
+      "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "键入需要英语（美国）键盘布局和 ASCII 文本。其他字符不会输入或发送。",
+      Paste: Paste
     };
 
     const catalogs = { en: en$1, es, ru, pt, pl, ko, ja, de, fr, zh };
@@ -4588,7 +4578,7 @@
                         sendingMode === "review" && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement("div", { style: { fontSize: '13px', lineHeight: '1.5' } }, t("Review stays visible until you decide. Tap {binding} to send; hold it to cancel. Open Decktation to review longer text.", { binding: buttons.join("+") }))),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                            React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: t("Text insertion"), menuLabel: t("Text insertion"), rgOptions: [{ data: "paste", label: t("Paste (default)") }, { data: "ydotool", label: t("ydotool typing (experimental)") }, { data: "gamescope", label: t("Gamescope typing (experimental)") }], selectedOption: textInsertionMode, onChange: async (option) => {
+                            React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: t("Text insertion"), menuLabel: t("Text insertion"), rgOptions: [{ data: "paste", label: t("Paste") }, { data: "ydotool", label: t("Type (only English keyboard)") }], selectedOption: textInsertionMode, onChange: async (option) => {
                                     try {
                                         const next = String(option.data);
                                         const result = await setTextInsertionModeRpc(next);
@@ -4603,14 +4593,10 @@
                                         setRpcError(String(error));
                                     }
                                 } })),
-                        React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                            React__default["default"].createElement("div", { style: { fontSize: '12px', opacity: 0.85 } }, t("Experimental: compare typing backends on your Steam Deck before sending in a game."))),
                         textInsertionMode === "ydotool" && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                            React__default["default"].createElement("div", { style: { fontSize: '12px' } }, t("ydotool typing: US keyboard layout and ASCII only. Other text fails without sending."))),
-                        textInsertionMode === "gamescope" && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                            React__default["default"].createElement("div", { style: { fontSize: '12px' } }, t("Gamescope typing never presses Enter. Check the draft and send it yourself. Maximum 40 characters including any channel prefix."))),
+                            React__default["default"].createElement("div", { style: { fontSize: '12px' } }, t("Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending."))),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                            React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: t("Press Enter yourself"), description: t("Type into chat without submitting"), checked: manualSend || textInsertionMode === "gamescope", disabled: textInsertionMode === "gamescope", onChange: async (next) => { setManualSend(next); await setManualSendRpc(next); } })),
+                            React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: t("Press Enter yourself"), description: t("Type into chat without submitting"), checked: manualSend, onChange: async (next) => { setManualSend(next); await setManualSendRpc(next); } })),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: t("Remember channel"), description: t("Reuse the last spoken channel"), checked: rememberLastChannel, onChange: async (next) => {
                                     setRememberLastChannel(next);

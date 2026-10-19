@@ -1,4 +1,4 @@
-"""Experimental input mode selection and Gamescope send boundaries."""
+"""Input mode selection and disabled Gamescope boundaries."""
 import asyncio
 import json
 import shutil
@@ -31,96 +31,32 @@ def test_modes_default_and_legacy_migration(tmp_path, monkeypatch):
     assert backend._read_button_config()["manualSend"] is True
 
 
-def test_gamescope_mode_persists_and_rejects_unknown_choice(tmp_path, monkeypatch):
+def test_disabled_gamescope_resets_to_paste(tmp_path, monkeypatch):
+    config = tmp_path / "button_config.json"
+    monkeypatch.setattr(backend, "BUTTON_CONFIG_FILE", str(config))
+    config.write_text(json.dumps({"textInsertionMode": "gamescope", "typeAsKeys": True}))
+    saved = backend._read_button_config()
+    assert saved["textInsertionMode"] == "paste"
+    assert saved["typeAsKeys"] is False
+
+
+def test_typing_persists_and_gamescope_is_rejected(tmp_path, monkeypatch):
     config = tmp_path / "button_config.json"
     monkeypatch.setattr(backend, "BUTTON_CONFIG_FILE", str(config))
     service = SimpleNamespace(text_insertion_mode="paste", cancel_pending=lambda: None)
     monkeypatch.setattr(backend.Plugin, "voice_service", service)
     plugin = backend.Plugin()
-    assert asyncio.run(plugin.set_text_insertion_mode("gamescope"))["success"]
-    assert backend._read_button_config()["textInsertionMode"] == "gamescope"
-    assert service.text_insertion_mode == "gamescope"
-    assert not asyncio.run(plugin.set_text_insertion_mode("other"))["success"]
-    assert backend._read_button_config()["textInsertionMode"] == "gamescope"
+    assert asyncio.run(plugin.set_text_insertion_mode("ydotool"))["success"]
+    assert service.text_insertion_mode == "ydotool"
+    for mode in ("gamescope", "other"):
+        assert not asyncio.run(plugin.set_text_insertion_mode(mode))["success"]
+        assert backend._read_button_config()["textInsertionMode"] == "ydotool"
+    with pytest.raises(ValueError):
+        backend._write_button_config({"textInsertionMode": "gamescope"})
 
 
 @patch("subprocess.run")
-def test_gamescope_review_labels_manual_typing_and_result(mock_run):
-    updates = []
-    svc = WoWVoiceChat(preset=CHAT, lazy_load=True, review_mode=True,
-                       text_insertion_mode="gamescope", pending_callback=updates.append)
-    svc.send_to_wow_chat = MagicMock(return_value=True)
-    svc.queue_transcription("hello")
-    draft = svc.pending_snapshot()
-    assert draft["action"] == "Type into chat"
-    assert draft["manual"] is True
-    assert svc.confirm_pending(draft["id"])
-    assert updates[-1] == {"mode": "result", "message": "Typed into chat"}
-
-
-@patch("subprocess.run")
-def test_gamescope_types_complete_unicode_without_clipboard_or_auto_submit(mock_run, monkeypatch, tmp_path):
-    monkeypatch.setenv("DECKY_PLUGIN_DIR", str(tmp_path))
-    helper = tmp_path / "bin" / "gamescope-inject"
-    helper.parent.mkdir()
-    helper.write_bytes(b"fixture")
-    helper.chmod(0o755)
-    mock_run.return_value = MagicMock(returncode=0)
-    svc = WoWVoiceChat(preset=CHAT, lazy_load=True, text_insertion_mode="gamescope")
-    assert svc.send_to_wow_chat("Mañana Привет", channel="say")
-    assert mock_run.call_args_list[0].args[0] == [str(helper), "--probe"]
-    assert mock_run.call_args_list[1].args[0][1:] == ["key", "28:1", "28:0"]
-    assert mock_run.call_count == 3
-    assert mock_run.call_args_list[2].args[0] == [str(helper)]
-    assert mock_run.call_args_list[2].kwargs["input"] == "/s Mañana Привет"
-
-
-@patch("subprocess.run")
-def test_gamescope_long_message_fails_before_chat_open(mock_run, monkeypatch, tmp_path):
-    monkeypatch.setenv("DECKY_PLUGIN_DIR", str(tmp_path))
-    helper = tmp_path / "bin" / "gamescope-inject"
-    helper.parent.mkdir()
-    helper.write_bytes(b"fixture")
-    helper.chmod(0o755)
-    svc = WoWVoiceChat(preset=CHAT, lazy_load=True, text_insertion_mode="gamescope")
-    assert not svc.send_to_wow_chat("x" * 41, channel="say")
-    mock_run.assert_not_called()
-
-
-@patch("subprocess.run")
-def test_missing_gamescope_helper_fails_before_opening_chat(mock_run, monkeypatch, tmp_path):
-    monkeypatch.setenv("DECKY_PLUGIN_DIR", str(tmp_path))
+def test_disabled_gamescope_never_opens_chat_or_injects(mock_run):
     svc = WoWVoiceChat(preset=CHAT, lazy_load=True, text_insertion_mode="gamescope")
     assert not svc.send_to_wow_chat("hello", channel="say")
     mock_run.assert_not_called()
-
-
-@patch("subprocess.run")
-def test_gamescope_helper_error_never_submits_or_retries_via_paste(mock_run, monkeypatch, tmp_path):
-    monkeypatch.setenv("DECKY_PLUGIN_DIR", str(tmp_path))
-    helper = tmp_path / "bin" / "gamescope-inject"
-    helper.parent.mkdir()
-    helper.write_bytes(b"fixture")
-    helper.chmod(0o755)
-    mock_run.side_effect = [MagicMock(returncode=0), MagicMock(returncode=0), MagicMock(returncode=1)]
-    svc = WoWVoiceChat(preset=CHAT, lazy_load=True, text_insertion_mode="gamescope")
-    assert not svc.send_to_wow_chat("hello", channel="say")
-    assert mock_run.call_count == 3
-
-
-@patch("subprocess.run")
-def test_gamescope_mode_snapshot_survives_toggle_during_chat_open(mock_run, monkeypatch, tmp_path):
-    monkeypatch.setenv("DECKY_PLUGIN_DIR", str(tmp_path))
-    helper = tmp_path / "bin" / "gamescope-inject"
-    helper.parent.mkdir()
-    helper.write_bytes(b"fixture")
-    helper.chmod(0o755)
-    svc = WoWVoiceChat(preset=CHAT, lazy_load=True, text_insertion_mode="gamescope")
-    def run(*args, **kwargs):
-        if len(mock_run.call_args_list) == 2:
-            svc.text_insertion_mode = "paste"
-        return MagicMock(returncode=0)
-    mock_run.side_effect = run
-    assert svc.send_to_wow_chat("Привет", channel="say")
-    assert mock_run.call_count == 3
-    assert mock_run.call_args_list[2].kwargs["input"] == "/s Привет"

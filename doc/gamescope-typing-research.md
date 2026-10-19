@@ -1,6 +1,21 @@
 # Experimental Gamescope typing: on-device test protocol
 
-This branch stacks on PR #79. The three choices under **Advanced → Sending** are temporary for comparing Paste (default), ydotool typing (US/ASCII), and Gamescope typing (UTF-8). They are not three recommended permanent settings. Nothing here is proof of compatibility with Steam Deck games.
+Gamescope text insertion is disabled after the on-device failures recorded below.
+**Advanced → Sending → Text insertion** offers **Paste** (default) and
+**Type (only English keyboard)**. Type requires an English (US) keyboard layout
+and ASCII text; ydotool remains its internal engine. Saved Gamescope selections
+reset to Paste, and the backend rejects new Gamescope selections.
+
+## Pending: test the Gamescope keymap patch
+
+Before re-enabling Gamescope typing, test a Gamescope build containing the
+keymap compatibility/serialization fix discussed in issue #2311. Repeat both
+direct scripts below with ASCII and Unicode in a plain X11 field and the original
+game. Require the visible text to match exactly; helper exit status is insufficient.
+Record the patched Gamescope version/commit and results. The patch has not yet
+been tested on this device. Keep the helper and scripts for this research;
+the historical plugin comparison steps below apply only to an experimental build
+that explicitly re-enables Gamescope insertion.
 
 ## Why this is experimental
 
@@ -11,6 +26,54 @@ Gamescope's [private input-method protocol](https://github.com/ValveSoftware/gam
 Install the **ZIP built by this branch's GitHub Actions build workflow**, not the source ZIP or the PR #79 artifact; verify the installed version/commit matches the test branch. Its ZIP must contain `decktation/bin/gamescope-inject`. Record SteamOS and Gamescope versions and the active game. Back up your settings if using an update build. Do not test with sensitive text or in a chat that automatically posts on typing.
 
 ## On-Deck comparison
+
+### Direct test result: 2026-10-19
+
+SteamOS 3.8.28 (build 20260922.1), Gamescope package 3.16.23.6-1,
+Xwayland 24.1.10-1.2. The installed helper completed its probe and commit
+successfully. Wayland tracing showed the literal request
+`set_string("Hi 907! | ñ é Ж 中")`; the user observed `1234567890-=qwert`
+in the target field. These are exactly the first 17 entries of Gamescope's
+`allow_keycodes`, interpreted under the ordinary US layout. This reproduces
+incorrect mapping independently of transcription and plugin insertion routing.
+The target application was not recorded.
+
+The installed `/usr/bin/gamescope` contains the old generated compatibility
+section (`xkb_compatibility "(unnamed)" { include "complete" };`), without the
+`interpret Any+AnyOfOrNone(all)` workaround present in the pinned upstream source.
+This supports the keymap serialization failure described in issue #2311 as a
+likely explanation. It does not establish whether Xwayland rejected the map or
+the target application ignored it; capturing the live Xwayland map or comparing
+with an ordinary X11 text field would distinguish those cases.
+
+Follow-up: `scripts/test_gamescope_x11.py --display :1` opened a plain Tk X11
+entry in Gamescope. After the user clicked Run test, the script focused the
+entry, committed the same sample and read the entry back automatically. Result:
+`actual="1234567890-=qwert"`, `matches=false`, `helper_exit=0`.
+The same failure therefore affects ordinary X11 text input, independently of the
+original game. The exact keymap serialization mechanism remains unverified, but
+the failure is reproducible in the Gamescope/Xwayland input path.
+
+Repeat this comparison with `/usr/bin/python3 scripts/test_gamescope_x11.py
+--display :1` (system Python supplies Tk). Click Run test in the resulting
+window; it captures the entry's contents and closes 12 seconds after the result.
+
+To bypass transcription, presets and chat-open keys, run the direct helper test
+from this checkout while Gaming Mode is running:
+
+```sh
+python3 scripts/test_gamescope_typing.py --case ascii --trace
+python3 scripts/test_gamescope_typing.py --case unicode --trace
+```
+
+Each invocation probes the compositor, prints the expected text, then waits 15
+seconds for you to focus an empty game text field. Run the commands separately
+and manually clear the field between tests. The script never clears text or
+presses Enter. `--case mixed` combines ASCII and Unicode in one short sample;
+`--probe` checks capability without typing. Protocol tracing includes the sample
+so you can compare `set_string` with the visible result. Correct protocol text
+with incorrect visible characters isolates the failure downstream of the plugin's
+transcription and insertion routing, but does not by itself identify the cause.
 
 1. In Gaming Mode, select **Generic** and focus a harmless editable field. Select Gamescope typing, dictate English (`test 123`), Spanish (`mañana ¿sí?`), and Russian (`Привет`). Compare the **visible characters**, not a success toast. If the field is blank or characters are wrong, record exactly what it shows. Manually clear between runs.
 2. In a game that blocks paste (OSRS is the motivating report), focus chat and keep the message **unsent**. Use Generic if chat is already open, or a custom preset with the correct game chat-open key and no WoW `/s ` prefix. Compare the same English phrase under ydotool typing and Gamescope typing; check dropped, rearranged or duplicated characters. Only press Enter yourself after inspecting the text. A screenshot of the unsent draft helps.
