@@ -1,0 +1,8 @@
+{
+  "plugin": "Decktation",
+  "channel": "branch",
+  "ref": "remove-gamescope",
+  "commit": "d37937aec90c0cdf9b5aaa74e5b1652336b8fb30",
+  "zip_url": "https://decktation.com/branches/remove-gamescope/Decktation.zip",
+  "generated_at": "2026-10-19T13:57:39Z"
+}
