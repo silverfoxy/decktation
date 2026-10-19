@@ -216,7 +216,7 @@
         }
     }
 
-    var version = "0.3.19";
+    var version = "0.3.20";
 
     // Read the actual QAM surface. Document visibility alone does not establish
     // whether a persistent Steam sidebar is on screen.
@@ -260,7 +260,7 @@
         return foundMenu ? false : null;
     }
 
-    var _manifest = {"name":"Decktation","version":"0.3.19","author":"silverfoxy","flags":["root"],"api_version":1,"publish":{"tags":["voice","dictation","speech-to-text","input","chat","gaming","accessibility"],"description":"Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using whisper.cpp.","image":"https://raw.githubusercontent.com/silverfoxy/decktation/master/store-card.png"}};
+    var _manifest = {"name":"Decktation","version":"0.3.20","author":"silverfoxy","flags":["root"],"api_version":1,"publish":{"tags":["voice","dictation","speech-to-text","input","chat","gaming","accessibility"],"description":"Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using whisper.cpp.","image":"https://raw.githubusercontent.com/silverfoxy/decktation/master/store-card.png"}};
 
     const manifest = _manifest;
     const API_VERSION = 2;

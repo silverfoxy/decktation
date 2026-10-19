@@ -7,12 +7,30 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.3.20] - 2026-10-18
+
 ### Added
 
+- Plugin and website localization in ten languages, with an interface language
+  selector in Advanced settings.
+- Physical press-to-bind editing for recording controls.
+- Opt-in controller input capture with a local report preview and explicit
+  consent before submitting a diagnostic report.
+- An in-plugin microphone troubleshooting guide under Diagnostics.
 - Optional local English spoken punctuation commands in Advanced settings and the
   standalone CLI, including comma, period, question mark, and exclamation mark.
 - Explicit “command …” dictation for game slash commands, bypassing chat
   channel prefixes while respecting review, countdown, and manual-send settings.
+- Experimental ydotool keystroke insertion for games that block clipboard paste.
+  This mode supports US-layout ASCII text.
+- Experimental Gamescope text insertion in Gaming Mode, limited to 40 characters
+  including channel prefixes and requiring manual Enter to send.
+
+### Fixed
+
+- Restore startup on Decky 3.3.0 by bundling an isolated minimal Python runtime.
+- Correct rear-grip mappings for verified HHD and DualSense Edge controller
+  layouts while preserving device-specific overrides.
 
 ## [0.3.19] - 2026-10-12
 
