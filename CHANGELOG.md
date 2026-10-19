@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Changed
+
+- Serve stable downloads from GitHub Releases and limit retained branch previews
+  on GitHub Pages to avoid oversized deployments.
+
 ## [0.3.20] - 2026-10-18
 
 ### Added

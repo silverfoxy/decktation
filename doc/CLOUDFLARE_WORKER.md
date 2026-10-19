@@ -6,7 +6,9 @@ The existing `decktation` Worker serves the public site at
 
 Astro builds `site/` into static landing assets bundled with the Worker.
 The Worker fetches the download list at `/downloads/`, branch/release pages,
-metadata, and catalogs from the existing GitHub Pages origin. ZIP URLs redirect to that origin, which serves the large files.
+metadata, and catalogs from the existing GitHub Pages origin. Stable ZIP URLs
+redirect to GitHub Releases; branch ZIPs redirect to Pages. Pages retains at most
+512 MiB of branch previews and removes release ZIP copies.
 The GitHub Pages custom-domain setting must remain empty to prevent redirects
 back to the Worker. Cloudflare Pages is not required. See the complete
 [domain setup and deployment order](DOMAIN_SETUP.md).

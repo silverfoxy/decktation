@@ -126,7 +126,7 @@ jobs:
           DECKTATION_VERSION="$(node scripts/release-version.mjs print)"
           python scripts/generate-store-catalog.py \
             --artifact build-output/decktation.zip \
-            --artifact-url "https://decktation.com/releases/v${DECKTATION_VERSION}/Decktation.zip" \
+            --artifact-url "https://github.com/${{ github.repository }}/releases/download/v${DECKTATION_VERSION}/decktation.zip" \
             --output /tmp/decktation-store.json
           python -m json.tool /tmp/decktation-store.json >/dev/null
 
@@ -156,6 +156,28 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Name the public release download
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: cp build-output/decktation.zip build-output/Decktation.zip
+
+      - name: Upload release archive
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build-output/Decktation.zip
+          body: |
+            ## Installation
+
+            Download **Decktation.zip** from the Assets section and import it
+            with Decky's **Install Plugin from ZIP** option.
+
+            **Do not download “Source code (zip)” or “Source code (tar.gz)”.**
+            GitHub adds those archives automatically, but they do not contain
+            Decktation's bundled Python dependencies and will not run.
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+
       - name: Publish Pages downloads
         if: github.event_name != 'pull_request'
         env:
@@ -167,24 +189,6 @@ jobs:
           REF_TYPE: ${{ github.ref_type }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: bash scripts/publish-pages.sh
-
-      - name: Upload release archive
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: build-output/decktation.zip
-          body: |
-            ## Installation
-
-            Download **decktation.zip** from the Assets section and import it
-            with Decky's **Install Plugin from ZIP** option.
-
-            **Do not download “Source code (zip)” or “Source code (tar.gz)”.**
-            GitHub adds those archives automatically, but they do not contain
-            Decktation's bundled Python dependencies and will not run.
-          draft: false
-          prerelease: false
-          generate_release_notes: true
 
   cleanup-pages:
     if: github.event_name == 'delete'

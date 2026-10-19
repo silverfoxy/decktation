@@ -297,7 +297,7 @@ assert_branch_target_available() {
 
 render_pages_content() {
   migrate_branch_dirs
-  if [ "$CLEANUP_ONLY" != "true" ]; then
+  if [ "$CLEANUP_ONLY" != "true" ] && [ "$REF_TYPE" = "branch" ]; then
     local branch_key
     branch_key="$(normalize_ref "$REF_NAME")"
     assert_branch_target_available "$branch_key"
@@ -306,7 +306,6 @@ render_pages_content() {
     local zip_url="$PAGES_BASE_URL/$branch_url_path/Decktation.zip"
     local metadata_url="$PAGES_BASE_URL/$branch_url_path/metadata.json"
     mkdir -p "$PAGES_DIR/branches/$branch_key"
-    cp "$ZIP_SOURCE" "$PAGES_DIR/branches/$branch_key/decktation.zip"
     cp "$ZIP_SOURCE" "$PAGES_DIR/branches/$branch_key/Decktation.zip"
     write_metadata \
       "$PAGES_DIR/branches/$branch_key/metadata.json" \
@@ -326,14 +325,6 @@ render_pages_content() {
   if [ "$CLEANUP_ONLY" != "true" ] && [ "$REF_TYPE" = "tag" ]; then
     mkdir -p "$PAGES_DIR/releases/$RELEASE_TAG" "$PAGES_DIR/releases/latest" \
       "$PAGES_DIR/store"
-    cp "$ZIP_SOURCE" "$PAGES_DIR/releases/$RELEASE_TAG/decktation.zip"
-    cp "$ZIP_SOURCE" "$PAGES_DIR/releases/$RELEASE_TAG/Decktation.zip"
-    cp "$ZIP_SOURCE" "$PAGES_DIR/releases/latest/decktation.zip"
-    cp "$ZIP_SOURCE" "$PAGES_DIR/releases/latest/Decktation.zip"
-    # Short, stable install URL for Decky's "Install Plugin from URL" action.
-    # Only release tags update it; branch builds must never replace the stable
-    # artifact a user receives from this address.
-    cp "$ZIP_SOURCE" "$PAGES_DIR/latest.zip"
     write_metadata \
       "$PAGES_DIR/releases/$RELEASE_TAG/metadata.json" \
       "release" \
@@ -359,7 +350,7 @@ render_pages_content() {
   if [ "$CLEANUP_ONLY" != "true" ] && { [ "$REF_TYPE" = "tag" ] || [ "$REF_NAME" = "master" ]; }; then
     local catalog_artifact_url
     if [ "$REF_TYPE" = "tag" ]; then
-      catalog_artifact_url="$PAGES_BASE_URL/releases/$RELEASE_TAG/Decktation.zip"
+      catalog_artifact_url="https://github.com/$GITHUB_REPOSITORY/releases/download/$RELEASE_TAG/decktation.zip"
     else
       catalog_artifact_url="$PAGES_BASE_URL/branches/master/Decktation.zip"
     fi
@@ -373,16 +364,8 @@ render_pages_content() {
       --output "$PAGES_DIR/store/plugins.json"
   fi
 
-  # Keep the stable short URL's filename equal to plugin.json's name.
-  # Migrate existing releases too, without changing which release is latest.
-  if [ -f "$PAGES_DIR/latest.zip" ]; then
-    cp "$PAGES_DIR/latest.zip" "$PAGES_DIR/Decktation.zip"
-  fi
-  if [ -d "$PAGES_DIR/releases" ]; then
-    find "$PAGES_DIR/releases" -type f -name decktation.zip -print | while read -r artifact; do
-      cp "$artifact" "$(dirname "$artifact")/Decktation.zip"
-    done
-  fi
+  python3 "$WORKSPACE_DIR/scripts/compact-pages.py" "$PAGES_DIR" \
+    --repository "$GITHUB_REPOSITORY" --current-branch "$REF_NAME"
 
   mkdir -p "$PAGES_DIR/downloads"
   cat >"$PAGES_DIR/downloads/index.html" <<EOF
@@ -488,10 +471,8 @@ render_pages_content() {
 </html>
 EOF
 
-  # Landing owns the root; plugin builds only update the download catalog.
-  if [ ! -f "$PAGES_DIR/index.html" ]; then
-    cp "$PAGES_DIR/downloads/index.html" "$PAGES_DIR/index.html"
-  fi
+  # The Worker serves the product landing; Pages serves the download index.
+  cp "$PAGES_DIR/downloads/index.html" "$PAGES_DIR/index.html"
 
   touch "$PAGES_DIR/.nojekyll"
 }

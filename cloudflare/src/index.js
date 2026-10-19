@@ -66,9 +66,9 @@ async function handleSite(request, url) {
     const latest = ["/latest.zip", "/decktation.zip", "/Decktation.zip",
       "/releases/latest/decktation.zip", "/releases/latest/Decktation.zip"].includes(url.pathname);
     const target = release
-      ? `https://github.com/silverfoxy/decktation/releases/download/${release[1]}/decktation.zip${url.search}`
+      ? `https://github.com/silverfoxy/decktation/releases/download/${release[1]}/Decktation.zip${url.search}`
       : latest
-        ? `https://github.com/silverfoxy/decktation/releases/latest/download/decktation.zip${url.search}`
+        ? `https://github.com/silverfoxy/decktation/releases/latest/download/Decktation.zip${url.search}`
         : upstreamUrl.replace(/(\/branches\/[^/]+\/)decktation\.zip(?=\?|$)/, "$1Decktation.zip");
     return new Response(null, {
       status: 302,

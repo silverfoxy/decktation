@@ -1,6 +1,8 @@
 from functools import cmp_to_key
 import importlib.util
 from pathlib import Path
+import io
+import json
 
 
 SCRIPT_PATH = Path(__file__).parents[1] / "scripts" / "generate-store-catalog.py"
@@ -36,3 +38,15 @@ def test_numeric_prerelease_identifiers_use_numeric_ordering():
     right = {"name": "1.0.0-dev.2"}
 
     assert CATALOG.compare_versions(left, right) > 0
+
+
+def test_capitalized_release_asset_keeps_url_compatible_with_installed_updaters(monkeypatch):
+    response = [{"tag_name": "v0.3.20", "assets": [{
+        "name": "Decktation.zip", "digest": "sha256:abc",
+        "browser_download_url": "https://github.com/silverfoxy/decktation/releases/download/v0.3.20/Decktation.zip",
+    }]}]
+    monkeypatch.setattr(CATALOG, "urlopen", lambda *a, **kw: io.BytesIO(json.dumps(response).encode()))
+    assert CATALOG.github_release_versions("silverfoxy/decktation") == [{
+        "name": "0.3.20", "hash": "abc",
+        "artifact": "https://github.com/silverfoxy/decktation/releases/download/v0.3.20/decktation.zip",
+    }]

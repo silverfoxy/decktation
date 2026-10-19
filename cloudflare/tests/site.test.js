@@ -155,12 +155,12 @@ test("stable aliases and versioned ZIPs download from GitHub Releases", async (t
       const response = await worker.fetch(request(`${path}?download=1`, method));
       assert.equal(response.status, 302);
       assert.equal(response.headers.get("Location"),
-        "https://github.com/silverfoxy/decktation/releases/latest/download/decktation.zip?download=1");
+        "https://github.com/silverfoxy/decktation/releases/latest/download/Decktation.zip?download=1");
     }
     for (const name of ["decktation.zip", "Decktation.zip"]) {
       const response = await worker.fetch(request(`/releases/v0.3.20/${name}`, method));
       assert.equal(response.headers.get("Location"),
-        "https://github.com/silverfoxy/decktation/releases/download/v0.3.20/decktation.zip");
+        "https://github.com/silverfoxy/decktation/releases/download/v0.3.20/Decktation.zip");
     }
   }
   assert.equal(fetch.mock.callCount(), 0);

@@ -34,11 +34,13 @@ render_pages_content
     subprocess.run(['bash', '-c', script], cwd=REPO, env=env, check=True, capture_output=True)
     branch = pages / 'branches' / 'feat-transcription-review'
     assert (branch / 'Decktation.zip').read_bytes() == b'new branch'
-    assert (branch / 'decktation.zip').read_bytes() == b'new branch'
+    assert not (branch / 'decktation.zip').exists()
     metadata = json.loads((branch / 'metadata.json').read_text())
     assert metadata['zip_url'] == 'https://example.com/branches/feat-transcription-review/Decktation.zip'
     assert metadata['commit'] == 'abc123'
     assert 'Decktation.zip' in (branch / 'index.html').read_text()
     assert (old / 'Decktation.zip').read_bytes() == b'old branch'
     assert json.loads((old / 'metadata.json').read_text())['zip_url'].endswith('/Decktation.zip')
-    assert (pages / 'Decktation.zip').read_bytes() == b'stable release'
+    assert not (pages / 'Decktation.zip').exists()
+    assert not (pages / 'latest.zip').exists()
+    assert not (old / 'decktation.zip').exists()

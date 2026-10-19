@@ -96,14 +96,16 @@ def github_release_versions(repository: str):
             (
                 candidate
                 for candidate in release.get("assets", [])
-                if candidate.get("name") == "decktation.zip"
+                if candidate.get("name", "").lower() == "decktation.zip"
             ),
             None,
         )
         digest = asset.get("digest", "") if asset else ""
         if not asset or not digest.startswith("sha256:"):
             continue
-        artifact_url = asset["browser_download_url"]
+        # Installed updaters allowlist this lowercase URL. GitHub resolves asset
+        # filenames case-insensitively, including the public Decktation.zip.
+        artifact_url = asset["browser_download_url"].rsplit("/", 1)[0] + "/decktation.zip"
         validate_url(artifact_url)
         versions.append(
             {
