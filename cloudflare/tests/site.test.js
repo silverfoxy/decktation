@@ -38,10 +38,10 @@ test("download index, branch pages and metadata use the Pages origin", async (t)
 test("ZIP redirects preserve release/branch paths and queries without fetching bytes", async (t) => {
   const fetch = t.mock.method(globalThis, "fetch", () => { throw new Error("Unexpected fetch"); });
   for (const method of ["GET", "HEAD"]) {
-    for (const path of ["/latest.zip", "/releases/latest/decktation.zip", "/releases/v1.0/decktation.zip", "/branches/feature%2Btest/decktation.zip?download=1", "//external.example/file.zip"]) {
+    for (const path of ["/branches/feature%2Btest/decktation.zip?download=1", "//external.example/file.zip"]) {
       const response = await worker.fetch(request(path, method));
       assert.equal(response.status, 302);
-      assert.equal(response.headers.get("Location"), `${origin}${path}`);
+      assert.equal(response.headers.get("Location"), `${origin}${path.replace("/decktation.zip", "/Decktation.zip")}`);
       assert.equal(response.headers.get("Cache-Control"), "no-store");
       assert.equal(await response.text(), "");
     }
@@ -144,4 +144,24 @@ test("downloads directory canonicalizes its trailing slash and preserves queries
   const response = await worker.fetch(request("/downloads?channel=test"));
   assert.equal(response.status, 308);
   assert.equal(response.headers.get("Location"), "https://decktation.com/downloads/?channel=test");
+});
+
+
+test("stable aliases and versioned ZIPs download from GitHub Releases", async (t) => {
+  const fetch = t.mock.method(globalThis, "fetch", () => { throw new Error("Unexpected fetch"); });
+  for (const method of ["GET", "HEAD"]) {
+    for (const path of ["/latest.zip", "/Decktation.zip", "/decktation.zip",
+      "/releases/latest/decktation.zip", "/releases/latest/Decktation.zip"]) {
+      const response = await worker.fetch(request(`${path}?download=1`, method));
+      assert.equal(response.status, 302);
+      assert.equal(response.headers.get("Location"),
+        "https://github.com/silverfoxy/decktation/releases/latest/download/decktation.zip?download=1");
+    }
+    for (const name of ["decktation.zip", "Decktation.zip"]) {
+      const response = await worker.fetch(request(`/releases/v0.3.20/${name}`, method));
+      assert.equal(response.headers.get("Location"),
+        "https://github.com/silverfoxy/decktation/releases/download/v0.3.20/decktation.zip");
+    }
+  }
+  assert.equal(fetch.mock.callCount(), 0);
 });

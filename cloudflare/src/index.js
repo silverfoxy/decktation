@@ -62,9 +62,17 @@ async function handleSite(request, url) {
   // ZIPs exceed Workers' static-asset file size limit. Let the artifact origin
   // serve downloads directly, including Range requests and HEAD probes.
   if (url.pathname.endsWith(".zip")) {
+    const release = /^\/releases\/(v[0-9A-Za-z.+-]+)\/(?:decktation|Decktation)\.zip$/.exec(url.pathname);
+    const latest = ["/latest.zip", "/decktation.zip", "/Decktation.zip",
+      "/releases/latest/decktation.zip", "/releases/latest/Decktation.zip"].includes(url.pathname);
+    const target = release
+      ? `https://github.com/silverfoxy/decktation/releases/download/${release[1]}/decktation.zip${url.search}`
+      : latest
+        ? `https://github.com/silverfoxy/decktation/releases/latest/download/decktation.zip${url.search}`
+        : upstreamUrl.replace(/(\/branches\/[^/]+\/)decktation\.zip(?=\?|$)/, "$1Decktation.zip");
     return new Response(null, {
       status: 302,
-      headers: { Location: upstreamUrl, "Cache-Control": "no-store" },
+      headers: { Location: target, "Cache-Control": "no-store" },
     });
   }
 
