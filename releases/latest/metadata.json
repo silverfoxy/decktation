@@ -1,8 +1,8 @@
 {
   "plugin": "Decktation",
   "channel": "release-latest",
-  "ref": "v0.3.19",
-  "commit": "bfff18d1261601a2ae59e109fd5a41aa88e21fb7",
+  "ref": "v0.3.20",
+  "commit": "2f437e20f7f68b807a3e5f5878cf2f67abc69ccc",
   "zip_url": "https://decktation.com/releases/latest/Decktation.zip",
-  "generated_at": "2026-10-12T14:40:36Z"
+  "generated_at": "2026-10-19T01:39:29Z"
 }
