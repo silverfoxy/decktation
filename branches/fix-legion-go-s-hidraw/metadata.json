@@ -1,0 +1,8 @@
+{
+  "plugin": "Decktation",
+  "channel": "branch",
+  "ref": "fix/legion-go-s-hidraw",
+  "commit": "849872e82d1a99773cad8c1330b01629ec0e9038",
+  "zip_url": "https://decktation.com/branches/fix-legion-go-s-hidraw/Decktation.zip",
+  "generated_at": "2026-10-20T14:34:25Z"
+}
