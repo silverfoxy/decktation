@@ -757,7 +757,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 		: modelLoading ? t("Loading transcription model...")
 		: !enabled ? t("Decktation is off")
 		: !modelReady ? t("Model not ready")
-		: !controllerReady ? t("Controller unavailable")
+		: !controllerReady ? t(controllerStatus === "Waiting for input" ? "Waiting for input" : "Controller unavailable")
 		: t("Ready");
 	const statusProblem = !!(statusError || rpcError || (serviceReady && !inputReady) || (enabled && serviceReady && !controllerReady));
 

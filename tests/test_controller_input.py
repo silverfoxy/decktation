@@ -364,6 +364,7 @@ def test_listener_hotplug_evdev_while_raw_is_idle_and_disconnect(listener, monke
         monkeypatch.setattr(listener, name, str(tmp_path / name))
     monkeypatch.setattr(listener, 'load_button_config', lambda: ['L1', 'R1'])
     monkeypatch.setattr(listener, 'find_steam_hidraw', lambda: iter([('/dev/hidraw0', 'steam_deck')]))
+    monkeypatch.setattr(listener, 'find_legion_go_s_hidraw', lambda: iter(()))
     scans = []
     def discover(pattern):
         scans.append(pattern)

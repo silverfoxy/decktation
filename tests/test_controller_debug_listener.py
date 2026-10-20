@@ -7,7 +7,7 @@ import pytest
 from binding_capture import read_json, write_json
 
 
-@pytest.mark.parametrize('module', ['controller_debug_report', 'controller_debug_session'])
+@pytest.mark.parametrize('module', ['controller_debug_report', 'controller_debug_session', 'legion_go_s'])
 def test_debug_modules_are_bundled_with_listener(module):
     root = Path(__file__).parents[1]
     assert 'src/' + module + '.py' in (root / 'backend/entrypoint.sh').read_text()

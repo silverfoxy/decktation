@@ -13,6 +13,7 @@ import glob
 import selectors
 import tempfile
 from deck_hid import STEAM_DECK_BUTTON_BITS, raw_button_states, triton_button_states
+from legion_go_s import BUTTON_BITS as LEGION_GO_S_BUTTON_BITS, button_states as legion_go_s_button_states
 from gamepad_evdev import EvdevGamepad
 from binding_capture import BindingCapture, read_json, write_json
 from controller_debug_report import InputReport, DURATION
@@ -73,6 +74,10 @@ def inspect_rejected_device(device):
 
 
 def controller_details(device, controller_type):
+    if controller_type == 'legion_go_s':
+        return {**device.identity, 'controller_type': controller_type,
+                'input_backend': 'hidraw', 'connection': 'usb',
+                'supported_buttons': sorted(device.supported_buttons)}
     if controller_type != 'evdev_gamepad':
         buttons = set(RAW_BUTTON_BITS)
         if controller_type not in ('steam_deck',) and not controller_type.startswith('steam_controller_2026'):
@@ -155,6 +160,51 @@ def find_steam_hidraw():
                 yield path, STEAM_CONTROLLER_TYPES[hid_id]
         except (OSError, ValueError):
             continue
+
+
+def find_legion_go_s_hidraw(sysfs_root='/sys/class/hidraw'):
+    """Find only the physical USB gamepad interface, not touchpad/IMU/keyboard."""
+    for path in glob.glob('/dev/hidraw*'):
+        device = os.path.join(sysfs_root, os.path.basename(path), 'device')
+        try:
+            with open(os.path.join(device, 'uevent')) as source:
+                hid_id = next((line.partition('=')[2].strip() for line in source
+                               if line.startswith('HID_ID=')), '')
+            if hid_id.upper() not in ('0003:00001A86:0000E310', '0003:00001A86:0000E311'):
+                continue
+            with open(os.path.join(device, '..', 'bInterfaceNumber')) as source:
+                if source.read().strip() != '06':
+                    continue
+            yield path, 'legion_go_s'
+        except OSError:
+            continue
+
+
+class LegionGoSGamepad:
+    """Observe the Lenovo gamepad HID input without grabbing or writing to it."""
+    def __init__(self, path, product_id=None):
+        if product_id is None:
+            uevent = os.path.join('/sys/class/hidraw', os.path.basename(path), 'device', 'uevent')
+            with open(uevent) as source:
+                hid_id = next((line.partition('=')[2].strip().upper() for line in source
+                               if line.startswith('HID_ID=')), '')
+            if hid_id not in ('0003:00001A86:0000E310', '0003:00001A86:0000E311'):
+                raise ValueError('not a Legion Go S gamepad')
+            product_id = int(hid_id[-4:], 16)
+        self.fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+        self.identity = {'bus': 3, 'vendor_id': 0x1a86, 'product_id': product_id}
+        self.supported_buttons = set(LEGION_GO_S_BUTTON_BITS)
+
+    def close(self):
+        os.close(self.fd)
+
+    def read_states(self):
+        report = os.read(self.fd, 32)
+        if not report:
+            raise OSError('Legion Go S HID disconnected')
+        states = legion_go_s_button_states(report)
+        if states is not None:
+            yield states
 
 
 class RawGamepad:
@@ -547,6 +597,7 @@ def main():
             update_combo()
             if time.monotonic() >= next_scan:
                 candidates = dict(find_steam_hidraw())
+                candidates.update(find_legion_go_s_hidraw())
                 candidates.update({path: 'evdev_gamepad' for path in glob.glob('/dev/input/event*')})
                 for path in list(devices):
                     if path not in candidates:
@@ -557,6 +608,7 @@ def main():
                     device = None
                     try:
                         reader = (EvdevGamepad if controller_type == 'evdev_gamepad' else
+                                  LegionGoSGamepad if controller_type == 'legion_go_s' else
                                   TritonGamepad if controller_type.startswith('steam_controller_2026') else
                                   RawGamepad)
                         device = (reader(path, diagnostic_only=True)

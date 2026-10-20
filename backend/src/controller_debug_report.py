@@ -22,7 +22,7 @@ def _controller_key(code):
 BUTTONS = {'A', 'B', 'X', 'Y', 'L1', 'R1', 'L2', 'R2', 'L3', 'R3',
            'L4', 'R4', 'L5', 'R5', 'View', 'Menu', 'D-pad Up', 'D-pad Down',
            'D-pad Left', 'D-pad Right', 'Left Trackpad', 'Right Trackpad'}
-CONTROLLER_TYPES = {'evdev_gamepad', 'steam_deck', 'steam_controller_wired',
+CONTROLLER_TYPES = {'evdev_gamepad', 'legion_go_s', 'steam_deck', 'steam_controller_wired',
                     'steam_controller_wireless', 'steam_controller_2026_puck',
                     'steam_controller_2026_receiver', 'steam_controller_2026_wired',
                     'steam_controller_2026_bluetooth'}
