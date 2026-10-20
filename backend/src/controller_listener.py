@@ -12,8 +12,9 @@ import json
 import glob
 import selectors
 import tempfile
-from deck_hid import STEAM_DECK_BUTTON_BITS, raw_button_states, triton_button_states
+from deck_hid import STEAM_DECK_BUTTON_BITS
 from gamepad_evdev import EvdevGamepad
+from controller_profiles import PROFILES_BY_KIND, HidGamepad, find_hidraw
 from binding_capture import BindingCapture, read_json, write_json
 from controller_debug_report import InputReport, DURATION
 from controller_debug_session import PROTOCOL, START_TIMEOUT, finite_number, read_bounded
@@ -38,29 +39,6 @@ CONFIG_FILE = os.path.join(CONFIG_DIR, "button_config.json")
 # report, independent of the active Steam Input layout.
 RAW_BUTTON_BITS = STEAM_DECK_BUTTON_BITS
 
-STEAM_HID_INTERFACES = {
-    # Steam Deck vendor controller interface.
-    "0003:000028DE:00001205": ("/input2",),
-    # Original Steam Controller, wired and wireless receiver. The receiver has
-    # appeared as input1 and input2 across hid-steam/kernel versions.
-    "0003:000028DE:00001102": ("/input2",),
-    "0003:000028DE:00001142": ("/input1", "/input2"),
-}
-STEAM_CONTROLLER_TYPES = {
-    "0003:000028DE:00001205": "steam_deck",
-    "0003:000028DE:00001102": "steam_controller_wired",
-    "0003:000028DE:00001142": "steam_controller_wireless",
-}
-for product, kind, suffixes, bus in (
-    (0x1304, 'steam_controller_2026_puck', tuple(f'/input{i}' for i in range(2, 6)), 3),
-    (0x1305, 'steam_controller_2026_receiver', tuple(f'/input{i}' for i in range(2, 6)), 3),
-    (0x1302, 'steam_controller_2026_wired', ('/input0', '/input1', '/input2'), 3),
-    (0x1303, 'steam_controller_2026_bluetooth', None, 5),
-):
-    hid_id = f'{bus:04X}:000028DE:{product:08X}'
-    STEAM_HID_INTERFACES[hid_id] = suffixes
-    STEAM_CONTROLLER_TYPES[hid_id] = kind
-
 DIAGNOSTIC_PREFIX = 'DECKTATION_CONTROLLER '
 
 def inspect_rejected_device(device):
@@ -73,21 +51,12 @@ def inspect_rejected_device(device):
 
 
 def controller_details(device, controller_type):
-    if controller_type != 'evdev_gamepad':
-        buttons = set(RAW_BUTTON_BITS)
-        if controller_type not in ('steam_deck',) and not controller_type.startswith('steam_controller_2026'):
-            buttons -= {'L4', 'R4'}
-        product = {'steam_deck': 0x1205, 'steam_controller_wired': 0x1102,
-                   'steam_controller_wireless': 0x1142,
-                   'steam_controller_2026_puck': 0x1304,
-                   'steam_controller_2026_receiver': 0x1305,
-                   'steam_controller_2026_wired': 0x1302,
-                   'steam_controller_2026_bluetooth': 0x1303}.get(controller_type, 0)
-        bluetooth = controller_type.endswith('_bluetooth')
-        return {'controller_type': controller_type, 'input_backend': 'hidraw',
-                'vendor_id': 0x28de, 'product_id': product,
-                'connection': 'bluetooth' if bluetooth else 'usb', 'bus': 5 if bluetooth else 3,
-                'supported_buttons': sorted(buttons)}
+    if controller_type in PROFILES_BY_KIND:
+        profile = PROFILES_BY_KIND[controller_type]
+        return {**getattr(device, 'identity', {}), 'controller_type': profile.kind,
+                'input_backend': 'hidraw',
+                'connection': {3: 'usb', 5: 'bluetooth'}.get(profile.bus, 'other'),
+                'supported_buttons': sorted(getattr(device, 'supported_buttons', profile.buttons))}
     identity = getattr(device, 'identity', {})
     family = {0x045e: 'xbox', 0x054c: 'playstation', 0x057e: 'nintendo',
               0x28de: 'valve'}.get(identity.get('vendor_id'), 'generic_gamepad')
@@ -135,70 +104,6 @@ def load_button_config():
 
     # Default to L1+R1
     return ["L1", "R1"]
-
-def find_steam_hidraw():
-    """Find a Valve vendor HID interface containing raw controller reports."""
-    for path in glob.glob("/dev/hidraw*"):
-        name = os.path.basename(path)
-        uevent_path = f"/sys/class/hidraw/{name}/device/uevent"
-        try:
-            with open(uevent_path, "r") as f:
-                properties = dict(
-                    line.rstrip().split("=", 1)
-                    for line in f
-                    if "=" in line
-                )
-            hid_id = properties.get("HID_ID")
-            interface_suffixes = STEAM_HID_INTERFACES.get(hid_id, ())
-            if hid_id in STEAM_CONTROLLER_TYPES and (interface_suffixes is None or
-                    properties.get("HID_PHYS", "").endswith(interface_suffixes)):
-                yield path, STEAM_CONTROLLER_TYPES[hid_id]
-        except (OSError, ValueError):
-            continue
-
-
-class RawGamepad:
-    def __init__(self, path):
-        # Some hid-steam versions require read/write for input delivery.
-        self.fd = os.open(path, os.O_RDWR | os.O_NONBLOCK)
-        self.identity = {}
-        try:
-            with open(f'/sys/class/hidraw/{os.path.basename(path)}/device/uevent') as source:
-                hid_id = next((line.strip().partition('=')[2] for line in source
-                               if line.startswith('HID_ID=')), '')
-            parts = hid_id.split(':')
-            if len(parts) == 3 and all(parts):
-                values = [int(part, 16) for part in parts]
-                if all(0 <= value <= 65535 for value in values):
-                    self.identity = dict(zip(('bus', 'vendor_id', 'product_id'), values))
-        except (OSError, ValueError):
-            pass  # Missing identity must not prevent observing input.
-
-    def close(self):
-        os.close(self.fd)
-
-    def read_states(self):
-        report = os.read(self.fd, 64)
-        if not report:
-            raise OSError('empty HID report')
-        # A wireless controller can disconnect while its USB receiver stays.
-        if len(report) >= 5 and report[:3] == b'\x01\x00\x03' and report[4] == 1:
-            yield {name: False for name in RAW_BUTTON_BITS}
-            return
-        states = raw_button_states(report)
-        if states is not None:
-            yield states
-
-
-class TritonGamepad(RawGamepad):
-    def read_states(self):
-        report = os.read(self.fd, 64)
-        if not report:
-            raise OSError('empty HID report')
-        states = triton_button_states(report)
-        if states is not None:
-            yield states
-
 
 class ControllerDebug:
     """Monotonic protocol-v2 producer, bound to one listener incarnation."""
@@ -546,7 +451,7 @@ def main():
             update_capture()
             update_combo()
             if time.monotonic() >= next_scan:
-                candidates = dict(find_steam_hidraw())
+                candidates = dict(find_hidraw())
                 candidates.update({path: 'evdev_gamepad' for path in glob.glob('/dev/input/event*')})
                 for path in list(devices):
                     if path not in candidates:
@@ -556,13 +461,12 @@ def main():
                         continue
                     device = None
                     try:
-                        reader = (EvdevGamepad if controller_type == 'evdev_gamepad' else
-                                  TritonGamepad if controller_type.startswith('steam_controller_2026') else
-                                  RawGamepad)
-                        device = (reader(path, diagnostic_only=True)
-                                  if reader is EvdevGamepad and debug_active else reader(path))
-                        # Discard private keyboard interfaces before registration:
-                        # closing an fd does not remove DefaultSelector's map entry.
+                        if controller_type == 'evdev_gamepad':
+                            device = (EvdevGamepad(path, diagnostic_only=True) if debug_active
+                                      else EvdevGamepad(path))
+                        else:
+                            device = HidGamepad(path, PROFILES_BY_KIND[controller_type])
+                        # Reject typing interfaces before selector registration.
                         if getattr(device, 'rejected', False) and not inspect_rejected_device(device):
                             device.close()
                             continue

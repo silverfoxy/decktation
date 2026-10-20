@@ -36,7 +36,7 @@ def test_real_main_loop_stop_before_ack_discovers_devices_and_suppresses_actions
     monkeypatch.setattr(listener.time, 'monotonic', lambda: now[0])
     monkeypatch.setattr(listener.time, 'time', lambda: 9_999_999_999.0)
     monkeypatch.setattr(listener, 'load_button_config', lambda: ['L1'])
-    monkeypatch.setattr(listener, 'find_steam_hidraw', lambda: iter(()))
+    monkeypatch.setattr(listener, 'find_hidraw', lambda: iter(()))
     scans = []
     def discover(pattern):
         scans.append(pattern)
@@ -125,7 +125,7 @@ def test_real_selector_reuses_rejected_keyboard_fd_during_capture(tmp_path, monk
                  'HAPTIC_SOURCE_FILE', 'RECENT_SOURCE_FILE'):
         monkeypatch.setattr(listener, name, str(tmp_path / name))
     monkeypatch.setattr(listener, 'load_button_config', lambda: ['L1'])
-    monkeypatch.setattr(listener, 'find_steam_hidraw', lambda: iter(()))
+    monkeypatch.setattr(listener, 'find_hidraw', lambda: iter(()))
     monkeypatch.setattr(listener.glob, 'glob', lambda _: [] if manager.session is None else
                         ['/dev/input/keyboard', '/dev/input/pad', '/dev/input/aux'])
     opened = {}
@@ -184,7 +184,7 @@ def test_back_to_back_capture_retains_rejected_diagnostic_interfaces(tmp_path, m
         monkeypatch.setattr(listener, name, str(tmp_path / name))
     monkeypatch.setattr(listener.time, 'monotonic', lambda: now[0])
     monkeypatch.setattr(listener, 'load_button_config', lambda: ['L1'])
-    monkeypatch.setattr(listener, 'find_steam_hidraw', lambda: iter(()))
+    monkeypatch.setattr(listener, 'find_hidraw', lambda: iter(()))
     monkeypatch.setattr(listener.glob, 'glob', lambda _: ['/dev/input/aux'] if manager.session else [])
     class Aux:
         identity = {}

@@ -67,8 +67,20 @@ for (const size of [{width: 320, height: 600}, {width: 360, height: 640}]) {
         await harness.control('input', {source: 'hidraw', button: 'Right Trackpad', pressed: i % 2 === 0});
       }
       if (finish === 'stop') await page.getByRole('button', {name: label, exact: true}).click();
-      else await harness.control('advance', {seconds: 30});
+      else {
+        // Model a slow replay deterministically. A fixed 30-second jump from here
+        // would skip the producer's two-second finalization window.
+        await harness.control('advance', {seconds: 3});
+        const {snapshot} = await harness.control('inspect');
+        expect(snapshot.state).toBe('recording');
+        await harness.control('advance', {seconds: snapshot.remaining_ms / 1000 + 0.05});
+      }
       await expect(page.locator('pre')).toBeVisible();
+      if (finish === 'automatic') {
+        const {snapshot} = await harness.control('inspect');
+        expect(snapshot.state).toBe('ready');
+        expect(snapshot.report.phase).toBe('complete');
+      }
       await page.screenshot({path: testInfo.outputPath(`${process.env.LAYOUT_STAGE || 'after'}-ready-${finish}-${size.width}.png`)});
       const send = page.getByRole('button', {name: 'Send this report to Sentry', exact: true});
       await fullyVisible(page, send);

@@ -325,7 +325,7 @@ def test_valve_discovery_selects_controller_slots(listener, monkeypatch, product
     monkeypatch.setattr(listener.glob, 'glob', lambda pattern: ['/dev/hidraw0'])
     monkeypatch.setattr('builtins.open', lambda *args: io.StringIO(
         f'HID_ID={bus:04X}:000028DE:{product:08X}\nHID_PHYS=usb-test{suffix}\n'))
-    assert list(listener.find_steam_hidraw()) == ([('/dev/hidraw0', expected)] if expected else [])
+    assert list(listener.find_hidraw()) == ([('/dev/hidraw0', expected)] if expected else [])
 
 
 def test_live_preview_shows_triggers_and_clears_on_release(listener, monkeypatch, tmp_path):
@@ -346,7 +346,7 @@ def test_raw_reader_ignores_status_and_detects_grips(listener, monkeypatch):
     report[13] = 2
     monkeypatch.setattr(listener.os, 'open', lambda *args: 123)
     monkeypatch.setattr(listener.os, 'read', lambda *args: report)
-    device = listener.RawGamepad('/dev/hidraw0')
+    device = listener.HidGamepad('/dev/hidraw0', listener.PROFILES_BY_KIND['steam_deck'])
     assert list(device.read_states())[0]['L4']
     report[2] = 4
     assert list(device.read_states()) == []
@@ -363,7 +363,7 @@ def test_listener_hotplug_evdev_while_raw_is_idle_and_disconnect(listener, monke
                  'HAPTIC_SOURCE_FILE', 'RECENT_SOURCE_FILE'):
         monkeypatch.setattr(listener, name, str(tmp_path / name))
     monkeypatch.setattr(listener, 'load_button_config', lambda: ['L1', 'R1'])
-    monkeypatch.setattr(listener, 'find_steam_hidraw', lambda: iter([('/dev/hidraw0', 'steam_deck')]))
+    monkeypatch.setattr(listener, 'find_hidraw', lambda: iter([('/dev/hidraw0', 'steam_deck')]))
     scans = []
     def discover(pattern):
         scans.append(pattern)
@@ -392,7 +392,7 @@ def test_listener_hotplug_evdev_while_raw_is_idle_and_disconnect(listener, monke
                 yield {'L1': True, 'R1': True}
             else:
                 raise OSError('unplugged')
-    monkeypatch.setattr(listener, 'RawGamepad', Raw)
+    monkeypatch.setattr(listener, 'HidGamepad', lambda path, profile: Raw(path))
     monkeypatch.setattr(listener, 'EvdevGamepad', Pad)
 
     class Selector:
@@ -447,11 +447,11 @@ def test_triton_puck_reports_buttons_and_disconnect(listener, monkeypatch):
     packets.extend((bytes(state), b'\x79\x01'))
     monkeypatch.setattr(listener.os, 'open', lambda *args: 42)
     monkeypatch.setattr(listener.os, 'read', lambda *args: packets.pop(0))
-    device = listener.TritonGamepad('/dev/hidraw4')
+    device = listener.HidGamepad('/dev/hidraw4', listener.PROFILES_BY_KIND['steam_controller_2026_puck'])
     assert list(device.read_states())[0]['L1']
     assert list(device.read_states())[0]['R1'] is False
     details = listener.controller_details(device, 'steam_controller_2026_puck')
-    assert details['product_id'] == 0x1304
+    assert details['input_backend'] == 'hidraw'
     assert {'L1', 'R1'}.issubset(details['supported_buttons'])
 
 

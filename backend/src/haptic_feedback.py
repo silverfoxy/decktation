@@ -10,7 +10,7 @@ import struct
 import threading
 import time
 
-from controller_listener import find_steam_hidraw
+from controller_profiles import PROFILES_BY_KIND, find_hidraw
 from gamepad_evdev import bits, ioctl_read, EVENT
 
 
@@ -145,9 +145,8 @@ class HapticFeedback:
                     and isinstance(value.get('identity'), dict)
                     and isinstance(value.get('time'), (int, float))
                     and 0 <= time.time() - value['time'] <= max_age
-                    and value.get('kind') in ('steam_deck', 'steam_controller_wired',
-                                              'steam_controller_wireless',
-                                              'steam_controller_2026_puck', 'evdev_gamepad')):
+                    and (value.get('kind') == 'evdev_gamepad' or
+                         getattr(PROFILES_BY_KIND.get(value.get('kind')), 'feedback', None))):
                 source = value
         except (OSError, ValueError, TypeError):
             pass
@@ -226,20 +225,21 @@ class HapticFeedback:
 
     def _play(self, event, source, generation):
         kind, path = source['kind'], source['path']
-        if kind in ('steam_deck', 'steam_controller_wired',
-                    'steam_controller_wireless', 'steam_controller_2026_puck'):
-            if (path, kind) not in find_steam_hidraw():
+        profile = PROFILES_BY_KIND.get(kind)
+        feedback = profile.feedback if profile else None
+        if feedback:
+            if (path, kind) not in find_hidraw():
                 self._info(f'{kind}: source disconnected; cue skipped')
                 return
-            backend = ('deck-hid-rumble' if kind == 'steam_deck' else
-                       'triton-hid-rumble' if kind == 'steam_controller_2026_puck' else
+            backend = ('deck-hid-rumble' if feedback == 'deck' else
+                       'triton-hid-rumble' if feedback == 'triton' else
                        'legacy-controller-hid-pulse')
             self._info(f'{kind}: {backend}')
             fd = os.open(path, os.O_RDWR)
             try:
-                if kind == 'steam_deck':
+                if feedback == 'deck':
                     self._deck_pattern(fd, event, generation)
-                elif kind == 'steam_controller_2026_puck':
+                elif feedback == 'triton':
                     self._triton_pattern(fd, event, generation)
                 else:
                     self._legacy_pattern(fd, event, generation)

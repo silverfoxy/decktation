@@ -90,7 +90,8 @@ test('background producer completes while panel is unmounted and remount resumes
   await page.evaluate(() => (window as any).fixture.unmount());
   await expect(page.getByRole('heading')).toHaveCount(0);
   const before = (await harness.control('inspect')).history.filter((v: any) => v.method === 'get_controller_debug').length;
-  await harness.control('advance', { seconds: 30 });
+  const {snapshot} = await harness.control('inspect');
+  await harness.control('advance', { seconds: snapshot.remaining_ms / 1000 + 0.05 });
   await expect.poll(async () => (await harness.control('inspect')).snapshot.state).toBe('ready');
   const final = await harness.control('inspect');
   expect(final.history.filter((v: any) => v.method === 'get_controller_debug')).toHaveLength(before);

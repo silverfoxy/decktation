@@ -13,7 +13,7 @@ cp out/runtime/LICENSE.txt out/licenses/runtime/LICENSE.cpython.txt
 # Decky Loader entry point.
 cp src/runtime_proxy.py src/runtime_worker.py src/resident_whisper.py src/audio_runtime.py src/decktation_backend.py src/plugin_update.py src/wow_voice_chat.py src/clipboard_injection.py src/controller_listener.py src/binding_capture.py src/controller_debug_report.py src/controller_debug_session.py \
     src/haptic_feedback.py \
-    src/deck_hid.py src/gamepad_evdev.py src/telemetry.py src/convert_wow_context.py \
+    src/deck_hid.py src/gamepad_evdev.py src/legion_go_s.py src/controller_profiles.py src/telemetry.py src/convert_wow_context.py \
     src/recording_overlay.py src/recording_overlay_manager.py src/overlay_render.py src/review_gesture.py out/
 
 # Omit installation-time tools, tests, and caches from the bundled Python

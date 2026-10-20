@@ -4,6 +4,8 @@ import platform
 import re
 import shlex
 
+from controller_profiles import PROFILES_BY_KIND
+
 MAX_DEVICES = 16
 MAX_EVENTS = 256
 MAX_BYTES = 32768
@@ -22,10 +24,7 @@ def _controller_key(code):
 BUTTONS = {'A', 'B', 'X', 'Y', 'L1', 'R1', 'L2', 'R2', 'L3', 'R3',
            'L4', 'R4', 'L5', 'R5', 'View', 'Menu', 'D-pad Up', 'D-pad Down',
            'D-pad Left', 'D-pad Right', 'Left Trackpad', 'Right Trackpad'}
-CONTROLLER_TYPES = {'evdev_gamepad', 'steam_deck', 'steam_controller_wired',
-                    'steam_controller_wireless', 'steam_controller_2026_puck',
-                    'steam_controller_2026_receiver', 'steam_controller_2026_wired',
-                    'steam_controller_2026_bluetooth'}
+CONTROLLER_TYPES = {'evdev_gamepad', *PROFILES_BY_KIND}
 REJECTION_REASONS = {'missing_gamepad_buttons', 'missing_stick_axes',
                      'missing_gamepad_buttons_and_stick_axes'}
 METADATA_FIELDS = ('decktation_version', 'os_id', 'os_version', 'os_build',

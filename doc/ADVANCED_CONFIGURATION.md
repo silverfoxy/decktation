@@ -124,3 +124,20 @@ Values may be `A`, `B`, `X`, `Y`, `L1`, `R1`, `L2`, or `R2`. Keys are Linux evde
 Use the controller status panel and `Controller input` log entries to identify the device and raw codes. Mappings are read when a device opens, so restart Decktation or reconnect the controller after editing. USB and Bluetooth IDs may differ, and Steam’s virtual controller has its own mapping. Capture separate X and Y presses from the same device before changing a mapping that appears incorrect.
 
 For the optional World of Warcraft addon and context converter, see the [WoW integration guide](WOW_INTEGRATION.md).
+
+### Adding a proprietary HID controller
+
+Ordinary gamepads are discovered by evdev capabilities. Devices whose physical
+controls are unavailable through evdev can use an explicit `ControllerProfile`
+in `backend/src/controller_profiles.py`. Profiles declare bus/vendor/product IDs,
+controller interface filtering, decoder, supported buttons, report size, and open
+mode. Discovery scans HID nodes once; the shared reader applies the matching
+profile. Keep proprietary report matching narrow so keyboard, touchpad, and IMU
+interfaces cannot be decoded as controller buttons.
+
+Add a decoder and synthetic report/interface tests for a new layout. Set feedback
+only when an existing output protocol is known to work; input support alone does
+not establish rumble support. Valve profiles retain read/write access for
+hid-steam input delivery; the Legion Go S profile opens read-only. Verify actual
+presses/releases and concurrent access with Steam/InputPlumber on hardware before
+claiming support. A successfully opened interface may still deliver no input.
