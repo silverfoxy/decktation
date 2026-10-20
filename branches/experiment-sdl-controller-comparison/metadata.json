@@ -1,0 +1,8 @@
+{
+  "plugin": "Decktation",
+  "channel": "branch",
+  "ref": "experiment/sdl-controller-comparison",
+  "commit": "d8a66bda384719bcd13b3c5388ead65da456b608",
+  "zip_url": "https://decktation.com/branches/experiment-sdl-controller-comparison/Decktation.zip",
+  "generated_at": "2026-10-20T18:26:20Z"
+}
