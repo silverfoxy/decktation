@@ -7,7 +7,7 @@ import pytest
 from binding_capture import read_json, write_json
 
 
-@pytest.mark.parametrize('module', ['controller_debug_report', 'controller_debug_session', 'legion_go_s'])
+@pytest.mark.parametrize('module', ['controller_debug_report', 'controller_debug_session', 'legion_go_s', 'controller_profiles'])
 def test_debug_modules_are_bundled_with_listener(module):
     root = Path(__file__).parents[1]
     assert 'src/' + module + '.py' in (root / 'backend/entrypoint.sh').read_text()
@@ -193,10 +193,10 @@ def test_observed_interfaces_explain_backend_identity_and_binding_rejection(prod
 def test_hid_identity_is_read_from_kernel_not_invented(monkeypatch, uevent, expected):
     import builtins
     import io
-    from controller_listener import RawGamepad
+    from controller_profiles import HidGamepad, PROFILES_BY_KIND
     monkeypatch.setattr(builtins, 'open', lambda *a, **kw: io.StringIO(uevent))
     monkeypatch.setattr('controller_listener.os.open', lambda *a: 123)
-    assert RawGamepad('/dev/hidraw0').identity == expected
+    assert HidGamepad('/dev/hidraw0', PROFILES_BY_KIND['steam_deck']).identity == expected
 
 
 def test_initial_held_state_preserves_first_release_without_typing(producer, tmp_path):

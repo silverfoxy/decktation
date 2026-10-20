@@ -28,7 +28,7 @@ def test_default_disabled_and_missing_hardware(monkeypatch):
 
 def test_missing_hardware_is_a_no_op(monkeypatch):
     feedback = haptic_feedback.HapticFeedback(enabled=True)
-    monkeypatch.setattr(haptic_feedback, "find_steam_hidraw", lambda: iter(()))
+    monkeypatch.setattr(haptic_feedback, "find_hidraw", lambda: iter(()))
     opened = MagicMock()
     monkeypatch.setattr(haptic_feedback.os, "open", opened)
     feedback._play("started", _source("steam_deck", "/dev/hidraw9"), 0)
@@ -58,7 +58,7 @@ def test_single_worker_plays_distinct_patterns_and_survives_failure(monkeypatch)
 
 def test_rumble_patterns_are_bounded_and_always_stopped(monkeypatch):
     feedback = haptic_feedback.HapticFeedback(enabled=True)
-    monkeypatch.setattr(haptic_feedback, "find_steam_hidraw",
+    monkeypatch.setattr(haptic_feedback, "find_hidraw",
                         lambda: iter([("/dev/fake", "steam_deck")]))
     monkeypatch.setattr(haptic_feedback.os, "open", lambda *args: 42)
     monkeypatch.setattr(haptic_feedback.os, "close", lambda fd: None)
@@ -202,7 +202,7 @@ def test_recent_controller_expires_and_disabled_events_do_not_queue(tmp_path, mo
 def test_valve_backend_is_bound_to_exact_discovered_path(monkeypatch, kind, backend):
     feedback = haptic_feedback.HapticFeedback(enabled=True)
     source = _source(kind, '/dev/hidraw4')
-    monkeypatch.setattr(haptic_feedback, 'find_steam_hidraw',
+    monkeypatch.setattr(haptic_feedback, 'find_hidraw',
                         lambda: iter([('/dev/hidraw4', kind), ('/dev/hidraw0', 'steam_deck')]))
     monkeypatch.setattr(haptic_feedback.os, 'open', lambda *args: 42)
     monkeypatch.setattr(haptic_feedback.os, 'close', lambda *args: None)
@@ -340,7 +340,7 @@ def test_switching_controllers_changes_next_session_only(tmp_path, monkeypatch):
 
 def test_disconnected_controller_does_not_fall_back_to_other_valve_device(monkeypatch):
     feedback = haptic_feedback.HapticFeedback(enabled=True)
-    monkeypatch.setattr(haptic_feedback, 'find_steam_hidraw',
+    monkeypatch.setattr(haptic_feedback, 'find_hidraw',
                         lambda: iter([('/dev/hidraw0', 'steam_deck')]))
     opened = MagicMock()
     monkeypatch.setattr(haptic_feedback.os, 'open', opened)
@@ -377,3 +377,15 @@ def test_puck_kind_is_accepted_for_haptic_session(tmp_path):
     feedback = haptic_feedback.HapticFeedback(enabled=True)
     feedback.begin_session(str(file))
     assert feedback._session == source
+
+
+@pytest.mark.parametrize('kind', tuple(haptic_feedback.PROFILES_BY_KIND))
+def test_session_uses_profile_feedback_capability(monkeypatch, tmp_path, kind):
+    source = _source(kind, '/dev/hidraw9')
+    source['time'] = 100
+    path = tmp_path / 'source.json'
+    path.write_text(json.dumps(source))
+    monkeypatch.setattr(haptic_feedback.time, 'time', lambda: 100)
+    feedback = haptic_feedback.HapticFeedback(enabled=True)
+    feedback.begin_session(path)
+    assert (feedback._session is not None) == bool(haptic_feedback.PROFILES_BY_KIND[kind].feedback)

@@ -48,7 +48,7 @@ def test_discovers_only_physical_gamepad_interface(monkeypatch, tmp_path, hid_id
     node.mkdir()
     (node / 'device').symlink_to(hid_device, target_is_directory=True)
     monkeypatch.setattr(listener.glob, 'glob', lambda pattern: ['/dev/hidraw0'])
-    assert list(listener.find_legion_go_s_hidraw(sysfs_root=str(tmp_path))) == (
+    assert list(listener.find_hidraw(sysfs_root=str(tmp_path))) == (
         [('/dev/hidraw0', 'legion_go_s')] if accepted else [])
 
 
@@ -60,9 +60,9 @@ def test_reader_opens_read_only_and_yields_physical_paddle_states(monkeypatch):
     monkeypatch.setattr(listener.os, 'open', lambda path, flags: opened.append((path, flags)) or 42)
     monkeypatch.setattr(listener.os, 'read', lambda fd, length: next(reports))
     monkeypatch.setattr(listener.os, 'close', closed.append)
-    gamepad = listener.LegionGoSGamepad('/dev/hidraw9', product_id=0xe310)
+    gamepad = listener.HidGamepad('/dev/hidraw9', listener.PROFILES_BY_KIND['legion_go_s'])
     assert opened == [('/dev/hidraw9', os.O_RDONLY | os.O_NONBLOCK)]
-    assert gamepad.identity == {'bus': 3, 'vendor_id': 0x1a86, 'product_id': 0xe310}
+    assert gamepad.profile.kind == 'legion_go_s'
     assert {'L1', 'R1', 'L4', 'R4'}.issubset(gamepad.supported_buttons)
     assert {name for name, pressed in next(gamepad.read_states()).items() if pressed} == {'L1', 'L4'}
     assert {name for name, pressed in next(gamepad.read_states()).items() if pressed} == {'R1', 'R4'}
@@ -77,8 +77,7 @@ def test_listener_uses_go_s_hid_buttons_for_combo_and_status(monkeypatch, tmp_pa
                  'STATUS_FILE', 'HAPTIC_SOURCE_FILE', 'RECENT_SOURCE_FILE'):
         monkeypatch.setattr(listener, name, str(tmp_path / name))
     monkeypatch.setattr(listener, 'load_button_config', lambda: ['L4', 'R4'])
-    monkeypatch.setattr(listener, 'find_steam_hidraw', lambda: iter(()))
-    monkeypatch.setattr(listener, 'find_legion_go_s_hidraw',
+    monkeypatch.setattr(listener, 'find_hidraw',
                         lambda: iter([('/dev/hidraw9', 'legion_go_s')]))
     monkeypatch.setattr(listener.glob, 'glob', lambda pattern: [])
 
@@ -92,7 +91,7 @@ def test_listener_uses_go_s_hid_buttons_for_combo_and_status(monkeypatch, tmp_pa
             yield {'L1': False, 'R1': False, 'L4': True, 'R4': True}
         def close(self):
             pass
-    monkeypatch.setattr(listener, 'LegionGoSGamepad', GoS)
+    monkeypatch.setattr(listener, 'HidGamepad', lambda path, profile: GoS(path))
 
     class Selector:
         calls = 0
@@ -127,8 +126,7 @@ def test_real_selector_delivers_a_legion_report_to_the_combo(monkeypatch, tmp_pa
                  'STATUS_FILE', 'HAPTIC_SOURCE_FILE', 'RECENT_SOURCE_FILE'):
         monkeypatch.setattr(listener, name, str(tmp_path / name))
     monkeypatch.setattr(listener, 'load_button_config', lambda: ['L4', 'R4'])
-    monkeypatch.setattr(listener, 'find_steam_hidraw', lambda: iter(()))
-    monkeypatch.setattr(listener, 'find_legion_go_s_hidraw',
+    monkeypatch.setattr(listener, 'find_hidraw',
                         lambda: iter([('/dev/hidraw9', 'legion_go_s')]))
     monkeypatch.setattr(listener.glob, 'glob', lambda pattern: [])
     reader, writer = os.pipe()
@@ -136,12 +134,13 @@ def test_real_selector_delivers_a_legion_report_to_the_combo(monkeypatch, tmp_pa
     report[2] = 0x03  # Both physical rear buttons.
     os.write(writer, report)
 
-    class PipeGoS(listener.LegionGoSGamepad):
-        def __init__(self, path):
+    class PipeGoS(listener.HidGamepad):
+        def __init__(self, path, profile):
+            self.profile = profile
             self.fd = reader
             self.identity = {'bus': 3, 'vendor_id': 0x1a86, 'product_id': 0xe310}
             self.supported_buttons = {'L4', 'R4'}
-    monkeypatch.setattr(listener, 'LegionGoSGamepad', PipeGoS)
+    monkeypatch.setattr(listener, 'HidGamepad', PipeGoS)
     class Selector(selectors.DefaultSelector):
         calls = 0
         def select(self, timeout=None):
