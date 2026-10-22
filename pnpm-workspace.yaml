@@ -1,0 +1,7 @@
+allowBuilds:
+  esbuild@0.25.12: true
+
+peerDependencyRules:
+  ignoreMissing:
+    - react
+    - react-dom
