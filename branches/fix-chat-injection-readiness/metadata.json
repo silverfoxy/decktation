@@ -1,0 +1,8 @@
+{
+  "plugin": "Decktation",
+  "channel": "branch",
+  "ref": "fix/chat-injection-readiness",
+  "commit": "cbddb7cc16754d0ba4ad95090ce3677c818ead61",
+  "zip_url": "https://decktation.com/branches/fix-chat-injection-readiness/Decktation.zip",
+  "generated_at": "2026-10-22T21:01:07Z"
+}
