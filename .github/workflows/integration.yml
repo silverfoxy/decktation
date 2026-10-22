@@ -11,6 +11,7 @@ on:
       - 'scripts/deck/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - 'requirements*.txt'
       - '.github/workflows/integration.yml'
   pull_request:
@@ -22,6 +23,7 @@ on:
       - 'scripts/deck/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - 'requirements*.txt'
       - '.github/workflows/integration.yml'
   workflow_dispatch:
