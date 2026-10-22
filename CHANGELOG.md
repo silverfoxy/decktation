@@ -7,10 +7,22 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.3.21] - 2026-10-21
+
+### Added
+
+- Legion Go S controller support for recording bindings, with shared HID device
+  discovery and controller profiles.
+
 ### Changed
 
 - Serve stable downloads from GitHub Releases and limit retained branch previews
   on GitHub Pages to avoid oversized deployments.
+
+### Removed
+
+- Broken experimental Gamescope text insertion mode. Use clipboard paste or
+  ydotool keystroke insertion instead.
 
 ## [0.3.20] - 2026-10-18
 
