@@ -63,6 +63,7 @@
   "whisper.cpp runs on the CPU.": "whisper.cpp가 CPU를 사용합니다.",
   "Connecting to Decktation...": "Decktation에 연결 중…",
   "Keyboard helper unavailable. Reload or reinstall Decktation.": "키보드 서비스를 사용할 수 없습니다. Decktation을 다시 불러오거나 재설치하세요.",
+  "Downloading transcription model...": "음성 인식 모델 다운로드 중...",
   "Loading transcription model...": "음성 인식 모델을 불러오는 중…",
   "Decktation is off": "Decktation이 꺼져 있습니다",
   "Model not ready": "모델이 준비되지 않았습니다",

@@ -63,6 +63,7 @@
   "whisper.cpp runs on the CPU.": "whisper.cpp utilise le CPU.",
   "Connecting to Decktation...": "Connexion à Decktation…",
   "Keyboard helper unavailable. Reload or reinstall Decktation.": "Service de saisie indisponible. Rechargez ou réinstallez Decktation.",
+  "Downloading transcription model...": "Téléchargement du modèle de transcription…",
   "Loading transcription model...": "Chargement du modèle de transcription…",
   "Decktation is off": "Decktation est désactivé",
   "Model not ready": "Modèle non prêt",

@@ -477,6 +477,7 @@
       "whisper.cpp runs on the CPU.": "whisper.cpp runs on the CPU.",
       "Connecting to Decktation...": "Connecting to Decktation...",
       "Keyboard helper unavailable. Reload or reinstall Decktation.": "Keyboard helper unavailable. Reload or reinstall Decktation.",
+      "Downloading transcription model...": "Downloading transcription model...",
       "Loading transcription model...": "Loading transcription model...",
       "Decktation is off": "Decktation is off",
       "Model not ready": "Model not ready",
@@ -966,6 +967,7 @@
       "whisper.cpp runs on the CPU.": "whisper.cpp usa la CPU.",
       "Connecting to Decktation...": "Conectando con Decktation...",
       "Keyboard helper unavailable. Reload or reinstall Decktation.": "El servicio de teclado no está disponible. Recarga o reinstala Decktation.",
+      "Downloading transcription model...": "Descargando el modelo de transcripción...",
       "Loading transcription model...": "Cargando el modelo de transcripción...",
       "Decktation is off": "Decktation está desactivado",
       "Model not ready": "El modelo no está listo",
@@ -1252,6 +1254,7 @@
       "whisper.cpp runs on the CPU.": "whisper.cpp использует CPU.",
       "Connecting to Decktation...": "Подключение к Decktation…",
       "Keyboard helper unavailable. Reload or reinstall Decktation.": "Служба клавиатуры недоступна. Перезагрузите или переустановите Decktation.",
+      "Downloading transcription model...": "Скачивание модели распознавания речи...",
       "Loading transcription model...": "Загрузка модели распознавания…",
       "Decktation is off": "Decktation выключен",
       "Model not ready": "Модель не готова",
@@ -1538,6 +1541,7 @@
       "whisper.cpp runs on the CPU.": "whisper.cpp usa a CPU.",
       "Connecting to Decktation...": "Conectando ao Decktation…",
       "Keyboard helper unavailable. Reload or reinstall Decktation.": "Serviço de teclado indisponível. Recarregue ou reinstale o Decktation.",
+      "Downloading transcription model...": "Baixando o modelo de transcrição...",
       "Loading transcription model...": "Carregando o modelo de transcrição…",
       "Decktation is off": "Decktation está desativado",
       "Model not ready": "O modelo não está pronto",
@@ -1824,6 +1828,7 @@
       "whisper.cpp runs on the CPU.": "whisper.cpp korzysta z CPU.",
       "Connecting to Decktation...": "Łączenie z Decktation…",
       "Keyboard helper unavailable. Reload or reinstall Decktation.": "Usługa klawiatury jest niedostępna. Przeładuj lub zainstaluj ponownie Decktation.",
+      "Downloading transcription model...": "Pobieranie modelu transkrypcji...",
       "Loading transcription model...": "Ładowanie modelu transkrypcji…",
       "Decktation is off": "Decktation jest wyłączony",
       "Model not ready": "Model nie jest gotowy",
@@ -2110,6 +2115,7 @@
       "whisper.cpp runs on the CPU.": "whisper.cpp가 CPU를 사용합니다.",
       "Connecting to Decktation...": "Decktation에 연결 중…",
       "Keyboard helper unavailable. Reload or reinstall Decktation.": "키보드 서비스를 사용할 수 없습니다. Decktation을 다시 불러오거나 재설치하세요.",
+      "Downloading transcription model...": "음성 인식 모델 다운로드 중...",
       "Loading transcription model...": "음성 인식 모델을 불러오는 중…",
       "Decktation is off": "Decktation이 꺼져 있습니다",
       "Model not ready": "모델이 준비되지 않았습니다",
@@ -2396,6 +2402,7 @@
       "whisper.cpp runs on the CPU.": "whisper.cppはCPUを使用します。",
       "Connecting to Decktation...": "Decktationに接続中…",
       "Keyboard helper unavailable. Reload or reinstall Decktation.": "キーボードサービスを利用できません。Decktationを再読み込みするか再インストールしてください。",
+      "Downloading transcription model...": "音声認識モデルをダウンロード中…",
       "Loading transcription model...": "音声認識モデルを読み込み中…",
       "Decktation is off": "Decktationは無効です",
       "Model not ready": "モデルの準備ができていません",
@@ -2682,6 +2689,7 @@
       "whisper.cpp runs on the CPU.": "whisper.cpp nutzt die CPU.",
       "Connecting to Decktation...": "Verbindung mit Decktation wird hergestellt…",
       "Keyboard helper unavailable. Reload or reinstall Decktation.": "Tastaturdienst nicht verfügbar. Decktation neu laden oder neu installieren.",
+      "Downloading transcription model...": "Transkriptionsmodell wird heruntergeladen…",
       "Loading transcription model...": "Transkriptionsmodell wird geladen…",
       "Decktation is off": "Decktation ist deaktiviert",
       "Model not ready": "Modell ist nicht bereit",
@@ -2968,6 +2976,7 @@
       "whisper.cpp runs on the CPU.": "whisper.cpp utilise le CPU.",
       "Connecting to Decktation...": "Connexion à Decktation…",
       "Keyboard helper unavailable. Reload or reinstall Decktation.": "Service de saisie indisponible. Rechargez ou réinstallez Decktation.",
+      "Downloading transcription model...": "Téléchargement du modèle de transcription…",
       "Loading transcription model...": "Chargement du modèle de transcription…",
       "Decktation is off": "Decktation est désactivé",
       "Model not ready": "Modèle non prêt",
@@ -3254,6 +3263,7 @@
       "whisper.cpp runs on the CPU.": "whisper.cpp 使用 CPU。",
       "Connecting to Decktation...": "正在连接 Decktation…",
       "Keyboard helper unavailable. Reload or reinstall Decktation.": "键盘服务不可用。请重新加载或重新安装 Decktation。",
+      "Downloading transcription model...": "正在下载语音识别模型…",
       "Loading transcription model...": "正在加载语音识别模型…",
       "Decktation is off": "Decktation 已关闭",
       "Model not ready": "模型尚未就绪",
@@ -3794,6 +3804,8 @@
             return () => { mounted = false; };
         }, []);
         const [page, setPage] = React.useState("main");
+        const pageRef = React.useRef(page);
+        pageRef.current = page;
         const panelRef = React.useRef(null);
         const languageMenuAnchorRef = React.useRef(null);
         const advancedModelRowRef = React.useRef(null);
@@ -3808,6 +3820,8 @@
         const [modelReady, setModelReady] = React.useState(false);
         const [inferenceDevice, setInferenceDevice] = React.useState(null);
         const [modelLoading, setModelLoading] = React.useState(false);
+        const [modelStage, setModelStage] = React.useState("idle");
+        const modelChangeInFlight = React.useRef(false);
         const [isToggling, setIsToggling] = React.useState(false);
         const [inputReady, setInputReady] = React.useState(true);
         const [buttonState, setButtonState] = React.useState("None");
@@ -4082,7 +4096,8 @@
                         setInferenceDevice(result.inference_device === "gpu" || result.inference_device === "cpu"
                             ? result.inference_device
                             : null);
-                        setModelLoading(result.model_loading);
+                        setModelLoading(result.model_loading === true || modelChangeInFlight.current);
+                        setModelStage(result.model_stage === "downloading" ? "downloading" : result.model_loading ? "loading" : "idle");
                         setTranscribing(result.transcribing === true);
                         setInputReady(result.input_ready !== false);
                         if (logic.enabled) {
@@ -4258,11 +4273,12 @@
                 : !serviceReady ? t("Connecting to Decktation...")
                     : !inputReady ? t("Keyboard helper unavailable. Reload or reinstall Decktation.")
                         : recording ? t("Recording...")
-                            : modelLoading ? t("Loading transcription model...")
-                                : !enabled ? t("Decktation is off")
-                                    : !modelReady ? t("Model not ready")
-                                        : !controllerReady ? t(controllerStatus === "Waiting for input" ? "Waiting for input" : "Controller unavailable")
-                                            : t("Ready");
+                            : modelStage === "downloading" ? t("Downloading transcription model...")
+                                : modelLoading ? t("Loading transcription model...")
+                                    : !enabled ? t("Decktation is off")
+                                        : !modelReady ? t("Model not ready")
+                                            : !controllerReady ? t(controllerStatus === "Waiting for input" ? "Waiting for input" : "Controller unavailable")
+                                                : t("Ready");
         const statusProblem = !!(statusError || rpcError || (serviceReady && !inputReady) || (enabled && serviceReady && !controllerReady));
         if (debugCaptureActive) {
             const swallow = (event) => { event.preventDefault(); event.stopPropagation(); };
@@ -4791,20 +4807,33 @@
                 page === "model" && React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Model") },
                     rpcError && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                         React__default["default"].createElement("div", { role: "alert" }, rpcError)),
+                    modelLoading && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                        React__default["default"].createElement("div", { role: "status", "aria-live": "polite" }, modelStage === "downloading" ? t("Downloading transcription model...") : t("Loading transcription model..."))),
                     MODEL_SIZE_OPTIONS.map(option => React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, { key: String(option.data) },
-                        React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: async () => {
+                        React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: modelLoading || modelChangeInFlight.current, onClick: async () => {
+                                if (modelLoading || modelChangeInFlight.current)
+                                    return;
+                                modelChangeInFlight.current = true;
                                 const next = option.data;
                                 setRpcError("");
                                 if (enabled && modelReady)
                                     setModelLoading(true);
-                                const result = await setModelSizeRpc(next);
-                                if (result.success) {
-                                    setModelSize(next);
-                                    setPage("advanced");
+                                try {
+                                    const result = await setModelSizeRpc(next);
+                                    if (result.success) {
+                                        setModelSize(next);
+                                        if (pageRef.current === "model")
+                                            setPage("advanced");
+                                    }
+                                    else
+                                        setRpcError(result.error || t("Could not update model size"));
                                 }
-                                else {
+                                catch (error) {
+                                    setRpcError(String(error));
+                                }
+                                finally {
+                                    modelChangeInFlight.current = false;
                                     setModelLoading(false);
-                                    setRpcError(result.error || t("Could not update model size"));
                                 }
                             } },
                             option.data === modelSize ? "✓ " : "",

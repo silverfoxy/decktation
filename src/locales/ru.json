@@ -63,6 +63,7 @@
   "whisper.cpp runs on the CPU.": "whisper.cpp использует CPU.",
   "Connecting to Decktation...": "Подключение к Decktation…",
   "Keyboard helper unavailable. Reload or reinstall Decktation.": "Служба клавиатуры недоступна. Перезагрузите или переустановите Decktation.",
+  "Downloading transcription model...": "Скачивание модели распознавания речи...",
   "Loading transcription model...": "Загрузка модели распознавания…",
   "Decktation is off": "Decktation выключен",
   "Model not ready": "Модель не готова",

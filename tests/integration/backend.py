@@ -32,6 +32,8 @@ class VoiceFixture:
     def __init__(self, counts):
         self.counts = counts
         self.is_recording = self.is_transcribing = self.model_loading = False
+        self.model_stage = 'idle'
+        self.model_size = 'base'
         self.manual_send = False
         self.type_as_keys = False
         self.text_insertion_mode = 'paste'
@@ -239,6 +241,13 @@ class Runtime:
                 if type(payload.get('value')) is not bool:
                     raise ValueError('Pause must be boolean')
                 self.paused = payload['value']
+            elif command == 'model_download':
+                stage = payload.get('stage')
+                if stage not in ('downloading', 'loading', 'idle'):
+                    raise ValueError('Unknown model stage')
+                self.plugin.voice_service.model_stage = stage
+                self.plugin.voice_service.model_loading = stage != 'idle'
+                self.plugin.model_operations = int(stage != 'idle')
             elif command == 'busy':
                 value = payload.get('kind')
                 if value not in ('recording', 'transcribing', 'idle'):

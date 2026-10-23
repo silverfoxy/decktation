@@ -332,6 +332,8 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
         return () => { mounted = false; };
     }, []);
 	const [page, setPage] = useState<PanelPage>("main");
+	const pageRef = useRef<PanelPage>(page);
+	pageRef.current = page;
 	const panelRef = useRef<HTMLDivElement>(null);
 	const languageMenuAnchorRef = useRef<HTMLSpanElement>(null);
 	const advancedModelRowRef = useRef<HTMLDivElement>(null);
@@ -346,6 +348,8 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [modelReady, setModelReady] = useState<boolean>(false);
 	const [inferenceDevice, setInferenceDevice] = useState<"cpu" | "gpu" | null>(null);
 	const [modelLoading, setModelLoading] = useState<boolean>(false);
+	const [modelStage, setModelStage] = useState<"idle" | "downloading" | "loading">("idle");
+	const modelChangeInFlight = useRef(false);
 	const [isToggling, setIsToggling] = useState<boolean>(false);
 	const [inputReady, setInputReady] = useState<boolean>(true);
 	const [buttonState, setButtonState] = useState<string>("None");
@@ -607,7 +611,8 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 							? result.inference_device
 							: null,
 					);
-					setModelLoading(result.model_loading);
+					setModelLoading(result.model_loading === true || modelChangeInFlight.current);
+					setModelStage(result.model_stage === "downloading" ? "downloading" : result.model_loading ? "loading" : "idle");
                     setTranscribing(result.transcribing === true);
 					setInputReady(result.input_ready !== false);
 					if (logic.enabled) {
@@ -754,6 +759,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 		: !serviceReady ? t("Connecting to Decktation...")
 		: !inputReady ? t("Keyboard helper unavailable. Reload or reinstall Decktation.")
 		: recording ? t("Recording...")
+		: modelStage === "downloading" ? t("Downloading transcription model...")
 		: modelLoading ? t("Loading transcription model...")
 		: !enabled ? t("Decktation is off")
 		: !modelReady ? t("Model not ready")
@@ -1145,13 +1151,19 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 				</PanelSection>}
 				{page === "model" && <PanelSection title={t("Model")}>
 					{rpcError && <PanelSectionRow><div role="alert">{rpcError}</div></PanelSectionRow>}
-					{MODEL_SIZE_OPTIONS.map(option => <PanelSectionRow key={String(option.data)}><ButtonItem layout="below" onClick={async () => {
+					{modelLoading && <PanelSectionRow><div role="status" aria-live="polite">{modelStage === "downloading" ? t("Downloading transcription model...") : t("Loading transcription model...")}</div></PanelSectionRow>}
+					{MODEL_SIZE_OPTIONS.map(option => <PanelSectionRow key={String(option.data)}><ButtonItem layout="below" disabled={modelLoading || modelChangeInFlight.current} onClick={async () => {
+						if (modelLoading || modelChangeInFlight.current) return;
+						modelChangeInFlight.current = true;
 						const next = option.data as string;
 						setRpcError("");
 						if (enabled && modelReady) setModelLoading(true);
-						const result = await setModelSizeRpc(next);
-						if (result.success) { setModelSize(next); setPage("advanced"); }
-						else { setModelLoading(false); setRpcError(result.error || t("Could not update model size")); }
+						try {
+							const result = await setModelSizeRpc(next);
+							if (result.success) { setModelSize(next); if (pageRef.current === "model") setPage("advanced"); }
+							else setRpcError(result.error || t("Could not update model size"));
+						} catch (error) { setRpcError(String(error)); }
+						finally { modelChangeInFlight.current = false; setModelLoading(false); }
 					}}>{option.data === modelSize ? "✓ " : ""}{t(String(option.label))}</ButtonItem></PanelSectionRow>)}
 				</PanelSection>}
 

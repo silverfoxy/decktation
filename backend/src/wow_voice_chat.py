@@ -214,6 +214,7 @@ class WoWVoiceChat:
         self.whisper_worker = None
         self.inference_device = None
         self.model_loading = False
+        self.model_stage = "idle"  # idle, downloading, or loading; not a percent estimate
         self.model_load_error = None
 
         # Last transcription result (for UI display)
@@ -339,6 +340,7 @@ class WoWVoiceChat:
                 return False
 
             self.model_loading = True
+            self.model_stage = "loading"
             try:
                 whisper_server = _whisper_server_path()
                 if not whisper_server.is_file():
@@ -361,6 +363,7 @@ class WoWVoiceChat:
                 self._report_diagnostic("model.load_failed", e)
                 return False
             finally:
+                self.model_stage = "idle"
                 self.model_loading = False
                 if self._closing.is_set():
                     self._stop_whisper_worker()
@@ -423,8 +426,12 @@ class WoWVoiceChat:
             temporary = model.with_suffix(".download")
             logger.info("Downloading Whisper model %s to %s", self.model_size, model)
             url = f"https://huggingface.co/ggerganov/whisper.cpp/resolve/main/{filename}"
-            _download_vulkan_model(url, temporary)
-            temporary.replace(model)
+            self.model_stage = "downloading"
+            try:
+                _download_vulkan_model(url, temporary)
+                temporary.replace(model)
+            finally:
+                self.model_stage = "loading"
         return model
 
     def _start_whisper_worker(self, whisper_server, model, use_gpu):
