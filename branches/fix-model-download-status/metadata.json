@@ -1,8 +1,0 @@
-{
-  "plugin": "Decktation",
-  "channel": "branch",
-  "ref": "fix/model-download-status",
-  "commit": "fa2f4cc509e17611dfcad62801210e3a26e6e7ae",
-  "zip_url": "https://decktation.com/branches/fix-model-download-status/Decktation.zip",
-  "generated_at": "2026-10-23T13:15:56Z"
-}
