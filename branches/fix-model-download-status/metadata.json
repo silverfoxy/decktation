@@ -2,7 +2,7 @@
   "plugin": "Decktation",
   "channel": "branch",
   "ref": "fix/model-download-status",
-  "commit": "594ddca78016077f39591020053f9c9782b8d82b",
+  "commit": "c9ce6a123693a77e376c6b8138cf777ea03a8f93",
   "zip_url": "https://decktation.com/branches/fix-model-download-status/Decktation.zip",
-  "generated_at": "2026-10-23T11:49:51Z"
+  "generated_at": "2026-10-23T12:54:17Z"
 }
