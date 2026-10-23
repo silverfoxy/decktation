@@ -70,7 +70,8 @@ def test_model_download_stage_is_reported_while_rpc_is_pending(monkeypatch, tmp_
     assert status["model_stage"] == "idle"
 
 
-def test_cancel_download_restores_previous_cached_model(monkeypatch, tmp_path):
+@pytest.mark.parametrize("read_times_out", [False, True])
+def test_cancel_download_restores_previous_cached_model(monkeypatch, tmp_path, read_times_out):
     base = tmp_path / ".cache" / "decktation" / "whisper.cpp" / "ggml-base.bin"
     base.parent.mkdir(parents=True)
     base.write_bytes(b"cached base")
@@ -97,6 +98,8 @@ def test_cancel_download_restores_previous_cached_model(monkeypatch, tmp_path):
                 return b""
             entered.set()
             assert release.wait(5)
+            if read_times_out:
+                raise TimeoutError("network read timed out")
             return b"download bytes"
     monkeypatch.setattr(wow_voice_chat.urllib.request, "urlopen", lambda *_a, **_kw: SlowResponse())
     config = tmp_path / "button_config.json"
@@ -125,7 +128,8 @@ def test_cancel_download_restores_previous_cached_model(monkeypatch, tmp_path):
     assert service.model_stage == "idle"
 
 
-def test_cancel_never_acknowledges_after_final_download_check(monkeypatch, tmp_path):
+@pytest.mark.parametrize("download_times_out", [False, True])
+def test_cancel_never_acknowledges_after_final_download_check(monkeypatch, tmp_path, download_times_out):
     monkeypatch.setenv("DECKY_USER_HOME", str(tmp_path))
     class PausedStageService(WoWVoiceChat):
         @property
@@ -144,8 +148,11 @@ def test_cancel_never_acknowledges_after_final_download_check(monkeypatch, tmp_p
     service.transition_started = threading.Event()
     service.transition_release = threading.Event()
     def downloaded(_url, destination, _cancel_event):
-        destination.write_bytes(b"complete model")
+        if not download_times_out:
+            destination.write_bytes(b"complete model")
         service.pause_transition = True
+        if download_times_out:
+            raise TimeoutError("network read timed out")
     monkeypatch.setattr(wow_voice_chat, "_download_vulkan_model", downloaded)
     with ThreadPoolExecutor(max_workers=2) as pool:
         loading = pool.submit(service._ensure_whisper_model)
@@ -160,7 +167,11 @@ def test_cancel_never_acknowledges_after_final_download_check(monkeypatch, tmp_p
         finally:
             service.transition_release.set()
         assert cancelling.result(5) is False
-        assert loading.result(5).read_bytes() == b"complete model"
+        if download_times_out:
+            with pytest.raises(TimeoutError):
+                loading.result(5)
+        else:
+            assert loading.result(5).read_bytes() == b"complete model"
 
 
 def test_switch_after_cancelled_initial_download_loads_cached_smaller_model(monkeypatch, tmp_path):

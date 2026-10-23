@@ -465,8 +465,15 @@ class WoWVoiceChat:
                         raise ModelDownloadCancelled()
                     self.model_stage = "loading"
                     temporary.replace(model)
-            except Exception:
+            except Exception as error:
+                with self.model_stage_lock:
+                    cancelled = self.model_cancel_event.is_set()
+                    self.model_stage = "loading"
                 temporary.unlink(missing_ok=True)
+                # Decide atomically with Cancel's acknowledgment: a timed-out
+                # read can finish just as the user requests cancellation.
+                if cancelled and not isinstance(error, ModelDownloadCancelled):
+                    raise ModelDownloadCancelled() from error
                 raise
             finally:
                 self.model_stage = "loading"
