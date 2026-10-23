@@ -73,6 +73,7 @@ const setRecordingIndicatorRpc = callable<[mode: string], RpcResponse>("set_reco
 const setHapticFeedbackRpc = callable<[enabled: boolean], RpcResponse>("set_haptic_feedback");
 const setActivePresetRpc = callable<[game: string], RpcResponse>("set_active_preset");
 const setModelSizeRpc = callable<[modelSize: string], RpcResponse>("set_model_size");
+const cancelModelDownloadRpc = callable<[], RpcResponse>("cancel_model_download");
 const setSpokenPunctuationRpc = callable<[enabled: boolean], RpcResponse>("set_spoken_punctuation");
 const setTranscriptionOptionsRpc = callable<
 	[language: string],
@@ -349,6 +350,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [inferenceDevice, setInferenceDevice] = useState<"cpu" | "gpu" | null>(null);
 	const [modelLoading, setModelLoading] = useState<boolean>(false);
 	const [modelStage, setModelStage] = useState<"idle" | "downloading" | "loading">("idle");
+	const [modelCancelling, setModelCancelling] = useState(false);
 	const modelChangeInFlight = useRef(false);
 	const [isToggling, setIsToggling] = useState<boolean>(false);
 	const [inputReady, setInputReady] = useState<boolean>(true);
@@ -571,7 +573,12 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 						setEnabled(true);
 						logic.enabled = true;
 						setModelLoading(true);
-						void loadModel();
+						void loadModel().then(result => {
+							if (!result.success) setRpcError(result.cancelled ? t(result.error || "Model download cancelled.") : result.error || t("Model not ready"));
+						}).catch(error => setRpcError(String(error))).finally(() => {
+							setModelCancelling(false);
+							setModelLoading(false);
+						});
 					}
 				}
 			}
@@ -754,11 +761,26 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 			setRpcError(String(error));
 		}
 	};
+	const cancelDownload = async () => {
+		if (modelCancelling || modelStage !== "downloading") return;
+		setModelCancelling(true);
+		try {
+			const result = await cancelModelDownloadRpc();
+			if (!result.success) {
+				setModelCancelling(false);
+				setRpcError(result.error || t("Could not cancel model download."));
+			}
+		} catch (error) {
+			setModelCancelling(false);
+			setRpcError(String(error));
+		}
+	};
 	const statusMessage = statusError ? t("Backend unavailable: {error}", {error: statusError})
 		: rpcError ? rpcError
 		: !serviceReady ? t("Connecting to Decktation...")
 		: !inputReady ? t("Keyboard helper unavailable. Reload or reinstall Decktation.")
 		: recording ? t("Recording...")
+		: modelCancelling ? t("Cancelling model download...")
 		: modelStage === "downloading" ? t("Downloading transcription model...")
 		: modelLoading ? t("Loading transcription model...")
 		: !enabled ? t("Decktation is off")
@@ -925,6 +947,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 										logic.enabled = !next;
 										setRpcError(String(error));
 									} finally {
+										setModelCancelling(false);
 										setIsToggling(false);
 									}
 								}} />
@@ -934,6 +957,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 								{statusMessage}
 							</div>
 						</PanelSectionRow>
+						{modelStage === "downloading" && <PanelSectionRow><ButtonItem layout="below" disabled={modelCancelling} onClick={cancelDownload}>{modelCancelling ? t("Cancelling model download...") : t("Cancel download")}</ButtonItem></PanelSectionRow>}
 					</PanelSection>
 					<PanelSection title={t("Quick settings")}>
 
@@ -1151,7 +1175,8 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 				</PanelSection>}
 				{page === "model" && <PanelSection title={t("Model")}>
 					{rpcError && <PanelSectionRow><div role="alert">{rpcError}</div></PanelSectionRow>}
-					{modelLoading && <PanelSectionRow><div role="status" aria-live="polite">{modelStage === "downloading" ? t("Downloading transcription model...") : t("Loading transcription model...")}</div></PanelSectionRow>}
+					{modelLoading && <PanelSectionRow><div role="status" aria-live="polite">{modelCancelling ? t("Cancelling model download...") : modelStage === "downloading" ? t("Downloading transcription model...") : t("Loading transcription model...")}</div></PanelSectionRow>}
+					{modelStage === "downloading" && <PanelSectionRow><ButtonItem layout="below" disabled={modelCancelling} onClick={cancelDownload}>{modelCancelling ? t("Cancelling model download...") : t("Cancel download")}</ButtonItem></PanelSectionRow>}
 					{MODEL_SIZE_OPTIONS.map(option => <PanelSectionRow key={String(option.data)}><ButtonItem layout="below" disabled={modelLoading || modelChangeInFlight.current} onClick={async () => {
 						if (modelLoading || modelChangeInFlight.current) return;
 						modelChangeInFlight.current = true;
@@ -1161,9 +1186,12 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 						try {
 							const result = await setModelSizeRpc(next);
 							if (result.success) { setModelSize(next); if (pageRef.current === "model") setPage("advanced"); }
-							else setRpcError(result.error || t("Could not update model size"));
+							else if (result.cancelled) {
+								setModelSize(result.modelSize || modelSize);
+								setRpcError(t(result.error || "Model download cancelled."));
+							} else setRpcError(result.error || t("Could not update model size"));
 						} catch (error) { setRpcError(String(error)); }
-						finally { modelChangeInFlight.current = false; setModelLoading(false); }
+						finally { modelChangeInFlight.current = false; setModelCancelling(false); setModelLoading(false); }
 					}}>{option.data === modelSize ? "✓ " : ""}{t(String(option.label))}</ButtonItem></PanelSectionRow>)}
 				</PanelSection>}
 

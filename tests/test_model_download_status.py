@@ -4,7 +4,7 @@ import asyncio
 import importlib.util
 import sys
 import threading
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -37,7 +37,7 @@ def test_model_download_stage_is_reported_while_rpc_is_pending(monkeypatch, tmp_
     monkeypatch.setenv("DECKY_USER_HOME", str(tmp_path))
     started, release = threading.Event(), threading.Event()
 
-    def download(_url, destination):
+    def download(_url, destination, _cancel_event):
         started.set()
         assert release.wait(5)
         destination.write_bytes(b"model")
@@ -70,9 +70,124 @@ def test_model_download_stage_is_reported_while_rpc_is_pending(monkeypatch, tmp_
     assert status["model_stage"] == "idle"
 
 
+def test_cancel_download_restores_previous_cached_model(monkeypatch, tmp_path):
+    base = tmp_path / ".cache" / "decktation" / "whisper.cpp" / "ggml-base.bin"
+    base.parent.mkdir(parents=True)
+    base.write_bytes(b"cached base")
+    server = tmp_path / "whisper-server"
+    server.touch()
+    monkeypatch.setenv("DECKY_USER_HOME", str(tmp_path))
+    monkeypatch.setattr(wow_voice_chat, "_whisper_server_path", lambda: server)
+    monkeypatch.setattr(WoWVoiceChat, "_vulkan_available", lambda self: False)
+    workers = []
+    def worker(_server, model, _environment, use_gpu):
+        result = MagicMock()
+        result.model = model
+        workers.append(result)
+        return result
+    monkeypatch.setattr(wow_voice_chat, "ResidentWhisper", worker)
+    entered, release = threading.Event(), threading.Event()
+    class SlowResponse:
+        calls = 0
+        def __enter__(self): return self
+        def __exit__(self, *_args): pass
+        def read(self, _size):
+            self.calls += 1
+            if self.calls > 1:
+                return b""
+            entered.set()
+            assert release.wait(5)
+            return b"download bytes"
+    monkeypatch.setattr(wow_voice_chat.urllib.request, "urlopen", lambda *_a, **_kw: SlowResponse())
+    config = tmp_path / "button_config.json"
+    monkeypatch.setattr(backend, "BUTTON_CONFIG_FILE", str(config))
+    backend.Plugin.voice_service = service = WoWVoiceChat(lazy_load=True, model_size="base")
+    monkeypatch.setattr(backend.Plugin, "model_operations", 0)
+    assert service._load_model() is True
+    assert service.whisper_model == base
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        job = pool.submit(lambda: asyncio.run(backend.Plugin().set_model_size("medium")))
+        try:
+            assert entered.wait(5)
+            assert service.model_stage == "downloading"
+            cancelled = asyncio.run(backend.Plugin().cancel_model_download())
+            assert cancelled["success"] is True
+        finally:
+            release.set()
+        result = job.result(5)
+    assert result["cancelled"] is True
+    assert backend._read_button_config()["modelSize"] == "base"
+    assert service.model_size == "base"
+    assert service.is_model_ready() and service.whisper_model == base
+    assert len(workers) == 2
+    assert not (base.parent / "ggml-medium.bin").exists()
+    assert not (base.parent / "ggml-medium.download").exists()
+    assert service.model_stage == "idle"
+
+
+def test_cancel_never_acknowledges_after_final_download_check(monkeypatch, tmp_path):
+    monkeypatch.setenv("DECKY_USER_HOME", str(tmp_path))
+    class PausedStageService(WoWVoiceChat):
+        @property
+        def model_stage(self):
+            return self._stage
+
+        @model_stage.setter
+        def model_stage(self, value):
+            if value == "loading" and getattr(self, "pause_transition", False):
+                self.transition_started.set()
+                assert self.transition_release.wait(5)
+                self.pause_transition = False
+            self._stage = value
+
+    service = PausedStageService(lazy_load=True, model_size="medium")
+    service.transition_started = threading.Event()
+    service.transition_release = threading.Event()
+    def downloaded(_url, destination, _cancel_event):
+        destination.write_bytes(b"complete model")
+        service.pause_transition = True
+    monkeypatch.setattr(wow_voice_chat, "_download_vulkan_model", downloaded)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        loading = pool.submit(service._ensure_whisper_model)
+        try:
+            assert service.transition_started.wait(5)
+            attempted = threading.Event()
+            cancelling = pool.submit(lambda: (attempted.set(), service.cancel_model_download())[1])
+            assert attempted.wait(5)
+            # The final check and transition must be atomic with cancel's decision.
+            with pytest.raises(FutureTimeout):
+                cancelling.result(0.1)
+        finally:
+            service.transition_release.set()
+        assert cancelling.result(5) is False
+        assert loading.result(5).read_bytes() == b"complete model"
+
+
+def test_switch_after_cancelled_initial_download_loads_cached_smaller_model(monkeypatch, tmp_path):
+    monkeypatch.setenv("DECKY_USER_HOME", str(tmp_path))
+    cache = tmp_path / ".cache" / "decktation" / "whisper.cpp"
+    cache.mkdir(parents=True)
+    (cache / "ggml-base.bin").write_bytes(b"cached")
+    server = tmp_path / "whisper-server"
+    server.touch()
+    monkeypatch.setattr(wow_voice_chat, "_whisper_server_path", lambda: server)
+    monkeypatch.setattr(WoWVoiceChat, "_vulkan_available", lambda self: False)
+    monkeypatch.setattr(wow_voice_chat, "ResidentWhisper", lambda *_args, **_kwargs: MagicMock())
+    monkeypatch.setattr(backend, "BUTTON_CONFIG_FILE", str(tmp_path / "button_config.json"))
+    monkeypatch.setattr(backend.Plugin, "model_operations", 0)
+    monkeypatch.setattr(backend.Plugin, "controller_enabled", True)
+    service = WoWVoiceChat(lazy_load=True, model_size="medium")
+    monkeypatch.setattr(backend.Plugin, "voice_service", service)
+    backend._write_button_config({"modelSize": "medium"})
+    result = asyncio.run(backend.Plugin().set_model_size("base"))
+    assert result["success"] is True
+    assert service.is_model_ready()
+    assert service.whisper_model == cache / "ggml-base.bin"
+
+
 def test_model_stage_clears_when_download_fails(monkeypatch, tmp_path):
     monkeypatch.setenv("DECKY_USER_HOME", str(tmp_path))
-    def broken(_url, _destination):
+    def broken(_url, _destination, _cancel_event):
         raise OSError("network unavailable")
     monkeypatch.setattr("wow_voice_chat._download_vulkan_model", broken)
     server = tmp_path / "whisper-server"

@@ -478,6 +478,10 @@
       "Connecting to Decktation...": "Connecting to Decktation...",
       "Keyboard helper unavailable. Reload or reinstall Decktation.": "Keyboard helper unavailable. Reload or reinstall Decktation.",
       "Downloading transcription model...": "Downloading transcription model...",
+      "Cancel download": "Cancel download",
+      "Cancelling model download...": "Cancelling model download...",
+      "Model download cancelled.": "Model download cancelled.",
+      "Could not cancel model download.": "Could not cancel model download.",
       "Loading transcription model...": "Loading transcription model...",
       "Decktation is off": "Decktation is off",
       "Model not ready": "Model not ready",
@@ -968,6 +972,10 @@
       "Connecting to Decktation...": "Conectando con Decktation...",
       "Keyboard helper unavailable. Reload or reinstall Decktation.": "El servicio de teclado no está disponible. Recarga o reinstala Decktation.",
       "Downloading transcription model...": "Descargando el modelo de transcripción...",
+      "Cancel download": "Cancelar descarga",
+      "Cancelling model download...": "Cancelando descarga del modelo...",
+      "Model download cancelled.": "Descarga del modelo cancelada.",
+      "Could not cancel model download.": "No se pudo cancelar la descarga del modelo.",
       "Loading transcription model...": "Cargando el modelo de transcripción...",
       "Decktation is off": "Decktation está desactivado",
       "Model not ready": "El modelo no está listo",
@@ -1255,6 +1263,10 @@
       "Connecting to Decktation...": "Подключение к Decktation…",
       "Keyboard helper unavailable. Reload or reinstall Decktation.": "Служба клавиатуры недоступна. Перезагрузите или переустановите Decktation.",
       "Downloading transcription model...": "Скачивание модели распознавания речи...",
+      "Cancel download": "Отменить загрузку",
+      "Cancelling model download...": "Отмена загрузки модели…",
+      "Model download cancelled.": "Загрузка модели отменена.",
+      "Could not cancel model download.": "Не удалось отменить загрузку модели.",
       "Loading transcription model...": "Загрузка модели распознавания…",
       "Decktation is off": "Decktation выключен",
       "Model not ready": "Модель не готова",
@@ -1542,6 +1554,10 @@
       "Connecting to Decktation...": "Conectando ao Decktation…",
       "Keyboard helper unavailable. Reload or reinstall Decktation.": "Serviço de teclado indisponível. Recarregue ou reinstale o Decktation.",
       "Downloading transcription model...": "Baixando o modelo de transcrição...",
+      "Cancel download": "Cancelar download",
+      "Cancelling model download...": "Cancelando download do modelo...",
+      "Model download cancelled.": "Download do modelo cancelado.",
+      "Could not cancel model download.": "Não foi possível cancelar o download do modelo.",
       "Loading transcription model...": "Carregando o modelo de transcrição…",
       "Decktation is off": "Decktation está desativado",
       "Model not ready": "O modelo não está pronto",
@@ -1829,6 +1845,10 @@
       "Connecting to Decktation...": "Łączenie z Decktation…",
       "Keyboard helper unavailable. Reload or reinstall Decktation.": "Usługa klawiatury jest niedostępna. Przeładuj lub zainstaluj ponownie Decktation.",
       "Downloading transcription model...": "Pobieranie modelu transkrypcji...",
+      "Cancel download": "Anuluj pobieranie",
+      "Cancelling model download...": "Anulowanie pobierania modelu…",
+      "Model download cancelled.": "Pobieranie modelu anulowane.",
+      "Could not cancel model download.": "Nie udało się anulować pobierania modelu.",
       "Loading transcription model...": "Ładowanie modelu transkrypcji…",
       "Decktation is off": "Decktation jest wyłączony",
       "Model not ready": "Model nie jest gotowy",
@@ -2116,6 +2136,10 @@
       "Connecting to Decktation...": "Decktation에 연결 중…",
       "Keyboard helper unavailable. Reload or reinstall Decktation.": "키보드 서비스를 사용할 수 없습니다. Decktation을 다시 불러오거나 재설치하세요.",
       "Downloading transcription model...": "음성 인식 모델 다운로드 중...",
+      "Cancel download": "다운로드 취소",
+      "Cancelling model download...": "모델 다운로드 취소 중...",
+      "Model download cancelled.": "모델 다운로드가 취소되었습니다.",
+      "Could not cancel model download.": "모델 다운로드를 취소할 수 없습니다.",
       "Loading transcription model...": "음성 인식 모델을 불러오는 중…",
       "Decktation is off": "Decktation이 꺼져 있습니다",
       "Model not ready": "모델이 준비되지 않았습니다",
@@ -2403,6 +2427,10 @@
       "Connecting to Decktation...": "Decktationに接続中…",
       "Keyboard helper unavailable. Reload or reinstall Decktation.": "キーボードサービスを利用できません。Decktationを再読み込みするか再インストールしてください。",
       "Downloading transcription model...": "音声認識モデルをダウンロード中…",
+      "Cancel download": "ダウンロードをキャンセル",
+      "Cancelling model download...": "モデルのダウンロードをキャンセル中…",
+      "Model download cancelled.": "モデルのダウンロードをキャンセルしました。",
+      "Could not cancel model download.": "モデルのダウンロードをキャンセルできませんでした。",
       "Loading transcription model...": "音声認識モデルを読み込み中…",
       "Decktation is off": "Decktationは無効です",
       "Model not ready": "モデルの準備ができていません",
@@ -2690,6 +2718,10 @@
       "Connecting to Decktation...": "Verbindung mit Decktation wird hergestellt…",
       "Keyboard helper unavailable. Reload or reinstall Decktation.": "Tastaturdienst nicht verfügbar. Decktation neu laden oder neu installieren.",
       "Downloading transcription model...": "Transkriptionsmodell wird heruntergeladen…",
+      "Cancel download": "Download abbrechen",
+      "Cancelling model download...": "Modelldownload wird abgebrochen…",
+      "Model download cancelled.": "Modelldownload abgebrochen.",
+      "Could not cancel model download.": "Modelldownload konnte nicht abgebrochen werden.",
       "Loading transcription model...": "Transkriptionsmodell wird geladen…",
       "Decktation is off": "Decktation ist deaktiviert",
       "Model not ready": "Modell ist nicht bereit",
@@ -2977,6 +3009,10 @@
       "Connecting to Decktation...": "Connexion à Decktation…",
       "Keyboard helper unavailable. Reload or reinstall Decktation.": "Service de saisie indisponible. Rechargez ou réinstallez Decktation.",
       "Downloading transcription model...": "Téléchargement du modèle de transcription…",
+      "Cancel download": "Annuler le téléchargement",
+      "Cancelling model download...": "Annulation du téléchargement du modèle…",
+      "Model download cancelled.": "Téléchargement du modèle annulé.",
+      "Could not cancel model download.": "Impossible d’annuler le téléchargement du modèle.",
       "Loading transcription model...": "Chargement du modèle de transcription…",
       "Decktation is off": "Decktation est désactivé",
       "Model not ready": "Modèle non prêt",
@@ -3264,6 +3300,10 @@
       "Connecting to Decktation...": "正在连接 Decktation…",
       "Keyboard helper unavailable. Reload or reinstall Decktation.": "键盘服务不可用。请重新加载或重新安装 Decktation。",
       "Downloading transcription model...": "正在下载语音识别模型…",
+      "Cancel download": "取消下载",
+      "Cancelling model download...": "正在取消模型下载…",
+      "Model download cancelled.": "模型下载已取消。",
+      "Could not cancel model download.": "无法取消模型下载。",
       "Loading transcription model...": "正在加载语音识别模型…",
       "Decktation is off": "Decktation 已关闭",
       "Model not ready": "模型尚未就绪",
@@ -3558,6 +3598,7 @@
     const setHapticFeedbackRpc = callable("set_haptic_feedback");
     const setActivePresetRpc = callable("set_active_preset");
     const setModelSizeRpc = callable("set_model_size");
+    const cancelModelDownloadRpc = callable("cancel_model_download");
     const setSpokenPunctuationRpc = callable("set_spoken_punctuation");
     const setTranscriptionOptionsRpc = callable("set_transcription_options");
     class DecktationLogic {
@@ -3821,6 +3862,7 @@
         const [inferenceDevice, setInferenceDevice] = React.useState(null);
         const [modelLoading, setModelLoading] = React.useState(false);
         const [modelStage, setModelStage] = React.useState("idle");
+        const [modelCancelling, setModelCancelling] = React.useState(false);
         const modelChangeInFlight = React.useRef(false);
         const [isToggling, setIsToggling] = React.useState(false);
         const [inputReady, setInputReady] = React.useState(true);
@@ -4059,7 +4101,13 @@
                             setEnabled(true);
                             logic.enabled = true;
                             setModelLoading(true);
-                            void loadModel();
+                            void loadModel().then(result => {
+                                if (!result.success)
+                                    setRpcError(result.cancelled ? t(result.error || "Model download cancelled.") : result.error || t("Model not ready"));
+                            }).catch(error => setRpcError(String(error))).finally(() => {
+                                setModelCancelling(false);
+                                setModelLoading(false);
+                            });
                         }
                     }
                 }
@@ -4268,17 +4316,34 @@
                 setRpcError(String(error));
             }
         };
+        const cancelDownload = async () => {
+            if (modelCancelling || modelStage !== "downloading")
+                return;
+            setModelCancelling(true);
+            try {
+                const result = await cancelModelDownloadRpc();
+                if (!result.success) {
+                    setModelCancelling(false);
+                    setRpcError(result.error || t("Could not cancel model download."));
+                }
+            }
+            catch (error) {
+                setModelCancelling(false);
+                setRpcError(String(error));
+            }
+        };
         const statusMessage = statusError ? t("Backend unavailable: {error}", { error: statusError })
             : rpcError ? rpcError
                 : !serviceReady ? t("Connecting to Decktation...")
                     : !inputReady ? t("Keyboard helper unavailable. Reload or reinstall Decktation.")
                         : recording ? t("Recording...")
-                            : modelStage === "downloading" ? t("Downloading transcription model...")
-                                : modelLoading ? t("Loading transcription model...")
-                                    : !enabled ? t("Decktation is off")
-                                        : !modelReady ? t("Model not ready")
-                                            : !controllerReady ? t(controllerStatus === "Waiting for input" ? "Waiting for input" : "Controller unavailable")
-                                                : t("Ready");
+                            : modelCancelling ? t("Cancelling model download...")
+                                : modelStage === "downloading" ? t("Downloading transcription model...")
+                                    : modelLoading ? t("Loading transcription model...")
+                                        : !enabled ? t("Decktation is off")
+                                            : !modelReady ? t("Model not ready")
+                                                : !controllerReady ? t(controllerStatus === "Waiting for input" ? "Waiting for input" : "Controller unavailable")
+                                                    : t("Ready");
         const statusProblem = !!(statusError || rpcError || (serviceReady && !inputReady) || (enabled && serviceReady && !controllerReady));
         if (debugCaptureActive) {
             const swallow = (event) => { event.preventDefault(); event.stopPropagation(); };
@@ -4486,11 +4551,14 @@
                                         setRpcError(String(error));
                                     }
                                     finally {
+                                        setModelCancelling(false);
                                         setIsToggling(false);
                                     }
                                 } })),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                            React__default["default"].createElement("div", { role: "status", style: { padding: statusProblem ? '10px' : '4px 0', borderRadius: '6px', backgroundColor: statusProblem ? '#713030' : undefined } }, statusMessage))),
+                            React__default["default"].createElement("div", { role: "status", style: { padding: statusProblem ? '10px' : '4px 0', borderRadius: '6px', backgroundColor: statusProblem ? '#713030' : undefined } }, statusMessage)),
+                        modelStage === "downloading" && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: modelCancelling, onClick: cancelDownload }, modelCancelling ? t("Cancelling model download...") : t("Cancel download")))),
                     React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Quick settings") },
                         presets.length > 0 && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: () => setPage("game") },
@@ -4808,7 +4876,9 @@
                     rpcError && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                         React__default["default"].createElement("div", { role: "alert" }, rpcError)),
                     modelLoading && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                        React__default["default"].createElement("div", { role: "status", "aria-live": "polite" }, modelStage === "downloading" ? t("Downloading transcription model...") : t("Loading transcription model..."))),
+                        React__default["default"].createElement("div", { role: "status", "aria-live": "polite" }, modelCancelling ? t("Cancelling model download...") : modelStage === "downloading" ? t("Downloading transcription model...") : t("Loading transcription model..."))),
+                    modelStage === "downloading" && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                        React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: modelCancelling, onClick: cancelDownload }, modelCancelling ? t("Cancelling model download...") : t("Cancel download"))),
                     MODEL_SIZE_OPTIONS.map(option => React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, { key: String(option.data) },
                         React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: modelLoading || modelChangeInFlight.current, onClick: async () => {
                                 if (modelLoading || modelChangeInFlight.current)
@@ -4825,6 +4895,10 @@
                                         if (pageRef.current === "model")
                                             setPage("advanced");
                                     }
+                                    else if (result.cancelled) {
+                                        setModelSize(result.modelSize || modelSize);
+                                        setRpcError(t(result.error || "Model download cancelled."));
+                                    }
                                     else
                                         setRpcError(result.error || t("Could not update model size"));
                                 }
@@ -4833,6 +4907,7 @@
                                 }
                                 finally {
                                     modelChangeInFlight.current = false;
+                                    setModelCancelling(false);
                                     setModelLoading(false);
                                 }
                             } },

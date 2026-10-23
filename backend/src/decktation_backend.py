@@ -1392,6 +1392,7 @@ class Plugin:
         try:
             model_size = _normalize_model_size(modelSize)
             config = _read_button_config()
+            previous_size = config.get("modelSize", "base")
             config["modelSize"] = model_size
             _write_button_config(config)
 
@@ -1402,8 +1403,28 @@ class Plugin:
                     Plugin.voice_service.set_model_size,
                     model_size,
                 )
+                # After an initial download was cancelled there is no worker to
+                # reload. A new selection while enabled must start that model.
+                if success and Plugin.controller_enabled and not Plugin.voice_service.is_model_ready():
+                    success = await asyncio.to_thread(Plugin.voice_service._load_model)
                 if not success:
-                    return {"success": False, "error": Plugin.voice_service.model_load_error}
+                    error = Plugin.voice_service.model_load_error
+                    if getattr(Plugin.voice_service, "model_download_cancelled", False) is True:
+                        config["modelSize"] = previous_size
+                        _write_button_config(config)
+                        # The previous worker was closed before the download.
+                        # Reload its cached model so cancellation restores dictation.
+                        restored = await asyncio.to_thread(
+                            Plugin.voice_service.set_model_size, previous_size
+                        )
+                        if reloaded and restored:
+                            restored = await asyncio.to_thread(Plugin.voice_service._load_model)
+                        if not restored:
+                            return {"success": False, "cancelled": True, "modelSize": previous_size,
+                                    "error": "Download cancelled, but the previous model could not be restored."}
+                        return {"success": False, "cancelled": True, "modelSize": previous_size,
+                                "error": "Model download cancelled."}
+                    return {"success": False, "error": error}
 
             logger.info(
                 f"Whisper model size updated: {model_size}"
@@ -1415,6 +1436,13 @@ class Plugin:
             return {"success": False, "error": str(e)}
         finally:
             Plugin.model_operations -= 1
+
+    async def cancel_model_download(self):
+        """Request cancellation; the active model operation cleans up and restores state."""
+        service = Plugin.voice_service
+        if service and service.cancel_model_download():
+            return {"success": True, "cancelling": True}
+        return {"success": False, "error": "No model download is in progress."}
 
     async def get_presets(self):
         """Get all available game presets"""
@@ -1701,7 +1729,8 @@ class Plugin:
             else:
                 logger.error(f"Model load failed: {Plugin.voice_service.model_load_error}")
 
-            return {"success": success, "error": Plugin.voice_service.model_load_error}
+            return {"success": success, "error": Plugin.voice_service.model_load_error,
+                    "cancelled": getattr(Plugin.voice_service, "model_download_cancelled", False) is True}
         except Exception as e:
             logger.error(f"Error loading model: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
