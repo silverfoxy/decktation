@@ -241,6 +241,25 @@ def configure_ptt_replay(backend, tmp_path, monkeypatch):
     return plugin, voice, state
 
 
+def test_binding_capture_cannot_swallow_release_of_existing_recording(backend, tmp_path, monkeypatch):
+    plugin, voice, state = configure_ptt_replay(backend, tmp_path, monkeypatch)
+    ticks = 0
+    def tick(_delay):
+        nonlocal ticks
+        ticks += 1
+        if ticks == 1:
+            assert voice.is_recording
+            plugin.binding_session = 'interleaved-capture'
+            plugin.binding_deadline = backend.time.time() + 10
+            state.write_text('0')
+        else:
+            plugin.poll_running = False
+    monkeypatch.setattr(backend.time, 'sleep', tick)
+    plugin.poll_button_state()
+    voice.stop_recording.assert_called_once_with()
+    assert not voice.is_recording
+
+
 def test_debug_start_rejected_during_ptt_preserves_release(backend, tmp_path, monkeypatch):
     plugin, voice, state = configure_ptt_replay(backend, tmp_path, monkeypatch)
     replies = []

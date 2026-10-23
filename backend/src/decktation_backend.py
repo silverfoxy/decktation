@@ -647,9 +647,10 @@ class Plugin:
                 # timeouts/final publication advancing without renderer polls.
                 debug_active = (Plugin.controller_debug is not None and
                                 Plugin.controller_debug.resume()['state'] in ACTIVE)
-                if (not Plugin.controller_enabled or
-                        (Plugin.binding_session and time.time() < Plugin.binding_deadline) or
-                        debug_active):
+                if ((not Plugin.controller_enabled or
+                     (Plugin.binding_session and time.time() < Plugin.binding_deadline) or
+                     debug_active) and
+                    not (Plugin.voice_service and Plugin.voice_service.is_recording)):
                     last_state = False
                     gesture.suppress_until_release(True)
                     time.sleep(0.1)
