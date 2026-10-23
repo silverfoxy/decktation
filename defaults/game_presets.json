@@ -3,6 +3,7 @@
     "name": "World of Warcraft",
     "chat_open_key": "enter",
     "chat_send_key": "enter",
+    "chat_open_delay": 0.25,
     "default_channel": "say",
     "channels": {
       "say": "/s ",
@@ -25,6 +26,7 @@
     "name": "Guild Wars 2",
     "chat_open_key": "enter",
     "chat_send_key": "enter",
+    "chat_open_delay": 0.25,
     "default_channel": "say",
     "channels": {
       "say": "/s ",
