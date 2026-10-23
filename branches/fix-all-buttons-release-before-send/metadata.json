@@ -2,7 +2,7 @@
   "plugin": "Decktation",
   "channel": "branch",
   "ref": "fix/all-buttons-release-before-send",
-  "commit": "53219e2b61ecc40b93b20033feaed9ca85bb064d",
+  "commit": "e0ae928f1444b5acc9ab3d4eeb8eb60c1e161466",
   "zip_url": "https://decktation.com/branches/fix-all-buttons-release-before-send/Decktation.zip",
-  "generated_at": "2026-10-23T17:02:15Z"
+  "generated_at": "2026-10-23T20:28:31Z"
 }
