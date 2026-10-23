@@ -30,17 +30,33 @@ WoWVoiceChat = object
 print('Engine log, not a JSON response')
 class Plugin:
     voice_service = None
+    downloading = False
+    download_cancelled = False
     async def _migration(self): pass
     async def _main(self):
         type(self).voice_service = object()
     async def get_status(self):
-        return {'success': True, 'service_ready': True, 'home': os.environ['DECKY_USER_HOME']}
+        return {'success': True, 'service_ready': True, 'home': os.environ['DECKY_USER_HOME'],
+                'downloading': type(self).downloading}
     async def update_context(self, context):
         await asyncio.sleep(context.get('delay', 0))
         return {'success': True, 'context': context}
     async def load_model(self):
-        await asyncio.sleep(0.1)
-        return {'success': True}
+        type(self).downloading = True
+        type(self).download_cancelled = False
+        try:
+            for _ in range(10):
+                await asyncio.sleep(0.01)
+                if type(self).download_cancelled:
+                    return {'success': False, 'cancelled': True}
+            return {'success': True}
+        finally:
+            type(self).downloading = False
+    async def cancel_model_download(self):
+        if not type(self).downloading:
+            return {'success': False, 'error': 'No download in progress'}
+        type(self).download_cancelled = True
+        return {'success': True, 'cancelling': True}
     async def set_model_size(self, modelSize):
         if modelSize == 'crash': os._exit(9)
         raise RuntimeError('expected engine error')
@@ -75,6 +91,28 @@ def test_bridge_preserves_concurrency_unicode_settings_and_cleanup(runtime):
             await bridge.close()
         assert bridge.process.returncode == 0
         assert (root / 'unloaded').read_text() == 'clean'
+    asyncio.run(run())
+
+
+def test_bridge_cancels_inflight_model_without_blocking_on_first_rpc(runtime):
+    root, decky = runtime
+    async def run():
+        bridge = RuntimeBridge(root, decky)
+        try:
+            await bridge.call('_main')
+            loading = asyncio.create_task(bridge.call('load_model'))
+            status = {}
+            for _ in range(30):
+                status = await bridge.call('get_status')
+                if status.get('downloading'):
+                    break
+                await asyncio.sleep(0.01)
+            assert status.get('downloading'), status
+            cancellation = await asyncio.wait_for(bridge.call('cancel_model_download'), 1)
+            assert cancellation == {'success': True, 'cancelling': True}
+            assert (await loading)['cancelled'] is True
+        finally:
+            await bridge.close()
     asyncio.run(run())
 
 
