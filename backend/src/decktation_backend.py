@@ -647,7 +647,9 @@ class Plugin:
                 # timeouts/final publication advancing without renderer polls.
                 debug_active = (Plugin.controller_debug is not None and
                                 Plugin.controller_debug.resume()['state'] in ACTIVE)
+                model_busy = Plugin.model_operations or (Plugin.voice_service and getattr(Plugin.voice_service, "model_loading", False) is True)
                 if (not Plugin.controller_enabled or
+                        (model_busy and not (Plugin.voice_service and Plugin.voice_service.is_recording)) or
                         (Plugin.binding_session and time.time() < Plugin.binding_deadline) or
                         debug_active):
                     last_state = False
@@ -685,7 +687,9 @@ class Plugin:
                                               Plugin.controller_debug.state in ACTIVE)
                             if capture_active:
                                 gesture.suppress_until_release(True)
-                            if Plugin.controller_enabled and not capture_active:
+                            if (Plugin.controller_enabled and not capture_active and
+                                    not Plugin.model_operations and
+                                    not (Plugin.voice_service and getattr(Plugin.voice_service, "model_loading", False) is True)):
                                 # Button pressed - cancel pending send if one is waiting
                                 if Plugin.voice_service and Plugin.voice_service.pending_text:
                                     cancelled = Plugin.voice_service.cancel_pending(source="controller_button")
@@ -1379,10 +1383,16 @@ class Plugin:
 
     async def set_model_size(self, modelSize: str = "base"):
         """Set the whisper.cpp model size and reload the model if needed."""
-        Plugin.model_operations += 1
+        with Plugin.controller_lock:
+            service = Plugin.voice_service
+            if service and (getattr(service, "is_recording", False) is True or
+                            getattr(service, "is_transcribing", False) is True):
+                return {"success": False, "error": "Finish the current dictation before changing models."}
+            Plugin.model_operations += 1
         try:
             model_size = _normalize_model_size(modelSize)
             config = _read_button_config()
+            previous_size = config.get("modelSize", "base")
             config["modelSize"] = model_size
             _write_button_config(config)
 
@@ -1393,8 +1403,28 @@ class Plugin:
                     Plugin.voice_service.set_model_size,
                     model_size,
                 )
+                # After an initial download was cancelled there is no worker to
+                # reload. A new selection while enabled must start that model.
+                if success and Plugin.controller_enabled and not Plugin.voice_service.is_model_ready():
+                    success = await asyncio.to_thread(Plugin.voice_service._load_model)
                 if not success:
-                    return {"success": False, "error": Plugin.voice_service.model_load_error}
+                    error = Plugin.voice_service.model_load_error
+                    if getattr(Plugin.voice_service, "model_download_cancelled", False) is True:
+                        config["modelSize"] = previous_size
+                        _write_button_config(config)
+                        # The previous worker was closed before the download.
+                        # Reload its cached model so cancellation restores dictation.
+                        restored = await asyncio.to_thread(
+                            Plugin.voice_service.set_model_size, previous_size
+                        )
+                        if reloaded and restored:
+                            restored = await asyncio.to_thread(Plugin.voice_service._load_model)
+                        if not restored:
+                            return {"success": False, "cancelled": True, "modelSize": previous_size,
+                                    "error": "Download cancelled, but the previous model could not be restored."}
+                        return {"success": False, "cancelled": True, "modelSize": previous_size,
+                                "error": "Model download cancelled."}
+                    return {"success": False, "error": error}
 
             logger.info(
                 f"Whisper model size updated: {model_size}"
@@ -1406,6 +1436,13 @@ class Plugin:
             return {"success": False, "error": str(e)}
         finally:
             Plugin.model_operations -= 1
+
+    async def cancel_model_download(self):
+        """Request cancellation; the active model operation cleans up and restores state."""
+        service = Plugin.voice_service
+        if service and service.cancel_model_download():
+            return {"success": True, "cancelling": True}
+        return {"success": False, "error": "No model download is in progress."}
 
     async def get_presets(self):
         """Get all available game presets"""
@@ -1458,6 +1495,8 @@ class Plugin:
     async def start_recording(self):
         """Start recording audio"""
         try:
+            if Plugin.model_operations or (Plugin.voice_service and getattr(Plugin.voice_service, "model_loading", False) is True):
+                return {"success": False, "error": "Wait for the transcription model to finish loading."}
             ensure_audio_environment(
                 __import__("sounddevice"),
                 getattr(decky, "DECKY_USER_HOME", None),
@@ -1470,6 +1509,8 @@ class Plugin:
             with Plugin.controller_lock:
                 if not Plugin.controller_enabled:
                     return {"success": False, "error": "Decktation is disabled"}
+                if Plugin.model_operations or getattr(Plugin.voice_service, "model_loading", False) is True:
+                    return {"success": False, "error": "Wait for the transcription model to finish loading."}
 
                 logger.info("Starting recording")
                 if Plugin.haptic_feedback and not Plugin.voice_service.is_recording:
@@ -1645,6 +1686,11 @@ class Plugin:
                     if Plugin.voice_service else None
                 ),
                 "model_loading": model_loading or Plugin.model_operations > 0,
+                "model_stage": (
+                    Plugin.voice_service.model_stage
+                    if Plugin.voice_service and model_loading else "idle"
+                ),
+                "model_size": Plugin.voice_service.model_size if Plugin.voice_service else None,
                 "transcribing": bool(Plugin.voice_service and getattr(Plugin.voice_service, "is_transcribing", False)),
                 "recording": Plugin.voice_service.is_recording if Plugin.voice_service else False,
                 "recording_start_count": Plugin.recording_start_count,
@@ -1663,7 +1709,12 @@ class Plugin:
 
     async def load_model(self):
         """Explicitly load the Whisper model (called when user enables dictation)"""
-        Plugin.model_operations += 1
+        with Plugin.controller_lock:
+            service = Plugin.voice_service
+            if service and (getattr(service, "is_recording", False) is True or
+                            getattr(service, "is_transcribing", False) is True):
+                return {"success": False, "error": "Finish the current dictation before loading models."}
+            Plugin.model_operations += 1
         try:
             if Plugin.voice_service is None:
                 return {"success": False, "error": "Service not initialized"}
@@ -1678,7 +1729,8 @@ class Plugin:
             else:
                 logger.error(f"Model load failed: {Plugin.voice_service.model_load_error}")
 
-            return {"success": success, "error": Plugin.voice_service.model_load_error}
+            return {"success": success, "error": Plugin.voice_service.model_load_error,
+                    "cancelled": getattr(Plugin.voice_service, "model_download_cancelled", False) is True}
         except Exception as e:
             logger.error(f"Error loading model: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}

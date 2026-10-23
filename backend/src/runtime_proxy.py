@@ -19,7 +19,7 @@ RPC_METHODS = (
     'send_armed_draft', 'set_manual_send', 'set_type_as_keys',
     'set_text_insertion_mode', 'set_remember_last_channel',
     'set_spoken_punctuation', 'set_transcription_options', 'set_model_size',
-    'get_presets', 'get_active_preset', 'set_active_preset', 'start_recording',
+    'cancel_model_download', 'get_presets', 'get_active_preset', 'set_active_preset', 'start_recording',
     'stop_recording', 'is_recording', 'update_context', 'get_plugin_update',
     'prepare_plugin_update', 'get_status', 'load_model', 'get_last_transcription',
 )

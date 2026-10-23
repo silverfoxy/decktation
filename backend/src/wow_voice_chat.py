@@ -128,13 +128,27 @@ def _whisper_server_path():
     return next((path for path in candidates if path.is_file()), candidates[0])
 
 
-def _download_vulkan_model(url, destination):
-    # Decky's frozen Python cannot reliably locate system CA files.
+class ModelDownloadCancelled(Exception):
+    """The selected model was not installed because its download was cancelled."""
+
+
+def _download_vulkan_model(url, destination, cancel_event=None):
     # Decky's frozen runtime needs an explicitly bundled CA store.
     context = ssl.create_default_context(cafile=certifi.where())
-    with urllib.request.urlopen(url, context=context, timeout=60) as response:
+    # A pending network read cannot be interrupted by a threading.Event.
+    # Bound each read so cancellation does not wait for the old 60s timeout.
+    timeout = 15 if cancel_event is not None else 60
+    with urllib.request.urlopen(url, context=context, timeout=timeout) as response:
         with destination.open("wb") as output:
-            shutil.copyfileobj(response, output)
+            while True:
+                if cancel_event is not None and cancel_event.is_set():
+                    raise ModelDownloadCancelled()
+                chunk = response.read(256 * 1024)
+                if cancel_event is not None and cancel_event.is_set():
+                    raise ModelDownloadCancelled()
+                if not chunk:
+                    break
+                output.write(chunk)
 
 
 def _vulkan_environment():
@@ -214,6 +228,10 @@ class WoWVoiceChat:
         self.whisper_worker = None
         self.inference_device = None
         self.model_loading = False
+        self.model_stage = "idle"  # idle, downloading, or loading; not a percent estimate
+        self.model_stage_lock = threading.Lock()
+        self.model_cancel_event = threading.Event()
+        self.model_download_cancelled = False
         self.model_load_error = None
 
         # Last transcription result (for UI display)
@@ -339,6 +357,9 @@ class WoWVoiceChat:
                 return False
 
             self.model_loading = True
+            self.model_stage = "loading"
+            self.model_download_cancelled = False
+            self.model_cancel_event.clear()
             try:
                 whisper_server = _whisper_server_path()
                 if not whisper_server.is_file():
@@ -355,15 +376,28 @@ class WoWVoiceChat:
                     self._start_whisper_worker(whisper_server, model, use_gpu=False)
                 self.model_load_error = None
                 return True
+            except ModelDownloadCancelled:
+                self.model_download_cancelled = True
+                self.model_load_error = "Model download cancelled."
+                return False
             except Exception as e:
                 print(f"Failed to load model: {e}")
                 self.model_load_error = str(e)
                 self._report_diagnostic("model.load_failed", e)
                 return False
             finally:
+                self.model_stage = "idle"
                 self.model_loading = False
                 if self._closing.is_set():
                     self._stop_whisper_worker()
+
+    def cancel_model_download(self):
+        """Request cancellation without waiting for the model lock or network read."""
+        with self.model_stage_lock:
+            if self.model_stage != "downloading" or self.model_cancel_event.is_set():
+                return False
+            self.model_cancel_event.set()
+            return True
 
     def unload_model(self):
         """Stop the resident Whisper worker and release its model."""
@@ -423,8 +457,26 @@ class WoWVoiceChat:
             temporary = model.with_suffix(".download")
             logger.info("Downloading Whisper model %s to %s", self.model_size, model)
             url = f"https://huggingface.co/ggerganov/whisper.cpp/resolve/main/{filename}"
-            _download_vulkan_model(url, temporary)
-            temporary.replace(model)
+            self.model_stage = "downloading"
+            try:
+                _download_vulkan_model(url, temporary, self.model_cancel_event)
+                with self.model_stage_lock:
+                    if self.model_cancel_event.is_set():
+                        raise ModelDownloadCancelled()
+                    self.model_stage = "loading"
+                    temporary.replace(model)
+            except Exception as error:
+                with self.model_stage_lock:
+                    cancelled = self.model_cancel_event.is_set()
+                    self.model_stage = "loading"
+                temporary.unlink(missing_ok=True)
+                # Decide atomically with Cancel's acknowledgment: a timed-out
+                # read can finish just as the user requests cancellation.
+                if cancelled and not isinstance(error, ModelDownloadCancelled):
+                    raise ModelDownloadCancelled() from error
+                raise
+            finally:
+                self.model_stage = "loading"
         return model
 
     def _start_whisper_worker(self, whisper_server, model, use_gpu):
