@@ -648,10 +648,11 @@ class Plugin:
                 debug_active = (Plugin.controller_debug is not None and
                                 Plugin.controller_debug.resume()['state'] in ACTIVE)
                 model_busy = Plugin.model_operations or (Plugin.voice_service and getattr(Plugin.voice_service, "model_loading", False) is True)
-                if (not Plugin.controller_enabled or
-                        (model_busy and not (Plugin.voice_service and Plugin.voice_service.is_recording)) or
-                        (Plugin.binding_session and time.time() < Plugin.binding_deadline) or
-                        debug_active):
+                if ((not Plugin.controller_enabled or
+                     model_busy or
+                     (Plugin.binding_session and time.time() < Plugin.binding_deadline) or
+                     debug_active) and
+                    not (Plugin.voice_service and Plugin.voice_service.is_recording)):
                     last_state = False
                     gesture.suppress_until_release(True)
                     time.sleep(0.1)

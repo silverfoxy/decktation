@@ -355,6 +355,93 @@ def test_raw_reader_ignores_status_and_detects_grips(listener, monkeypatch):
     assert not any(list(device.read_states())[0].values())
 
 
+@pytest.mark.parametrize('first_released', ['L2', 'R2'])
+def test_combo_stays_active_until_every_button_is_released(listener, monkeypatch, tmp_path, first_released):
+    """Every configured button must be released before typing starts."""
+    from types import SimpleNamespace
+
+    for name in ('STATE_FILE', 'PID_FILE', 'PREVIEW_FILE', 'CONTROLLER_TYPE_FILE', 'STATUS_FILE',
+                 'HAPTIC_SOURCE_FILE', 'RECENT_SOURCE_FILE'):
+        monkeypatch.setattr(listener, name, str(tmp_path / name))
+    monkeypatch.setattr(listener, 'load_button_config', lambda: ['L2', 'R2'])
+    monkeypatch.setattr(listener, 'find_hidraw', lambda: iter([('/dev/hidraw0', 'steam_deck')]))
+    monkeypatch.setattr(listener.glob, 'glob', lambda pattern: [])
+
+    class Pad:
+        fd = 11
+        identity = {'vendor_id': 0x28de, 'product_id': 0x1205, 'bus': 3}
+        supported_buttons = {'L2', 'R2', 'X'}
+        keys = set()
+        key_buttons = {}
+        def __init__(self, path, profile): pass
+        def close(self): pass
+        def read_states(self):
+            yield next(states)
+
+    remaining = 'R2' if first_released == 'L2' else 'L2'
+    states = iter((
+        {'L2': True, 'R2': True, 'X': True},
+        {first_released: False, remaining: True, 'X': True},
+        {'L2': False, 'R2': False, 'X': True},
+    ))
+    monkeypatch.setattr(listener, 'HidGamepad', Pad)
+    class Selector:
+        calls = 0
+        def register(self, fd, events, path): pass
+        def unregister(self, fd): pass
+        def close(self): pass
+        def select(self, timeout):
+            self.calls += 1
+            assert (tmp_path / 'STATE_FILE').read_text() == ('0' if self.calls in (1, 4) else '1')
+            if self.calls == 4:
+                raise KeyboardInterrupt
+            return [(SimpleNamespace(data='/dev/hidraw0'), 1)]
+    monkeypatch.setattr(listener.selectors, 'DefaultSelector', Selector)
+    listener.main()
+    assert not (tmp_path / 'STATE_FILE').exists()
+
+
+def test_partial_duplicate_source_keeps_combo_active_until_trigger_up(listener, monkeypatch, tmp_path):
+    """A second input interface holding the trigger must not modify injected keys."""
+    from types import SimpleNamespace
+    for name in ('STATE_FILE', 'PID_FILE', 'PREVIEW_FILE', 'CONTROLLER_TYPE_FILE', 'STATUS_FILE',
+                 'HAPTIC_SOURCE_FILE', 'RECENT_SOURCE_FILE'):
+        monkeypatch.setattr(listener, name, str(tmp_path / name))
+    monkeypatch.setattr(listener, 'load_button_config', lambda: ['L2', 'R2'])
+    monkeypatch.setattr(listener, 'find_hidraw', lambda: iter((
+        ('/dev/hidraw0', 'steam_deck'), ('/dev/hidraw1', 'steam_deck'))))
+    monkeypatch.setattr(listener.glob, 'glob', lambda pattern: [])
+    events = {
+        '/dev/hidraw0': iter(({'L2': True, 'R2': True}, {'L2': False, 'R2': False})),
+        '/dev/hidraw1': iter(({'L2': True, 'R2': False}, {'L2': False, 'R2': False})),
+    }
+    class Pad:
+        identity = {'vendor_id': 0x28de, 'product_id': 0x1205, 'bus': 3}
+        supported_buttons = {'L2', 'R2'}
+        keys = set()
+        key_buttons = {}
+        def __init__(self, path, profile):
+            self.path = path
+            self.fd = 11 if path.endswith('0') else 12
+        def close(self): pass
+        def read_states(self): yield next(events[self.path])
+    monkeypatch.setattr(listener, 'HidGamepad', Pad)
+    class Selector:
+        calls = 0
+        def register(self, fd, events, path): pass
+        def unregister(self, fd): pass
+        def close(self): pass
+        def select(self, timeout):
+            self.calls += 1
+            assert (tmp_path / 'STATE_FILE').read_text() == ('0' if self.calls in (1, 5) else '1')
+            if self.calls == 5:
+                raise KeyboardInterrupt
+            path = ('/dev/hidraw0', '/dev/hidraw1', '/dev/hidraw0', '/dev/hidraw1')[self.calls - 1]
+            return [(SimpleNamespace(data=path), 1)]
+    monkeypatch.setattr(listener.selectors, 'DefaultSelector', Selector)
+    listener.main()
+
+
 def test_listener_hotplug_evdev_while_raw_is_idle_and_disconnect(listener, monkeypatch, tmp_path, capsys):
     """An idle Deck must not block a newly attached Xbox or its release."""
     from types import SimpleNamespace
