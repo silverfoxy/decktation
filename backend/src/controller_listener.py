@@ -346,7 +346,7 @@ def main():
         if combo_active:
             # Once armed, keep the recording active until every configured
             # button is up on every observed source. A partial duplicate can
-            # still be holding an Alt/Shift-mapped trigger after its peer stops.
+            # still be holding a configured button after its peer stops.
             active = any(states.get(button, False)
                          for states in tracker.sources.values()
                          for button in button_names)

@@ -357,7 +357,7 @@ def test_raw_reader_ignores_status_and_detects_grips(listener, monkeypatch):
 
 @pytest.mark.parametrize('first_released', ['L2', 'R2'])
 def test_combo_stays_active_until_every_button_is_released(listener, monkeypatch, tmp_path, first_released):
-    """A remaining trigger must not be held as Alt/Shift when typing starts."""
+    """Every configured button must be released before typing starts."""
     from types import SimpleNamespace
 
     for name in ('STATE_FILE', 'PID_FILE', 'PREVIEW_FILE', 'CONTROLLER_TYPE_FILE', 'STATUS_FILE',
