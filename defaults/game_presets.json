@@ -15,7 +15,12 @@
       "whisper": "/w ",
       "reply": "/r ",
       "type": "",
-      "alert": "/rw "
+      "alert": "/rw ",
+      "channel_1": "/1 ",
+      "channel_2": "/2 ",
+      "channel_3": "/3 ",
+      "channel_4": "/4 ",
+      "channel_5": "/5 "
     },
     "whisper_prompt": "",
     "context_file": "wow_context.json",
