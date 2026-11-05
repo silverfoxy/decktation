@@ -1,0 +1,8 @@
+{
+  "plugin": "Decktation",
+  "channel": "branch",
+  "ref": "feat/wow-numbered-chat-channels",
+  "commit": "439fc03291d58d8e9fd708a2a9a4585e2715e688",
+  "zip_url": "https://decktation.com/branches/feat-wow-numbered-chat-channels/Decktation.zip",
+  "generated_at": "2026-11-05T21:28:57Z"
+}
