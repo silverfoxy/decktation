@@ -48,6 +48,9 @@ A spoken channel prefix selects that message’s destination; without a prefix, 
 | **officer** | `/o` | "officer" | Officer chat |
 | **yell** | `/y` | "yell" | Yell (larger area) |
 | **instance** | `/i` | "instance" | Instance chat |
+| **channel 1–5** | `/1`–`/5` | "channel one"–"channel five" (or "channel 1"–"channel 5") | Numbered chat channels currently joined in WoW |
+
+Numbered channel slots depend on the channels joined by your character; verify them in-game with `/chatlist`. Use the explicit "channel N" prefix so ordinary words such as "trade" are not mistaken for a routing command.
 
 ## Examples
 

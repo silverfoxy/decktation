@@ -22,7 +22,12 @@
         "whisper": ["whisper"],
         "reply": ["reply"],
         "type": ["type"],
-        "alert": ["alert"]
+        "alert": ["alert"],
+        "channel_1": ["channel one", "channel 1"],
+        "channel_2": ["channel two", "channel 2"],
+        "channel_3": ["channel three", "channel 3"],
+        "channel_4": ["channel four", "channel 4"],
+        "channel_5": ["channel five", "channel 5"]
       }
     },
     "fr": {
@@ -53,7 +58,12 @@
     "whisper": "/w ",
     "reply": "/r ",
     "type": "",
-    "alert": "/rw "
+    "alert": "/rw ",
+    "channel_1": "/1 ",
+    "channel_2": "/2 ",
+    "channel_3": "/3 ",
+    "channel_4": "/4 ",
+    "channel_5": "/5 "
   },
   "enabled_languages": ["en", "fr"],
   "default_channel": "say"
