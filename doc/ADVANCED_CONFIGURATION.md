@@ -54,7 +54,9 @@ transcription recognized; it does not validate which commands the game supports.
 
 ### Add a custom channel
 
-Add the game command to the preset’s `channels` map in `defaults/game_presets.json`, then add the spoken alias under the same channel key in `defaults/channel_languages.json` for each language you want to support. For example, add a WoW `/1` channel to the `"wow"` preset:
+For numbered WoW channels, use the explicit **“channel one”** through **“channel five”** prefixes; these route to `/1` through `/5`. Digit forms such as **“channel 1”** are accepted too. Bare words like **“trade”** are intentionally not prefixes, so ordinary messages beginning with them remain intact. Number assignments are controlled by WoW and may vary with your joined channels; verify them with `/chatlist`.
+
+The numbered channel aliases are already included in Decktation’s WoW preset and English language configuration. For a custom channel, add the game command to the preset’s `channels` map in `defaults/game_presets.json`, then add its spoken alias under the same channel key in `defaults/channel_languages.json` for each language you want to support. For example:
 
 ```json
 "channels": {
@@ -69,7 +71,7 @@ Add the game command to the preset’s `channels` map in `defaults/game_presets.
   "languages": {
     "en": {
       "channels": {
-        "one": ["one", "channel one"]
+        "one": ["channel one", "channel 1"]
       }
     }
   }

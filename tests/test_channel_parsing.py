@@ -26,6 +26,11 @@ WOW_PRESET = {
         "reply": "/r ",
         "type": "",
         "alert": "/rw ",
+        "channel_1": "/1 ",
+        "channel_2": "/2 ",
+        "channel_3": "/3 ",
+        "channel_4": "/4 ",
+        "channel_5": "/5 ",
     },
     "whisper_prompt": "World of Warcraft gameplay.",
     "context_file": "wow_context.json",
@@ -108,6 +113,11 @@ class TestWoWChannels:
         ("reply", "reply"),
         ("type", "type"),
         ("alert", "alert"),
+        ("channel one", "channel_1"),
+        ("channel two", "channel_2"),
+        ("channel three", "channel_3"),
+        ("channel four", "channel_4"),
+        ("channel five", "channel_5"),
     ])
     def test_channel_prefix_recognized(self, wow_svc, prefix, expected_channel):
         ch, text = wow_svc.parse_channel_and_text(f"{prefix} hello")
@@ -144,6 +154,24 @@ class TestWoWChannels:
         ch, text = wow_svc.parse_channel_and_text("party ")
         assert ch == "say"
         assert text == "party"
+
+    @pytest.mark.parametrize("spoken,expected_channel,expected_command", [
+        ("channel one hello", "channel_1", "/1 "),
+        ("channel two: hello", "channel_2", "/2 "),
+        ("channel 3, hello", "channel_3", "/3 "),
+        ("CHANNEL FOUR hello", "channel_4", "/4 "),
+        ("channel five hello", "channel_5", "/5 "),
+    ])
+    def test_numbered_channel_prefixes(self, wow_svc, spoken, expected_channel, expected_command):
+        channel, text = wow_svc.parse_channel_and_text(spoken)
+        assert channel == expected_channel
+        assert text == "hello"
+        assert wow_svc.channel_commands[channel] == expected_command
+
+    def test_trade_as_message_is_not_a_channel_prefix(self, wow_svc):
+        channel, text = wow_svc.parse_channel_and_text("trade me xyz")
+        assert channel == "say"
+        assert text == "trade me xyz"
 
 
 # ---------------------------------------------------------------------------
