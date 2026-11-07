@@ -7,6 +7,20 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- Full-screen game profile editor with searchable channels, editable chat
+  prefixes, custom spoken triggers, and recognition keywords for each game.
+
+### Changed
+
+- Skip unused Whisper word timestamp computation during dictation.
+
+### Fixed
+
+- Filter recognized non-speech cues such as `[blank_audio]` before typing or
+  creating a transcription draft.
+
 ## [0.3.21] - 2026-10-21
 
 ### Added

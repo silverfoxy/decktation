@@ -82,6 +82,8 @@ class ResidentWhisper:
         # prompt to prevent one recording's context from leaking into another.
         fields = {'language': language or 'auto', 'prompt': prompt or '',
                   'response_format': 'json', 'beam_size': '5',
+                  # Dictation consumes text only, so skip word timing work.
+                  'token_timestamps': 'false',
                   'translate': 'false'}
         boundary = 'decktation-' + uuid.uuid4().hex
         body = bytearray()

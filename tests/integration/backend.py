@@ -47,6 +47,9 @@ class VoiceFixture:
     def cancel_pending(self):
         pass
 
+    def set_preset(self, preset):
+        self.preset = preset
+
     def is_model_ready(self):
         return False
 
@@ -65,6 +68,7 @@ class Runtime:
         'get_controller_debug': 1, 'stop_controller_debug': 1,
         'upload_controller_debug': 2, 'get_status': 0,
         'get_button_config': 0, 'get_presets': 0,
+        'get_profile_editor': 1, 'save_profile_editor': 2,
         'set_review_context': 2,
     }
     # UI-only unrelated native/network services; never masquerade as capture RPCs.

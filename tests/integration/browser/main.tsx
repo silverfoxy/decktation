@@ -2,14 +2,19 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import pluginFactory from '../../../src/index';
 import { gamepad } from './decky';
-import { token, rpc } from './sdk';
+import { token, rpc, routeComponents } from './sdk';
 
 // This is the production definePlugin callback, not a copied/exported panel.
 const plugin = (pluginFactory as unknown as () => {
   content: any; onDismount: () => void;
 })();
 const root = createRoot(document.getElementById('root')!);
-function mount() { root.render(plugin.content); }
+function mount() {
+  const Route = routeComponents.get(window.location.pathname);
+  root.render(Route ? <Route /> : plugin.content);
+}
+window.addEventListener('fixture-navigate', mount);
+window.addEventListener('popstate', mount);
 mount();
 (window as any).fixture = {
   gamepad, rpc,

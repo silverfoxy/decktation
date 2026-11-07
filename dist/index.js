@@ -45,221 +45,6 @@
         }
     }
 
-    const ACTIVE = new Set(["starting", "recording", "stopping"]);
-    const STATES = new Set(["idle", ...ACTIVE, "ready", "failed"]);
-    const idle = () => ({ success: true, session: null, revision: 0, state: "idle",
-        remaining_ms: 0, event_count: 0, device_count: 0, metadata: {}, report: null });
-    const object = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
-    const LIVE_BUTTONS = new Set(["A", "B", "X", "Y", "L1", "R1", "L2", "R2", "L3", "R3",
-        "L4", "R4", "L5", "R5", "View", "Menu", "D-pad Up", "D-pad Down", "D-pad Left", "D-pad Right",
-        "Left Trackpad", "Right Trackpad"]);
-    const liveSource = (value) => typeof value === "string" && /^source_([1-9]|1[0-6])$/.test(value);
-    const liveCode = (value) => Number.isInteger(value) &&
-        ((value >= 0x100 && value <= 0x15f) || (value >= 0x220 && value <= 0x223) || (value >= 0x2c0 && value <= 0x2ff));
-    function liveInput(value) {
-        if (!object(value) || !Array.isArray(value.pressed) || value.pressed.length > 32 ||
-            !value.pressed.every((entry) => object(entry) && liveSource(entry.source) && LIVE_BUTTONS.has(entry.button)))
-            return null;
-        const event = value.last_event;
-        if (event !== null && (!object(event) || !Number.isFinite(event.at_ms) || event.at_ms < 0 || event.at_ms > 30000 ||
-            !liveSource(event.source) || !["key", "hid", "mapped", "binding"].includes(event.kind) || typeof event.pressed !== "boolean" ||
-            (event.button !== undefined && !LIVE_BUTTONS.has(event.button)) ||
-            (event.code !== undefined && !liveCode(event.code)) ||
-            (event.kind === "key" ? !liveCode(event.code) : !LIVE_BUTTONS.has(event.button))))
-            return null;
-        return { pressed: value.pressed.map(({ source, button }) => ({ source, button })),
-            last_event: event === null ? null : { at_ms: event.at_ms, source: event.source, kind: event.kind,
-                ...(event.button !== undefined ? { button: event.button } : {}),
-                ...(event.code !== undefined ? { code: event.code } : {}), pressed: event.pressed } };
-    }
-    class ControllerDebugClient {
-        constructor(rpc) {
-            this.rpc = rpc;
-            this.view = { snapshot: idle(), pending: null, error: "" };
-            this.listeners = new Set();
-            this.epoch = 0;
-            this.disposed = false;
-            this.cancelRequests = new Set();
-        }
-        subscribe(listener) {
-            this.listeners.add(listener);
-            listener(this.view);
-            return () => { this.listeners.delete(listener); };
-        }
-        emit(patch) {
-            this.view = { ...this.view, ...patch };
-            for (const listener of this.listeners)
-                listener(this.view);
-        }
-        clearPoll() {
-            if (this.pollTimer !== undefined)
-                clearTimeout(this.pollTimer);
-            this.pollTimer = undefined;
-        }
-        async request(invoke, timeout = 5000) {
-            let timer;
-            let cancel = () => { };
-            try {
-                return await new Promise((resolve, reject) => {
-                    cancel = () => reject(new Error("Controller debugger disconnected."));
-                    this.cancelRequests.add(cancel);
-                    timer = setTimeout(() => reject(new Error("Controller debugger did not respond. Try a new capture.")), timeout);
-                    Promise.resolve().then(invoke).then(resolve, reject);
-                });
-            }
-            finally {
-                if (timer !== undefined)
-                    clearTimeout(timer);
-                this.cancelRequests.delete(cancel);
-            }
-        }
-        accept(result, expectedSession) {
-            if (!result?.success)
-                throw new Error(result?.error || "Could not read controller report");
-            if (!STATES.has(result.state) || !Number.isInteger(result.revision) || result.revision < 0 ||
-                !Number.isInteger(result.remaining_ms) || result.remaining_ms < 0 || result.remaining_ms > 30000 ||
-                !Number.isInteger(result.event_count) || result.event_count < 0 ||
-                !Number.isInteger(result.device_count) || result.device_count < 0 ||
-                !object(result.metadata) ||
-                (result.state === "idle" ? result.session !== null : typeof result.session !== "string" || !result.session) ||
-                (expectedSession !== undefined && result.session !== expectedSession) ||
-                (result.state === "ready" && (!object(result.report) || !["complete", "stopped"].includes(result.report.phase)))) {
-                throw new Error("Invalid controller capture status. Reopen Diagnostics to reconnect.");
-            }
-            const current = this.view.snapshot;
-            if (current.session === result.session && result.revision < current.revision)
-                return;
-            // Even a newer stale transport response cannot resurrect a terminal session.
-            if (current.session === result.session && ["ready", "failed"].includes(current.state) && ACTIVE.has(result.state))
-                return;
-            this.emit({ snapshot: { ...result, report: result.state === "ready" ? result.report : null,
-                    live_input: result.state === "recording" ? liveInput(result.live_input) : null }, error: "" });
-        }
-        schedulePoll() {
-            this.clearPoll();
-            if (this.disposed || this.view.pending || this.view.error || !ACTIVE.has(this.view.snapshot.state))
-                return;
-            this.pollTimer = setTimeout(() => this.poll(), 250);
-        }
-        async poll() {
-            this.pollTimer = undefined;
-            const token = this.epoch;
-            const session = this.view.snapshot.session;
-            if (!session || this.disposed || this.view.pending)
-                return;
-            try {
-                const result = await this.request(() => this.rpc.get(session));
-                if (!this.disposed && token === this.epoch)
-                    this.accept(result, session);
-            }
-            catch (error) {
-                if (!this.disposed && token === this.epoch)
-                    this.emit({ error: error.message, snapshot: { ...this.view.snapshot, live_input: null } });
-            }
-            finally {
-                if (!this.disposed && token === this.epoch)
-                    this.schedulePoll();
-            }
-        }
-        async command(pending, invoke, expectedSession) {
-            const token = ++this.epoch;
-            this.clearPoll();
-            this.emit({ pending, error: "" });
-            try {
-                const result = await this.request(invoke, pending === "upload" ? 15000 : 5000);
-                if (!this.disposed && token === this.epoch)
-                    this.accept(result, expectedSession);
-            }
-            catch (error) {
-                if (!this.disposed && token === this.epoch)
-                    this.emit({ error: error.message, snapshot: { ...this.view.snapshot, live_input: null } });
-            }
-            finally {
-                if (!this.disposed && token === this.epoch) {
-                    this.emit({ pending: null });
-                    this.schedulePoll();
-                }
-            }
-        }
-        async connect() {
-            this.disposed = false;
-            await this.command("resume", () => this.rpc.resume());
-        }
-        async start() {
-            if (this.disposed || (this.view.pending && this.view.pending !== "resume") || ACTIVE.has(this.view.snapshot.state))
-                return;
-            await this.command("start", () => this.rpc.start());
-        }
-        async stop() {
-            const { snapshot, pending } = this.view;
-            if (this.disposed || pending || !snapshot.session || !["starting", "recording"].includes(snapshot.state))
-                return;
-            await this.command("stop", () => this.rpc.stop(snapshot.session), snapshot.session);
-        }
-        async refresh() {
-            if (!this.disposed && !this.view.pending)
-                await this.command("resume", () => this.rpc.resume());
-        }
-        async upload() {
-            const { snapshot, pending } = this.view;
-            if (this.disposed || pending || snapshot.state !== "ready" || !snapshot.session || snapshot.event_id)
-                return;
-            await this.command("upload", () => this.rpc.upload(snapshot.session, true), snapshot.session);
-        }
-        dispose() {
-            this.disposed = true;
-            ++this.epoch;
-            this.clearPoll();
-            for (const cancel of this.cancelRequests)
-                cancel();
-            this.listeners.clear();
-        }
-    }
-
-    var version = "0.3.21";
-
-    // Read the actual QAM surface. Document visibility alone does not establish
-    // whether a persistent Steam sidebar is on screen.
-    function quickAccessVisibility(documents, classNames) {
-        let foundMenu = false;
-        for (const doc of documents) {
-            // Prefer the sidebar itself over its full-screen transparent container.
-            for (const name of classNames) {
-                if (!name)
-                    continue;
-                const menus = Array.from(doc.getElementsByClassName(name));
-                if (!menus.length)
-                    continue;
-                foundMenu = true;
-                if (doc.hidden)
-                    break;
-                const view = doc.defaultView;
-                if (!view)
-                    break;
-                for (const menu of menus) {
-                    if (!menu.isConnected)
-                        continue;
-                    const rect = menu.getBoundingClientRect();
-                    if (rect.width <= 0 || rect.height <= 0 || rect.right <= 0 || rect.bottom <= 0 || rect.left >= view.innerWidth || rect.top >= view.innerHeight)
-                        continue;
-                    let visible = true;
-                    for (let node = menu; node; node = node.parentElement) {
-                        const style = view.getComputedStyle(node);
-                        if (style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse" || Number(style.opacity) === 0) {
-                            visible = false;
-                            break;
-                        }
-                    }
-                    if (visible)
-                        return true;
-                }
-                break;
-            }
-        }
-        // Missing markup is unknown, rather than an assertion that QAM is open.
-        return foundMenu ? false : null;
-    }
-
     var _manifest = {"name":"Decktation","version":"0.3.21","author":"silverfoxy","flags":["root"],"api_version":1,"publish":{"tags":["voice","dictation","speech-to-text","input","chat","gaming","accessibility"],"description":"Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using whisper.cpp.","image":"https://raw.githubusercontent.com/silverfoxy/decktation/master/store-card.png"}};
 
     const manifest = _manifest;
@@ -286,7 +71,7 @@
     const callable = api.callable;
     api.addEventListener;
     api.removeEventListener;
-    api.routerHook;
+    const routerHook = api.routerHook;
     const toaster = api.toaster;
     api.openFilePicker;
     api.executeInTab;
@@ -295,84 +80,6 @@
     api.fetchNoCors;
     api.getExternalResourceURL;
     api.useQuickAccessVisible;
-
-    var DefaultContext = {
-      color: undefined,
-      size: undefined,
-      className: undefined,
-      style: undefined,
-      attr: undefined
-    };
-    var IconContext = React__default["default"].createContext && React__default["default"].createContext(DefaultContext);
-
-    var __assign = window && window.__assign || function () {
-      __assign = Object.assign || function (t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-          s = arguments[i];
-          for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
-        }
-        return t;
-      };
-      return __assign.apply(this, arguments);
-    };
-    var __rest = window && window.__rest || function (s, e) {
-      var t = {};
-      for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0) t[p] = s[p];
-      if (s != null && typeof Object.getOwnPropertySymbols === "function") for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
-        if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i])) t[p[i]] = s[p[i]];
-      }
-      return t;
-    };
-    function Tree2Element(tree) {
-      return tree && tree.map(function (node, i) {
-        return React__default["default"].createElement(node.tag, __assign({
-          key: i
-        }, node.attr), Tree2Element(node.child));
-      });
-    }
-    function GenIcon(data) {
-      // eslint-disable-next-line react/display-name
-      return function (props) {
-        return React__default["default"].createElement(IconBase, __assign({
-          attr: __assign({}, data.attr)
-        }, props), Tree2Element(data.child));
-      };
-    }
-    function IconBase(props) {
-      var elem = function (conf) {
-        var attr = props.attr,
-          size = props.size,
-          title = props.title,
-          svgProps = __rest(props, ["attr", "size", "title"]);
-        var computedSize = size || conf.size || "1em";
-        var className;
-        if (conf.className) className = conf.className;
-        if (props.className) className = (className ? className + " " : "") + props.className;
-        return React__default["default"].createElement("svg", __assign({
-          stroke: "currentColor",
-          fill: "currentColor",
-          strokeWidth: "0"
-        }, conf.attr, attr, svgProps, {
-          className: className,
-          style: __assign(__assign({
-            color: props.color || conf.color
-          }, conf.style), props.style),
-          height: computedSize,
-          width: computedSize,
-          xmlns: "http://www.w3.org/2000/svg"
-        }), title && React__default["default"].createElement("title", null, title), props.children);
-      };
-      return IconContext !== undefined ? React__default["default"].createElement(IconContext.Consumer, null, function (conf) {
-        return elem(conf);
-      }) : elem(DefaultContext);
-    }
-
-    // THIS FILE IS AUTO GENERATED
-    function FaArrowCircleUp (props) {
-      return GenIcon({"tag":"svg","attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M8 256C8 119 119 8 256 8s248 111 248 248-111 248-248 248S8 393 8 256zm143.6 28.9l72.4-75.5V392c0 13.3 10.7 24 24 24h16c13.3 0 24-10.7 24-24V209.4l72.4 75.5c9.3 9.7 24.8 9.9 34.3.4l10.9-11c9.4-9.4 9.4-24.6 0-33.9L273 107.7c-9.4-9.4-24.6-9.4-33.9 0L106.3 240.4c-9.4 9.4-9.4 24.6 0 33.9l10.9 11c9.6 9.5 25.1 9.3 34.4-.4z"}}]})(props);
-    }function FaMicrophone (props) {
-      return GenIcon({"tag":"svg","attr":{"viewBox":"0 0 352 512"},"child":[{"tag":"path","attr":{"d":"M176 352c53.02 0 96-42.98 96-96V96c0-53.02-42.98-96-96-96S80 42.98 80 96v160c0 53.02 42.98 96 96 96zm160-160h-16c-8.84 0-16 7.16-16 16v48c0 74.8-64.49 134.82-140.79 127.38C96.71 376.89 48 317.11 48 250.3V208c0-8.84-7.16-16-16-16H16c-8.84 0-16 7.16-16 16v40.16c0 89.64 63.97 169.55 152 181.69V464H96c-8.84 0-16 7.16-16 16v16c0 8.84 7.16 16 16 16h160c8.84 0 16-7.16 16-16v-16c0-8.84-7.16-16-16-16h-56v-33.77C285.71 418.47 352 344.9 352 256v-48c0-8.84-7.16-16-16-16z"}}]})(props);
-    }
 
     var Back$9 = "Back";
     var Enable$9 = "Enable";
@@ -3565,6 +3272,569 @@
         return nativeLanguageNames[code] || fallback;
     }
 
+    const PROFILE_EDITOR_ROUTE = "/decktation/profiles";
+    let initialGame = "wow";
+    function openProfileEditor(game) {
+        initialGame = game;
+        deckyFrontendLib.Navigation.Navigate(PROFILE_EDITOR_ROUTE);
+        deckyFrontendLib.Navigation.CloseSideMenus();
+    }
+    const loadProfile = callable("get_profile_editor");
+    const saveProfile = callable("save_profile_editor");
+    const getPresets$1 = callable("get_presets");
+    const title = (channel) => channel.replace(/_/g, " ");
+    const styles = `
+.decktation-editor { position:fixed; inset:0; z-index:1; box-sizing:border-box; height:100vh; padding:40px 36px 24px; background:#101923; color:#ecf1f6; display:flex; flex-direction:column; gap:16px; font-size:16px; }
+.decktation-editor * { box-sizing:border-box; }
+.decktation-editor h1 { font-size:26px; margin:0; }
+.decktation-editor h2 { font-size:21px; margin:0 0 14px; text-transform:capitalize; }
+.decktation-editor header,.decktation-editor footer,.decktation-editor .tabs,.decktation-editor .inline { display:flex; align-items:center; gap:12px; }
+.decktation-editor header { justify-content:space-between; background:transparent; padding:0; }
+.decktation-editor .subtitle { color:#aab8c7; font-size:14px; margin-top:5px; }
+.decktation-editor .tabs > * { flex:1; }
+.decktation-editor .workspace { display:grid; grid-template-columns: minmax(240px, 32%) 1fr; gap:20px; min-height:0; flex:1; }
+.decktation-editor .channel-list,.decktation-editor .details { min-height:0; overflow-y:auto; padding:16px; border-radius:8px; background:#1b2836; }
+.decktation-editor .channel-list { display:flex; flex-direction:column; gap:8px; }
+.decktation-editor .channel-rows { flex:1; overflow-y:auto; min-height:80px; }
+.decktation-editor .channel-row { margin:4px 0; border-left:3px solid transparent; }
+.decktation-editor .channel-row.selected { border-color:#66c0f4; background:#263f53; }
+.decktation-editor .channel-row > * { width:100%; margin:0; }
+.decktation-editor .channel-label { display:flex; justify-content:space-between; gap:12px; width:100%; text-transform:capitalize; }
+.decktation-editor code { color:#9cc7e3; text-transform:none; }
+.decktation-editor .field { margin-bottom:18px; }
+.decktation-editor .chips { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 20px; }
+.decktation-editor .hint { color:#aab8c7; font-size:14px; line-height:1.5; }
+.decktation-editor footer { border-top:1px solid #344659; padding-top:12px; justify-content:space-between; }
+.decktation-editor .keywords { flex:1; overflow-y:auto; background:#1b2836; padding:24px; border-radius:8px; }
+.decktation-editor .notice { padding:12px; background:#354557; border-radius:6px; }
+.decktation-editor .error { color:#ffb7b7; }
+@media (max-width:700px) { .decktation-editor { padding:30px 16px 16px; } .decktation-editor .workspace { grid-template-columns:220px 1fr; gap:12px; } }
+`;
+    function ProfileEditor() {
+        const [game, setGame] = React.useState(initialGame);
+        const [presets, setPresets] = React.useState([]);
+        const [profile, setProfile] = React.useState(null);
+        const [selected, setSelected] = React.useState("");
+        const [tab, setTab] = React.useState("channels");
+        const [search, setSearch] = React.useState("");
+        const [newChannel, setNewChannel] = React.useState("");
+        const [addingChannel, setAddingChannel] = React.useState(false);
+        const [trigger, setTrigger] = React.useState("");
+        const [keyword, setKeyword] = React.useState("");
+        const [busy, setBusy] = React.useState(false);
+        const [dirty, setDirty] = React.useState(false);
+        const [message, setMessage] = React.useState("");
+        const [error, setError] = React.useState("");
+        const [pendingAction, setPendingAction] = React.useState(null);
+        const details = React.useRef(null);
+        const mounted = React.useRef(true);
+        React.useEffect(() => {
+            mounted.current = true;
+            getPresets$1().then(result => {
+                if (!mounted.current)
+                    return;
+                if (result.success)
+                    setPresets(result.presets);
+                else
+                    setError(result.error);
+            }).catch(error => { if (mounted.current)
+                setError(String(error)); });
+            return () => { mounted.current = false; };
+        }, []);
+        React.useEffect(() => {
+            let active = true;
+            setProfile(null);
+            setError("");
+            setMessage("");
+            setDirty(false);
+            setSearch("");
+            setTrigger("");
+            setKeyword("");
+            setNewChannel("");
+            setAddingChannel(false);
+            loadProfile(game).then(result => {
+                if (!active)
+                    return;
+                if (!result.success) {
+                    setError(result.error);
+                    return;
+                }
+                const loaded = result.profile;
+                setProfile({ ...loaded, hotwords: Array.isArray(loaded.hotwords) ? loaded.hotwords : loaded.hotwords ? [loaded.hotwords] : [] });
+                setSelected(loaded.default_channel);
+            }).catch(error => { if (active)
+                setError(String(error)); });
+            return () => { active = false; };
+        }, [game]);
+        function update(next) { setProfile(next); setDirty(true); setMessage(""); setError(""); }
+        function leave(nextGame) {
+            if (busy)
+                return;
+            if (dirty || trigger.trim() || keyword.trim() || newChannel.trim()) {
+                setPendingAction(nextGame ? { game: nextGame } : {});
+                return;
+            }
+            if (nextGame)
+                setGame(nextGame);
+            else
+                deckyFrontendLib.Navigation.NavigateBack();
+        }
+        async function save() {
+            if (!profile)
+                return;
+            if (trigger.trim() || keyword.trim() || newChannel.trim()) {
+                setError(t("Add or clear the text you entered before saving."));
+                return;
+            }
+            setBusy(true);
+            setError("");
+            try {
+                const channels = Object.fromEntries(Object.entries(profile.channels).map(([key, command]) => [key, command.trim() ? command.trim() + " " : ""]));
+                const result = await saveProfile(game, { ...profile, channels });
+                if (!mounted.current)
+                    return;
+                if (!result.success)
+                    throw new Error(result.error);
+                setProfile({ ...profile, channels });
+                setDirty(false);
+                setMessage(t("Saved"));
+            }
+            catch (error) {
+                if (mounted.current)
+                    setError(String(error));
+            }
+            finally {
+                if (mounted.current)
+                    setBusy(false);
+            }
+        }
+        const pending = pendingAction !== null;
+        const disabled = busy || pending;
+        const filtered = profile ? Object.keys(profile.channels).filter(channel => `${title(channel)} ${profile.channels[channel]} ${Object.entries(profile.channel_triggers).filter(([, value]) => value === channel).map(([key]) => key).join(" ")}`.toLowerCase().includes(search.toLowerCase())) : [];
+        const aliases = profile ? Object.entries(profile.channel_triggers).filter(([, channel]) => channel === selected).map(([phrase]) => phrase) : [];
+        return React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "decktation-editor", onCancel: (event) => { event.stopPropagation(); event.preventDefault(); if (pending)
+                setPendingAction(null);
+            else
+                leave(); }, onCancelActionDescription: t("Back") },
+            React__default["default"].createElement("style", null, styles),
+            React__default["default"].createElement("header", null,
+                React__default["default"].createElement("div", null,
+                    React__default["default"].createElement("h1", null, t("Game profiles")),
+                    React__default["default"].createElement("div", { className: "subtitle" }, t("Keywords and channel routing for each game"))),
+                React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: t("Game profile"), rgOptions: presets.map(preset => ({ data: preset.id, label: t(preset.name) })), selectedOption: game, disabled: disabled, onChange: option => { if (String(option.data) !== game)
+                        leave(String(option.data)); } })),
+            pending && React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "notice", role: "alertdialog", "aria-label": t("Unsaved changes") },
+                React__default["default"].createElement("div", null, t("Discard unsaved changes?")),
+                React__default["default"].createElement("div", { className: "inline" },
+                    React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: () => setPendingAction(null) }, t("Keep editing")),
+                    React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: () => { const next = pendingAction?.game; setPendingAction(null); if (next)
+                            setGame(next);
+                        else
+                            deckyFrontendLib.Navigation.NavigateBack(); } }, t("Discard changes")))),
+            React__default["default"].createElement("div", { className: "tabs" },
+                React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: disabled, onClick: () => setTab("channels") },
+                    tab === "channels" ? "● " : "",
+                    t("Channels")),
+                React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: disabled, onClick: () => setTab("keywords") },
+                    tab === "keywords" ? "● " : "",
+                    t("Keywords"))),
+            !profile && React__default["default"].createElement("div", { role: "status" }, error || t("Loading...")),
+            profile && tab === "channels" && React__default["default"].createElement("div", { className: "workspace" },
+                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "channel-list" },
+                    React__default["default"].createElement(deckyFrontendLib.TextField, { label: t("Search channels"), value: search, disabled: disabled, onChange: event => setSearch(event.target.value) }),
+                    React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "channel-rows", "aria-label": t("Channel list") },
+                        filtered.map(channel => React__default["default"].createElement("div", { key: channel, className: `channel-row ${selected === channel ? "selected" : ""}` },
+                            React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: disabled, onClick: () => {
+                                    if (trigger.trim()) {
+                                        setError(t("Add or clear the spoken trigger before selecting another channel."));
+                                        return;
+                                    }
+                                    setSelected(channel);
+                                    setError("");
+                                    details.current?.querySelector('input, button, [role="button"]')?.focus();
+                                } },
+                                React__default["default"].createElement("span", { className: "channel-label" },
+                                    React__default["default"].createElement("span", null,
+                                        title(channel),
+                                        profile.default_channel === channel ? " ★" : ""),
+                                    React__default["default"].createElement("code", null, profile.channels[channel].trim() || t("Text only")))))),
+                        !filtered.length && React__default["default"].createElement("p", { className: "hint" }, t("No matching channels"))),
+                    !addingChannel && React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: disabled, onClick: () => setAddingChannel(true) }, t("Add channel")),
+                    addingChannel && React__default["default"].createElement(React__default["default"].Fragment, null,
+                        React__default["default"].createElement(deckyFrontendLib.TextField, { label: t("New channel name"), value: newChannel, disabled: disabled, onChange: event => setNewChannel(event.target.value) }),
+                        React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: disabled || !/^[a-z][a-z0-9_]{0,39}$/.test(newChannel) || newChannel in profile.channels || Object.keys(profile.channels).length >= 40, onClick: () => {
+                                if (trigger.trim()) {
+                                    setError(t("Add or clear the spoken trigger before adding a channel."));
+                                    return;
+                                }
+                                if (profile.channel_triggers[title(newChannel)]) {
+                                    setError(t("This name is already a spoken trigger for another channel."));
+                                    return;
+                                }
+                                update({ ...profile, channels: { ...profile.channels, [newChannel]: "" }, channel_triggers: { ...profile.channel_triggers, [title(newChannel)]: newChannel } });
+                                setSelected(newChannel);
+                                setSearch("");
+                                setNewChannel("");
+                                setAddingChannel(false);
+                            } }, t("Add channel")),
+                        React__default["default"].createElement("div", { className: "hint" }, t("Use lowercase letters, numbers, or underscores. Start with a letter.")),
+                        React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: disabled, onClick: () => { setAddingChannel(false); setNewChannel(""); } }, t("Cancel")))),
+                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "details" },
+                    React__default["default"].createElement("div", { ref: details },
+                        React__default["default"].createElement("h2", null, title(selected)),
+                        React__default["default"].createElement("div", { className: "field" },
+                            React__default["default"].createElement(deckyFrontendLib.TextField, { label: t("Chat command"), value: profile.channels[selected] || "", disabled: disabled, description: t("For example /p. Leave empty to type without a channel command."), onChange: event => update({ ...profile, channels: { ...profile.channels, [selected]: event.target.value } }) })),
+                        React__default["default"].createElement("div", { className: "field" },
+                            React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: t("Use as default channel"), checked: profile.default_channel === selected, disabled: disabled || profile.default_channel === selected, onChange: () => update({ ...profile, default_channel: selected }) })),
+                        React__default["default"].createElement("h2", null, t("Additional spoken triggers")),
+                        React__default["default"].createElement("p", { className: "hint" }, t("Say a trigger before your message to select this channel. Built-in language triggers remain available.")),
+                        React__default["default"].createElement("div", { className: "chips" }, aliases.map(phrase => React__default["default"].createElement(deckyFrontendLib.ButtonItem, { key: phrase, layout: "below", disabled: disabled, onClick: () => {
+                                const next = { ...profile.channel_triggers };
+                                delete next[phrase];
+                                update({ ...profile, channel_triggers: next });
+                            } },
+                            t("Remove trigger"),
+                            ": ",
+                            phrase,
+                            " \u00D7"))),
+                        React__default["default"].createElement(deckyFrontendLib.TextField, { label: t("New spoken trigger"), value: trigger, disabled: disabled, onChange: event => setTrigger(event.target.value) }),
+                        React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: disabled || !trigger.trim(), onClick: () => {
+                                const phrase = trigger.trim().toLowerCase();
+                                if (phrase in profile.channel_triggers && profile.channel_triggers[phrase] !== selected) {
+                                    setError(t("Each spoken trigger must belong to one channel."));
+                                    return;
+                                }
+                                update({ ...profile, channel_triggers: { ...profile.channel_triggers, [phrase]: selected } });
+                                setTrigger("");
+                            } }, t("Add trigger")),
+                        React__default["default"].createElement("p", { className: "hint" },
+                            t("Example"),
+                            ": ",
+                            React__default["default"].createElement("strong", null,
+                                aliases[0] || title(selected),
+                                " ",
+                                t("hello everyone")),
+                            " \u2192 ",
+                            React__default["default"].createElement("code", null,
+                                profile.channels[selected].trim(),
+                                " ",
+                                t("hello everyone")))))),
+            profile && tab === "keywords" && React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "keywords" },
+                React__default["default"].createElement("h2", null, t("Recognition keywords")),
+                React__default["default"].createElement("p", { className: "hint" }, t("Names and game terms that help Whisper recognize speech. These hints apply to every channel in this game profile.")),
+                React__default["default"].createElement("div", { className: "inline" },
+                    React__default["default"].createElement(deckyFrontendLib.TextField, { label: t("New keyword"), value: keyword, disabled: disabled, onChange: event => setKeyword(event.target.value) }),
+                    React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: disabled || !keyword.trim() || profile.hotwords.length >= 100, onClick: () => {
+                            const word = keyword.trim();
+                            if (!profile.hotwords.includes(word))
+                                update({ ...profile, hotwords: [...profile.hotwords, word] });
+                            setKeyword("");
+                        } }, t("Add keyword"))),
+                React__default["default"].createElement("div", { className: "chips" }, profile.hotwords.map((word, index) => React__default["default"].createElement(deckyFrontendLib.ButtonItem, { key: `${index}-${word}`, layout: "below", disabled: disabled, onClick: () => update({ ...profile, hotwords: profile.hotwords.filter((_, position) => position !== index) }) },
+                    t("Remove keyword"),
+                    ": ",
+                    word,
+                    " \u00D7"))),
+                !profile.hotwords.length && React__default["default"].createElement("p", { className: "hint" }, t("No custom keywords yet. Add character names, places, or unusual game terms."))),
+            React__default["default"].createElement("footer", null,
+                React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: busy, onClick: () => leave() }, t("Back")),
+                React__default["default"].createElement("div", { role: error ? "alert" : "status", className: error ? "error" : "hint" }, error || (dirty ? t("Unsaved changes") : message)),
+                React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: disabled || !profile || !dirty, onClick: save }, busy ? t("Saving...") : t("Save changes"))));
+    }
+
+    const ACTIVE = new Set(["starting", "recording", "stopping"]);
+    const STATES = new Set(["idle", ...ACTIVE, "ready", "failed"]);
+    const idle = () => ({ success: true, session: null, revision: 0, state: "idle",
+        remaining_ms: 0, event_count: 0, device_count: 0, metadata: {}, report: null });
+    const object = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+    const LIVE_BUTTONS = new Set(["A", "B", "X", "Y", "L1", "R1", "L2", "R2", "L3", "R3",
+        "L4", "R4", "L5", "R5", "View", "Menu", "D-pad Up", "D-pad Down", "D-pad Left", "D-pad Right",
+        "Left Trackpad", "Right Trackpad"]);
+    const liveSource = (value) => typeof value === "string" && /^source_([1-9]|1[0-6])$/.test(value);
+    const liveCode = (value) => Number.isInteger(value) &&
+        ((value >= 0x100 && value <= 0x15f) || (value >= 0x220 && value <= 0x223) || (value >= 0x2c0 && value <= 0x2ff));
+    function liveInput(value) {
+        if (!object(value) || !Array.isArray(value.pressed) || value.pressed.length > 32 ||
+            !value.pressed.every((entry) => object(entry) && liveSource(entry.source) && LIVE_BUTTONS.has(entry.button)))
+            return null;
+        const event = value.last_event;
+        if (event !== null && (!object(event) || !Number.isFinite(event.at_ms) || event.at_ms < 0 || event.at_ms > 30000 ||
+            !liveSource(event.source) || !["key", "hid", "mapped", "binding"].includes(event.kind) || typeof event.pressed !== "boolean" ||
+            (event.button !== undefined && !LIVE_BUTTONS.has(event.button)) ||
+            (event.code !== undefined && !liveCode(event.code)) ||
+            (event.kind === "key" ? !liveCode(event.code) : !LIVE_BUTTONS.has(event.button))))
+            return null;
+        return { pressed: value.pressed.map(({ source, button }) => ({ source, button })),
+            last_event: event === null ? null : { at_ms: event.at_ms, source: event.source, kind: event.kind,
+                ...(event.button !== undefined ? { button: event.button } : {}),
+                ...(event.code !== undefined ? { code: event.code } : {}), pressed: event.pressed } };
+    }
+    class ControllerDebugClient {
+        constructor(rpc) {
+            this.rpc = rpc;
+            this.view = { snapshot: idle(), pending: null, error: "" };
+            this.listeners = new Set();
+            this.epoch = 0;
+            this.disposed = false;
+            this.cancelRequests = new Set();
+        }
+        subscribe(listener) {
+            this.listeners.add(listener);
+            listener(this.view);
+            return () => { this.listeners.delete(listener); };
+        }
+        emit(patch) {
+            this.view = { ...this.view, ...patch };
+            for (const listener of this.listeners)
+                listener(this.view);
+        }
+        clearPoll() {
+            if (this.pollTimer !== undefined)
+                clearTimeout(this.pollTimer);
+            this.pollTimer = undefined;
+        }
+        async request(invoke, timeout = 5000) {
+            let timer;
+            let cancel = () => { };
+            try {
+                return await new Promise((resolve, reject) => {
+                    cancel = () => reject(new Error("Controller debugger disconnected."));
+                    this.cancelRequests.add(cancel);
+                    timer = setTimeout(() => reject(new Error("Controller debugger did not respond. Try a new capture.")), timeout);
+                    Promise.resolve().then(invoke).then(resolve, reject);
+                });
+            }
+            finally {
+                if (timer !== undefined)
+                    clearTimeout(timer);
+                this.cancelRequests.delete(cancel);
+            }
+        }
+        accept(result, expectedSession) {
+            if (!result?.success)
+                throw new Error(result?.error || "Could not read controller report");
+            if (!STATES.has(result.state) || !Number.isInteger(result.revision) || result.revision < 0 ||
+                !Number.isInteger(result.remaining_ms) || result.remaining_ms < 0 || result.remaining_ms > 30000 ||
+                !Number.isInteger(result.event_count) || result.event_count < 0 ||
+                !Number.isInteger(result.device_count) || result.device_count < 0 ||
+                !object(result.metadata) ||
+                (result.state === "idle" ? result.session !== null : typeof result.session !== "string" || !result.session) ||
+                (expectedSession !== undefined && result.session !== expectedSession) ||
+                (result.state === "ready" && (!object(result.report) || !["complete", "stopped"].includes(result.report.phase)))) {
+                throw new Error("Invalid controller capture status. Reopen Diagnostics to reconnect.");
+            }
+            const current = this.view.snapshot;
+            if (current.session === result.session && result.revision < current.revision)
+                return;
+            // Even a newer stale transport response cannot resurrect a terminal session.
+            if (current.session === result.session && ["ready", "failed"].includes(current.state) && ACTIVE.has(result.state))
+                return;
+            this.emit({ snapshot: { ...result, report: result.state === "ready" ? result.report : null,
+                    live_input: result.state === "recording" ? liveInput(result.live_input) : null }, error: "" });
+        }
+        schedulePoll() {
+            this.clearPoll();
+            if (this.disposed || this.view.pending || this.view.error || !ACTIVE.has(this.view.snapshot.state))
+                return;
+            this.pollTimer = setTimeout(() => this.poll(), 250);
+        }
+        async poll() {
+            this.pollTimer = undefined;
+            const token = this.epoch;
+            const session = this.view.snapshot.session;
+            if (!session || this.disposed || this.view.pending)
+                return;
+            try {
+                const result = await this.request(() => this.rpc.get(session));
+                if (!this.disposed && token === this.epoch)
+                    this.accept(result, session);
+            }
+            catch (error) {
+                if (!this.disposed && token === this.epoch)
+                    this.emit({ error: error.message, snapshot: { ...this.view.snapshot, live_input: null } });
+            }
+            finally {
+                if (!this.disposed && token === this.epoch)
+                    this.schedulePoll();
+            }
+        }
+        async command(pending, invoke, expectedSession) {
+            const token = ++this.epoch;
+            this.clearPoll();
+            this.emit({ pending, error: "" });
+            try {
+                const result = await this.request(invoke, pending === "upload" ? 15000 : 5000);
+                if (!this.disposed && token === this.epoch)
+                    this.accept(result, expectedSession);
+            }
+            catch (error) {
+                if (!this.disposed && token === this.epoch)
+                    this.emit({ error: error.message, snapshot: { ...this.view.snapshot, live_input: null } });
+            }
+            finally {
+                if (!this.disposed && token === this.epoch) {
+                    this.emit({ pending: null });
+                    this.schedulePoll();
+                }
+            }
+        }
+        async connect() {
+            this.disposed = false;
+            await this.command("resume", () => this.rpc.resume());
+        }
+        async start() {
+            if (this.disposed || (this.view.pending && this.view.pending !== "resume") || ACTIVE.has(this.view.snapshot.state))
+                return;
+            await this.command("start", () => this.rpc.start());
+        }
+        async stop() {
+            const { snapshot, pending } = this.view;
+            if (this.disposed || pending || !snapshot.session || !["starting", "recording"].includes(snapshot.state))
+                return;
+            await this.command("stop", () => this.rpc.stop(snapshot.session), snapshot.session);
+        }
+        async refresh() {
+            if (!this.disposed && !this.view.pending)
+                await this.command("resume", () => this.rpc.resume());
+        }
+        async upload() {
+            const { snapshot, pending } = this.view;
+            if (this.disposed || pending || snapshot.state !== "ready" || !snapshot.session || snapshot.event_id)
+                return;
+            await this.command("upload", () => this.rpc.upload(snapshot.session, true), snapshot.session);
+        }
+        dispose() {
+            this.disposed = true;
+            ++this.epoch;
+            this.clearPoll();
+            for (const cancel of this.cancelRequests)
+                cancel();
+            this.listeners.clear();
+        }
+    }
+
+    var version = "0.3.21";
+
+    // Read the actual QAM surface. Document visibility alone does not establish
+    // whether a persistent Steam sidebar is on screen.
+    function quickAccessVisibility(documents, classNames) {
+        let foundMenu = false;
+        for (const doc of documents) {
+            // Prefer the sidebar itself over its full-screen transparent container.
+            for (const name of classNames) {
+                if (!name)
+                    continue;
+                const menus = Array.from(doc.getElementsByClassName(name));
+                if (!menus.length)
+                    continue;
+                foundMenu = true;
+                if (doc.hidden)
+                    break;
+                const view = doc.defaultView;
+                if (!view)
+                    break;
+                for (const menu of menus) {
+                    if (!menu.isConnected)
+                        continue;
+                    const rect = menu.getBoundingClientRect();
+                    if (rect.width <= 0 || rect.height <= 0 || rect.right <= 0 || rect.bottom <= 0 || rect.left >= view.innerWidth || rect.top >= view.innerHeight)
+                        continue;
+                    let visible = true;
+                    for (let node = menu; node; node = node.parentElement) {
+                        const style = view.getComputedStyle(node);
+                        if (style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse" || Number(style.opacity) === 0) {
+                            visible = false;
+                            break;
+                        }
+                    }
+                    if (visible)
+                        return true;
+                }
+                break;
+            }
+        }
+        // Missing markup is unknown, rather than an assertion that QAM is open.
+        return foundMenu ? false : null;
+    }
+
+    var DefaultContext = {
+      color: undefined,
+      size: undefined,
+      className: undefined,
+      style: undefined,
+      attr: undefined
+    };
+    var IconContext = React__default["default"].createContext && React__default["default"].createContext(DefaultContext);
+
+    var __assign = window && window.__assign || function () {
+      __assign = Object.assign || function (t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+          s = arguments[i];
+          for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
+        }
+        return t;
+      };
+      return __assign.apply(this, arguments);
+    };
+    var __rest = window && window.__rest || function (s, e) {
+      var t = {};
+      for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0) t[p] = s[p];
+      if (s != null && typeof Object.getOwnPropertySymbols === "function") for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+        if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i])) t[p[i]] = s[p[i]];
+      }
+      return t;
+    };
+    function Tree2Element(tree) {
+      return tree && tree.map(function (node, i) {
+        return React__default["default"].createElement(node.tag, __assign({
+          key: i
+        }, node.attr), Tree2Element(node.child));
+      });
+    }
+    function GenIcon(data) {
+      // eslint-disable-next-line react/display-name
+      return function (props) {
+        return React__default["default"].createElement(IconBase, __assign({
+          attr: __assign({}, data.attr)
+        }, props), Tree2Element(data.child));
+      };
+    }
+    function IconBase(props) {
+      var elem = function (conf) {
+        var attr = props.attr,
+          size = props.size,
+          title = props.title,
+          svgProps = __rest(props, ["attr", "size", "title"]);
+        var computedSize = size || conf.size || "1em";
+        var className;
+        if (conf.className) className = conf.className;
+        if (props.className) className = (className ? className + " " : "") + props.className;
+        return React__default["default"].createElement("svg", __assign({
+          stroke: "currentColor",
+          fill: "currentColor",
+          strokeWidth: "0"
+        }, conf.attr, attr, svgProps, {
+          className: className,
+          style: __assign(__assign({
+            color: props.color || conf.color
+          }, conf.style), props.style),
+          height: computedSize,
+          width: computedSize,
+          xmlns: "http://www.w3.org/2000/svg"
+        }), title && React__default["default"].createElement("title", null, title), props.children);
+      };
+      return IconContext !== undefined ? React__default["default"].createElement(IconContext.Consumer, null, function (conf) {
+        return elem(conf);
+      }) : elem(DefaultContext);
+    }
+
+    // THIS FILE IS AUTO GENERATED
+    function FaArrowCircleUp (props) {
+      return GenIcon({"tag":"svg","attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M8 256C8 119 119 8 256 8s248 111 248 248-111 248-248 248S8 393 8 256zm143.6 28.9l72.4-75.5V392c0 13.3 10.7 24 24 24h16c13.3 0 24-10.7 24-24V209.4l72.4 75.5c9.3 9.7 24.8 9.9 34.3.4l10.9-11c9.4-9.4 9.4-24.6 0-33.9L273 107.7c-9.4-9.4-24.6-9.4-33.9 0L106.3 240.4c-9.4 9.4-9.4 24.6 0 33.9l10.9 11c9.6 9.5 25.1 9.3 34.4-.4z"}}]})(props);
+    }function FaMicrophone (props) {
+      return GenIcon({"tag":"svg","attr":{"viewBox":"0 0 352 512"},"child":[{"tag":"path","attr":{"d":"M176 352c53.02 0 96-42.98 96-96V96c0-53.02-42.98-96-96-96S80 42.98 80 96v160c0 53.02 42.98 96 96 96zm160-160h-16c-8.84 0-16 7.16-16 16v48c0 74.8-64.49 134.82-140.79 127.38C96.71 376.89 48 317.11 48 250.3V208c0-8.84-7.16-16-16-16H16c-8.84 0-16 7.16-16 16v40.16c0 89.64 63.97 169.55 152 181.69V464H96c-8.84 0-16 7.16-16 16v16c0 8.84 7.16 16 16 16h160c8.84 0 16-7.16 16-16v-16c0-8.84-7.16-16-16-16h-56v-33.77C285.71 418.47 352 344.9 352 256v-48c0-8.84-7.16-16-16-16z"}}]})(props);
+    }
+
     const setOverlayLabel = callable("set_overlay_transcribing_label");
     const syncOverlayLanguage = () => setOverlayLabel(t("Transcribing...")).catch(() => { });
     const getPluginUpdate = callable("get_plugin_update");
@@ -4856,6 +5126,8 @@
                                     }
                                 } })))),
                 page === "game" && React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Mode") },
+                    React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                        React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: () => openProfileEditor(activePreset) }, t("Edit game profile"))),
                     rpcError && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                         React__default["default"].createElement("div", { role: "alert" }, rpcError)),
                     presets.map(option => React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, { key: String(option.data) },
@@ -4935,6 +5207,7 @@
             available && React__default["default"].createElement("span", { "aria-hidden": "true", style: { position: "absolute", right: "-3px", top: "-3px", width: "7px", height: "7px", borderRadius: "50%", background: "#7cdb98" } }));
     };
     var index = deckyFrontendLib.definePlugin(() => {
+        routerHook.addRoute(PROFILE_EDITOR_ROUTE, ProfileEditor, { exact: true });
         let logic = new DecktationLogic();
         let disposed = false;
         // One cached discovery check per plugin lifecycle, even before opening its panel.
@@ -5006,6 +5279,7 @@
             icon: React__default["default"].createElement(DecktationIcon, { logic: logic }),
             onDismount() {
                 disposed = true;
+                routerHook.removeRoute(PROFILE_EDITOR_ROUTE);
                 logic.updateListeners.clear();
                 clearInterval(bgNotifyInterval);
                 if (logic.recording) {
