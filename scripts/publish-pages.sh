@@ -7,7 +7,8 @@ set -euo pipefail
 : "${PAGES_BASE_URL:?PAGES_BASE_URL is required}"
 
 CLEANUP_ONLY="${CLEANUP_ONLY:-false}"
-GITHUB_SHA="${GITHUB_SHA:-}"
+# workflow_run belongs to master; its reserved GITHUB_SHA is not the build SHA.
+export BUILD_SHA="${BUILD_SHA:-${GITHUB_SHA:-}}"
 REF_NAME="${REF_NAME:-}"
 REF_TYPE="${REF_TYPE:-}"
 RELEASE_TAG="${RELEASE_TAG:-$REF_NAME}"
@@ -25,7 +26,7 @@ if [ "$CLEANUP_ONLY" != "true" ] && [ ! -f "$ZIP_SOURCE" ]; then
 fi
 
 if [ "$CLEANUP_ONLY" != "true" ]; then
-  : "${GITHUB_SHA:?GITHUB_SHA is required}"
+  : "${BUILD_SHA:?BUILD_SHA is required}"
   : "${REF_NAME:?REF_NAME is required}"
   : "${REF_TYPE:?REF_TYPE is required}"
   if [ "$REF_TYPE" = "pull_request" ]; then
@@ -60,7 +61,7 @@ write_metadata() {
   "plugin": "Decktation",
   "channel": $(escape_json "$channel"),
   "ref": $(escape_json "$ref_value"),
-  "commit": $(escape_json "$GITHUB_SHA"),
+  "commit": $(escape_json "$BUILD_SHA"),
   "zip_url": $(escape_json "$zip_url"),
   "generated_at": $(escape_json "$(date -u +%FT%TZ)")
 }
@@ -312,7 +313,7 @@ assert_branch_target_available() {
 assert_release_is_not_older() {
   local latest="$PAGES_DIR/releases/latest/metadata.json"
   [ "$REF_TYPE" = "tag" ] && [ -f "$latest" ] || return 0
-  python3 - "$RELEASE_TAG" "$GITHUB_SHA" "$latest" "$WORKSPACE_DIR/scripts/generate-store-catalog.py" <<'PY_RELEASE_ORDER'
+  python3 - "$RELEASE_TAG" "$BUILD_SHA" "$latest" "$WORKSPACE_DIR/scripts/generate-store-catalog.py" <<'PY_RELEASE_ORDER'
 import importlib.util
 import json
 import sys
@@ -350,7 +351,7 @@ from pathlib import Path
 Path(sys.argv[1]).write_text(json.dumps({
     'channel': 'pull_request', 'number': int(os.environ['PR_NUMBER']),
     'run_id': int(os.environ['PR_RUN_ID']), 'run_attempt': int(os.environ['PR_RUN_ATTEMPT']),
-    'commit': os.environ['GITHUB_SHA'],
+    'commit': os.environ['BUILD_SHA'],
     'head_repository': os.environ['PR_HEAD_REPO'],
     'zip_url': os.environ['PR_ZIP_URL'], 'sha256': os.environ['PR_ZIP_SHA256'],
 }, indent=2) + '\n')
@@ -429,8 +430,8 @@ render_pages_content() {
       git -C "$WORKSPACE_DIR" fetch origin "refs/tags/$RELEASE_TAG"
       local tag_manifests
       tag_manifests="$(mktemp -d)"
-      git -C "$WORKSPACE_DIR" show "$GITHUB_SHA:plugin.json" >"$tag_manifests/plugin.json"
-      git -C "$WORKSPACE_DIR" show "$GITHUB_SHA:package.json" >"$tag_manifests/package.json"
+      git -C "$WORKSPACE_DIR" show "$BUILD_SHA:plugin.json" >"$tag_manifests/plugin.json"
+      git -C "$WORKSPACE_DIR" show "$BUILD_SHA:package.json" >"$tag_manifests/package.json"
       catalog_plugin_manifest="$tag_manifests/plugin.json"
       catalog_package_manifest="$tag_manifests/package.json"
     fi
@@ -582,13 +583,13 @@ publish_pages() (
     if [ "$REF_TYPE" = "pull_request" ]; then
       python3 "$WORKSPACE_DIR/scripts/verify-current-pr.py" \
         --repository "$GITHUB_REPOSITORY" --number "$PR_NUMBER" \
-        --sha "$GITHUB_SHA" --head-repository "$PR_HEAD_REPO" || {
+        --sha "$BUILD_SHA" --head-repository "$PR_HEAD_REPO" || {
           echo "PR closed or changed before publication" >&2
           return 1
         }
     else
       bash "$WORKSPACE_DIR/scripts/verify-current-ref.sh" \
-        "https://github.com/${GITHUB_REPOSITORY}.git" "$REF_TYPE" "$REF_NAME" "$GITHUB_SHA" || {
+        "https://github.com/${GITHUB_REPOSITORY}.git" "$REF_TYPE" "$REF_NAME" "$BUILD_SHA" || {
           echo "Ref moved or was deleted before publication; refusing stale ZIP" >&2
           return 1
         }
@@ -607,7 +608,7 @@ publish_pages() (
   if [ "$CLEANUP_ONLY" != "true" ] && [ "$REF_TYPE" = "pull_request" ] && \
      ! python3 "$WORKSPACE_DIR/scripts/verify-current-pr.py" \
        --repository "$GITHUB_REPOSITORY" --number "$PR_NUMBER" \
-       --sha "$GITHUB_SHA" --head-repository "$PR_HEAD_REPO"; then
+       --sha "$BUILD_SHA" --head-repository "$PR_HEAD_REPO"; then
     echo "PR moved during publication; removing stale catalog entry" >&2
     refresh_testing_catalog
     git add store/testing/plugins.json
@@ -620,7 +621,7 @@ publish_pages() (
   # its catalog entry promptly; Decky also verifies the pinned ZIP hash.
   if [ "$CLEANUP_ONLY" != "true" ] && [ "$REF_TYPE" = "branch" ] && \
      ! bash "$WORKSPACE_DIR/scripts/verify-current-ref.sh" \
-       "https://github.com/${GITHUB_REPOSITORY}.git" "$REF_TYPE" "$REF_NAME" "$GITHUB_SHA"; then
+       "https://github.com/${GITHUB_REPOSITORY}.git" "$REF_TYPE" "$REF_NAME" "$BUILD_SHA"; then
     echo "Ref moved during publication; reconciling test catalog" >&2
     refresh_testing_catalog
     git add store/testing/plugins.json
