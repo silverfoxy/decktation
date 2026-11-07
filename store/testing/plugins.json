@@ -1,0 +1,19 @@
+[
+  {
+    "id": 1,
+    "name": "Decktation",
+    "author": "silverfoxy",
+    "description": "Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using whisper.cpp. UNREVIEWED experimental code: ",
+    "tags": [
+      "voice",
+      "dictation",
+      "speech-to-text",
+      "input",
+      "chat",
+      "gaming",
+      "accessibility"
+    ],
+    "image_url": "https://raw.githubusercontent.com/silverfoxy/decktation/master/store-card.png",
+    "versions": []
+  }
+]
