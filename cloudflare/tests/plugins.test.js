@@ -29,10 +29,13 @@ test("OPTIONS permits Decky's custom header", async () => {
 
 test("GET and OPTIONS serve the opt-in test catalog without changing stable", async (t) => {
   const fetch = t.mock.method(globalThis, "fetch", async (url, init) => {
-    assert.equal(url, "https://silverfoxy.github.io/decktation/store/testing/plugins.json");
+    assert.equal(new URL(url).origin + new URL(url).pathname, "https://silverfoxy.github.io/decktation/store/testing/plugins.json");
+    assert.ok(new URL(url).searchParams.has("catalog_refresh"));
+    assert.equal(init.headers.get("Cache-Control"), "no-cache");
+    assert.equal(init.cf.cacheTtl, 0);
     assert.equal(init.redirect, "manual");
     return new Response('[{"name":"Decktation","versions":[]}]', {
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Cache-Control": "max-age=600", Age: "500", Expires: "later", ETag: "old" },
     });
   });
   const url = "https://decktation.com/testing/plugins.json";
@@ -43,6 +46,8 @@ test("GET and OPTIONS serve the opt-in test catalog without changing stable", as
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("Access-Control-Allow-Origin"), "*");
   assert.equal((await response.json())[0].name, "Decktation");
+  assert.equal(response.headers.get("Cache-Control"), "no-store");
+  for (const name of ["Age", "Expires", "ETag"]) assert.equal(response.headers.get(name), null);
   assert.equal(fetch.mock.callCount(), 1);
   assert.equal((await worker.fetch(new Request(url, { method: "POST" }))).status, 405);
 });
