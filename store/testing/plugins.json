@@ -3,7 +3,7 @@
     "id": 1,
     "name": "Decktation",
     "author": "silverfoxy",
-    "description": "Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using whisper.cpp. UNREVIEWED experimental code: PR #94 (7e9823d), PR #96 (a838299), PR #97 (d1755d2)",
+    "description": "Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using whisper.cpp. UNREVIEWED experimental code: PR #94 (7e9823d), PR #96 (a838299)",
     "tags": [
       "voice",
       "dictation",
@@ -16,11 +16,6 @@
     "image_url": "https://raw.githubusercontent.com/silverfoxy/decktation/master/store-card.png",
     "versions": [
       {
-        "name": "0.3.22-dev.c3faf68",
-        "hash": "6605ad72ff8afb0904714cde70e2f3ea702a3678ad0762d11f1c1dbace15c42d",
-        "artifact": "https://decktation.com/branches/master/Decktation.zip"
-      },
-      {
         "name": "0.3.22-dev.pr-94.7e9823d",
         "hash": "342bfa3a42bf9ee43db59dd5fe4be4fbbf89be327baf2f39a00d1a4936f3c93e",
         "artifact": "https://decktation.com/pulls/94/42394017559/2/Decktation.zip"
@@ -29,11 +24,6 @@
         "name": "0.3.22-dev.pr-96.a838299",
         "hash": "235e9dd7b59b2e69103dd76442f2553dc0df30a7198f808f30a60424b8329526",
         "artifact": "https://decktation.com/pulls/96/42412752007/1/Decktation.zip"
-      },
-      {
-        "name": "0.3.22-dev.pr-97.d1755d2",
-        "hash": "01b50b58b33cb110406eae94dfb18ef821e6a2dbe7676a60a7f89c97165357b1",
-        "artifact": "https://decktation.com/pulls/97/42415310506/1/Decktation.zip"
       }
     ]
   }
