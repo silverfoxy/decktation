@@ -249,5 +249,6 @@
   "Type (only English keyboard)": "Ввод (только английская раскладка)",
   "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Для ввода нужны английская раскладка (США) и текст ASCII. Другие символы не будут введены или отправлены.",
   "Paste": "Вставка (по умолчанию)",
-  "Edit game profile": "Изменить профиль игры"
+  "Edit game profile": "Изменить профиль игры",
+  "Use a space after channel names or spoken triggers.": "Добавляйте пробел после названий каналов или голосовых команд."
 }

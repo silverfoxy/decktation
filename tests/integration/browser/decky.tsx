@@ -11,7 +11,7 @@ export const Navigation = {
 export const quickAccessMenuClasses = { Title: 'fixture-title', QuickAccessMenu: 'fixture-qam', Menu: 'fixture-menu' };
 export const gamepadContextMenuClasses = {};
 export const getGamepadNavigationTrees = () => [];
-export const GamepadButton = { OK: 1, CANCEL: 2, DIR_UP: 9, DIR_DOWN: 10 };
+export const GamepadButton = { OK: 1, CANCEL: 2, DIR_UP: 9, DIR_DOWN: 10, DIR_LEFT: 11, DIR_RIGHT: 12 };
 export const PanelSection = ({ title, children }: any) => <section><h2>{title}</h2>{children}</section>;
 export const PanelSectionRow = ({ children }: any) => <div>{children}</div>;
 export const TextField = ({ label, description, ...props }: any) => <div style={{ width: '100%' }}><label style={{ display: 'block' }}>{label}<input style={{ display: 'block', width: '100%', padding: '10px', marginTop: '8px', marginBottom: '8px', background: '#101923', color: 'white', border: '1px solid #64748b', borderRadius: '4px', fontSize: '16px' }} {...props} /></label>{description && <div style={{ fontSize: '14px', color: '#aab8c7', lineHeight: 1.5 }}>{description}</div>}</div>;

@@ -249,5 +249,6 @@
   "Type (only English keyboard)": "Wpisuj (tylko klawiatura angielska)",
   "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Wpisywanie wymaga angielskiego (US) układu klawiatury i tekstu ASCII. Inny tekst nie zostanie wpisany ani wysłany.",
   "Paste": "Wklej (domyślnie)",
-  "Edit game profile": "Edytuj profil gry"
+  "Edit game profile": "Edytuj profil gry",
+  "Use a space after channel names or spoken triggers.": "Użyj spacji po nazwach kanałów lub wyzwalaczach głosowych."
 }

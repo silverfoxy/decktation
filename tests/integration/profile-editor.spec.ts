@@ -99,3 +99,45 @@ for (const viewport of [{ width: 1280, height: 800, rows: 10 }, { width: 800, he
     await page.screenshot({ path: `/tmp/decktation-profile-editor-compact-${viewport.width}.png` });
   });
 }
+
+test('controller directions follow horizontal rows and channel panes', async ({ page }) => {
+  await openEditor(page);
+  const direction = (button: number) => page.evaluate(button => (window as any).fixture.gamepad('onGamepadDirection', button), button);
+  const channels = page.getByRole('button', { name: /Channels/ });
+  const keywords = page.getByRole('button', { name: /Keywords/ });
+  await channels.focus();
+  await direction(12);
+  await expect(keywords).toBeFocused();
+  await direction(11);
+  await expect(channels).toBeFocused();
+  const party = page.getByRole('button', { name: /^party/i });
+  await party.click();
+  await party.focus();
+  await direction(12);
+  await expect(page.getByLabel('Chat command')).toBeFocused();
+  await direction(11);
+  await expect(party).toBeFocused();
+  await direction(10);
+  await expect(party).not.toBeFocused();
+  const trigger = page.getByLabel('New spoken trigger');
+  await trigger.fill('group');
+  await direction(12);
+  await expect(page.getByRole('button', { name: 'Add trigger', exact: true })).toBeFocused();
+  await direction(11);
+  await expect(trigger).toBeFocused();
+});
+
+test('trigger remains visible above an overlay keyboard and in a reduced viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 600 });
+  await openEditor(page);
+  const trigger = page.getByLabel('New spoken trigger');
+  await trigger.fill('group');
+  await expect.poll(async () => trigger.evaluate(input => input.getBoundingClientRect().bottom)).toBeLessThan(320);
+  await expect.poll(() => page.locator('.details').evaluate(pane => pane.scrollHeight > pane.clientHeight)).toBe(true);
+  await page.setViewportSize({ width: 800, height: 320 });
+  await expect(trigger).toBeInViewport();
+  await trigger.press('End');
+  await trigger.pressSequentially(' chat');
+  await expect(trigger).toHaveValue('group chat');
+  await expect(page.getByText('Use a space after channel names or spoken triggers.')).toBeAttached();
+});

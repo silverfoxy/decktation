@@ -249,5 +249,6 @@
   "Type (only English keyboard)": "입력 (영어 키보드만)",
   "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "입력에는 영어(미국) 키보드 배열과 ASCII 텍스트가 필요합니다. 다른 문자는 입력하거나 전송하지 않습니다.",
   "Paste": "붙여넣기 (기본값)",
-  "Edit game profile": "게임 프로필 편집"
+  "Edit game profile": "게임 프로필 편집",
+  "Use a space after channel names or spoken triggers.": "채널 이름이나 음성 트리거 뒤에 공백을 넣으세요."
 }

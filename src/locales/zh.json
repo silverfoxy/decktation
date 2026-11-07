@@ -249,5 +249,6 @@
   "Type (only English keyboard)": "键入（仅限英文键盘）",
   "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "键入需要英语（美国）键盘布局和 ASCII 文本。其他字符不会输入或发送。",
   "Paste": "粘贴（默认）",
-  "Edit game profile": "编辑游戏配置"
+  "Edit game profile": "编辑游戏配置",
+  "Use a space after channel names or spoken triggers.": "在频道名称或语音触发词后添加空格。"
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { DialogButton, Dropdown, Focusable, Navigation, TextField, TextFieldProps } from "decky-frontend-lib";
 import { callable } from "@decky/api";
 import { t } from "./i18n";
+import { moveEditorFocus } from "./profileEditorNavigation";
 
 export const PROFILE_EDITOR_ROUTE = "/decktation/profiles";
 let initialGame = "wow";
@@ -34,8 +35,8 @@ const styles = `
 .decktation-editor * { box-sizing:border-box; }
 .decktation-editor h1 { font-size:20px; line-height:1.2; margin:0; white-space:nowrap; }
 .decktation-editor h2 { font-size:17px; line-height:1.25; margin:0; text-transform:capitalize; }
-.decktation-editor header,.decktation-editor footer,.decktation-editor .tabs,.decktation-editor .inline { display:flex; align-items:center; gap:8px; min-width:0; }
-.decktation-editor header { flex-shrink:0; justify-content:space-between; background:transparent; padding:0; min-height:36px; }
+.decktation-editor .editor-header,.decktation-editor .editor-footer,.decktation-editor .tabs,.decktation-editor .inline { display:flex; align-items:center; gap:8px; min-width:0; }
+.decktation-editor .editor-header { flex-shrink:0; justify-content:space-between; background:transparent; padding:0; min-height:36px; }
 .decktation-editor .tabs { flex-shrink:0; }
 .decktation-editor .profile-picker { display:flex; align-items:center; gap:8px; min-width:0; }
 .decktation-editor .profile-picker > span { font-size:12px; color:#aab8c7; white-space:nowrap; }
@@ -55,6 +56,10 @@ const styles = `
 .decktation-editor .channel-label > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .decktation-editor code { color:#9cc7e3; text-transform:none; font-size:13px; }
 .decktation-editor .details { overflow-y:auto; }
+.decktation-editor .details,.decktation-editor .keywords { scrollbar-gutter:stable; }
+.decktation-editor .details[data-editor-editing="true"],.decktation-editor .keywords[data-editor-editing="true"] { padding-bottom:min(45vh,320px); scroll-padding-top:10px; }
+.decktation-editor .details::-webkit-scrollbar,.decktation-editor .keywords::-webkit-scrollbar { width:8px; }
+.decktation-editor .details::-webkit-scrollbar-thumb,.decktation-editor .keywords::-webkit-scrollbar-thumb { background:#60788a; border-radius:4px; }
 .decktation-editor .details-body { display:flex; flex-direction:column; gap:12px; }
 .decktation-editor .editor-field { display:flex; flex-direction:column; gap:4px; min-width:0; }
 .decktation-editor .editor-label { font-size:13px; color:#cdd7e2; line-height:18px; }
@@ -65,8 +70,8 @@ const styles = `
 .decktation-editor .inline .editor-field { flex:1; }
 .decktation-editor .chips { display:flex; flex-wrap:wrap; gap:6px; margin:0; }
 .decktation-editor .hint { color:#aab8c7; font-size:12px; line-height:1.4; margin:0; }
-.decktation-editor footer { flex-shrink:0; border-top:1px solid #344659; padding-top:8px; justify-content:space-between; min-height:40px; }
-.decktation-editor footer [role="alert"],.decktation-editor footer [role="status"] { flex:1; min-width:0; text-align:center; }
+.decktation-editor .editor-footer { flex-shrink:0; border-top:1px solid #344659; padding-top:8px; justify-content:space-between; min-height:40px; }
+.decktation-editor .editor-footer [role="alert"],.decktation-editor .editor-footer [role="status"] { flex:1; min-width:0; text-align:center; }
 .decktation-editor .keywords { flex:1; min-height:0; overflow-y:auto; background:#1b2836; padding:16px; border-radius:6px; display:flex; flex-direction:column; gap:12px; }
 .decktation-editor .notice { padding:10px; background:#354557; border-radius:6px; flex-shrink:0; }
 .decktation-editor .error { color:#ffb7b7; font-size:12px; }
@@ -90,6 +95,45 @@ export function ProfileEditor() {
     const [error, setError] = useState("");
     const [pendingAction, setPendingAction] = useState<{ game?: string } | null>(null);
     const details = useRef<HTMLDivElement>(null);
+    const editor = useRef<HTMLDivElement>(null);
+    const [viewport, setViewport] = useState(() => ({ height: Math.min(window.innerHeight, window.visualViewport?.height ?? window.innerHeight), top: window.visualViewport?.offsetTop || 0 }));
+    useEffect(() => {
+        const root = editor.current;
+        if (!root) return;
+        let frame = 0;
+        let input: HTMLElement | null = null;
+        const revealInput = () => {
+            cancelAnimationFrame(frame);
+            frame = requestAnimationFrame(() => {
+                if (!input || !root.contains(input)) return;
+                const pane = input.closest<HTMLElement>('.details, .keywords');
+                if (!pane) return;
+                pane.setAttribute('data-editor-editing', 'true');
+                pane.scrollTop += input.getBoundingClientRect().top - pane.getBoundingClientRect().top - 10;
+            });
+        };
+        const resize = () => {
+            setViewport({ height: Math.min(window.innerHeight, window.visualViewport?.height ?? window.innerHeight), top: window.visualViewport?.offsetTop || 0 });
+            revealInput();
+        };
+        const onFocus = (event: FocusEvent) => {
+            const target = event.target as HTMLElement;
+            root.querySelectorAll('[data-editor-editing]').forEach(pane => pane.removeAttribute('data-editor-editing'));
+            input = target.matches('input, textarea') ? target : null;
+            revealInput();
+        };
+        root.addEventListener('focusin', onFocus);
+        window.addEventListener('resize', resize);
+        window.visualViewport?.addEventListener('resize', resize);
+        window.visualViewport?.addEventListener('scroll', resize);
+        return () => {
+            cancelAnimationFrame(frame);
+            root.removeEventListener('focusin', onFocus);
+            window.removeEventListener('resize', resize);
+            window.visualViewport?.removeEventListener('resize', resize);
+            window.visualViewport?.removeEventListener('scroll', resize);
+        };
+    }, []);
     const mounted = useRef(true);
     useEffect(() => {
         mounted.current = true;
@@ -136,22 +180,24 @@ export function ProfileEditor() {
     const filtered = profile ? Object.keys(profile.channels).filter(channel =>
         `${title(channel)} ${profile.channels[channel]} ${Object.entries(profile.channel_triggers).filter(([, value]) => value === channel).map(([key]) => key).join(" ")}`.toLowerCase().includes(search.toLowerCase())) : [];
     const aliases = profile ? Object.entries(profile.channel_triggers).filter(([, channel]) => channel === selected).map(([phrase]) => phrase) : [];
-    return <Focusable className="decktation-editor" onCancel={(event: any) => { event.stopPropagation(); event.preventDefault(); if (pending) setPendingAction(null); else leave(); }} onCancelActionDescription={t("Back")}>
+    return <Focusable ref={editor} className="decktation-editor" style={{ height: viewport.height, top: viewport.top }} onGamepadDirection={event => {
+        if (!busy && editor.current && moveEditorFocus(editor.current, event.detail.button)) { event.preventDefault(); event.stopPropagation(); }
+    }} onCancel={(event: any) => { event.stopPropagation(); event.preventDefault(); if (pending) setPendingAction(null); else leave(); }} onCancelActionDescription={t("Back")}>
         <style>{styles}</style>
-        <header><h1>{t("Game profiles")}</h1>
-            <div className="tabs"><DialogButton className="editor-button" disabled={disabled} onClick={() => setTab("channels")}>{tab === "channels" ? "● " : ""}{t("Channels")}</DialogButton>
-                <DialogButton className="editor-button" disabled={disabled} onClick={() => setTab("keywords")}>{tab === "keywords" ? "● " : ""}{t("Keywords")}</DialogButton></div>
+        <Focusable className="editor-header" role="banner" flow-children="row" data-nav-row><h1>{t("Game profiles")}</h1>
+            <Focusable className="tabs" flow-children="row" data-nav-row><DialogButton className="editor-button" disabled={disabled} onClick={() => setTab("channels")}>{tab === "channels" ? "● " : ""}{t("Channels")}</DialogButton>
+                <DialogButton className="editor-button" disabled={disabled} onClick={() => setTab("keywords")}>{tab === "keywords" ? "● " : ""}{t("Keywords")}</DialogButton></Focusable>
             <div className="profile-picker"><span>{t("Game profile")}</span><Dropdown menuLabel={t("Game profile")} rgOptions={presets.map(preset => ({ data:preset.id, label:t(preset.name) }))} selectedOption={game} disabled={disabled}
-                onChange={option => { if (String(option.data) !== game) leave(String(option.data)); }} /></div></header>
+                onChange={option => { if (String(option.data) !== game) leave(String(option.data)); }} /></div></Focusable>
         {pending && <Focusable className="notice" role="alertdialog" aria-label={t("Unsaved changes")}>
-            <div>{t("Discard unsaved changes?")}</div><div className="inline">
+            <div>{t("Discard unsaved changes?")}</div><Focusable className="inline" flow-children="row" data-nav-row>
                 <DialogButton className="editor-button" onClick={() => setPendingAction(null)}>{t("Keep editing")}</DialogButton>
                 <DialogButton className="editor-button" onClick={() => { const next = pendingAction?.game; setPendingAction(null); if (next) setGame(next); else Navigation.NavigateBack(); }}>{t("Discard changes")}</DialogButton>
-            </div></Focusable>}
+            </Focusable></Focusable>}
         {!profile && <div role="status">{error || t("Loading...")}</div>}
         {profile && tab === "channels" && <div className="workspace">
-            <Focusable className="channel-list"><EditorTextField label={t("Search channels")} value={search} disabled={disabled} onChange={event => setSearch(event.target.value)} />
-                <Focusable className="channel-rows" aria-label={t("Channel list")}>
+            <Focusable className="channel-list" flow-children="column"><EditorTextField label={t("Search channels")} value={search} disabled={disabled} onChange={event => setSearch(event.target.value)} />
+                <Focusable flow-children="column" className="channel-rows" aria-label={t("Channel list")}>
                     {filtered.map(channel => <div key={channel} className={`channel-row ${selected === channel ? "selected" : ""}`}>
                         <DialogButton className="editor-button" disabled={disabled} onClick={() => {
                             if (trigger.trim()) { setError(t("Add or clear the spoken trigger before selecting another channel.")); return; }
@@ -173,7 +219,7 @@ export function ProfileEditor() {
                 <div className="hint">{t("Use lowercase letters, numbers, or underscores. Start with a letter.")}</div>
                 <DialogButton className="editor-button" disabled={disabled} onClick={() => { setAddingChannel(false); setNewChannel(""); }}>{t("Cancel")}</DialogButton></>}
             </Focusable>
-            <Focusable className="details"><div ref={details} className="details-body"><h2>{title(selected)}</h2>
+            <Focusable className="details" flow-children="column"><div ref={details} className="details-body"><h2>{title(selected)}</h2>
                 <div className="field"><EditorTextField label={t("Chat command")} value={profile.channels[selected] || ""} disabled={disabled}
                     description={t("For example /p. Leave empty to type without a channel command.")}
                     onChange={event => update({ ...profile, channels:{ ...profile.channels, [selected]:event.target.value } })} /></div>
@@ -181,30 +227,30 @@ export function ProfileEditor() {
                     onClick={() => update({ ...profile, default_channel:selected })}>{profile.default_channel === selected ? "★ " : "☆ "}{t("Use as default channel")}</DialogButton></div>
                 <div className="trigger-section"><h2>{t("Additional spoken triggers")}</h2>
                 <p className="hint">{t("Say a trigger before your message to select this channel. Built-in language triggers remain available.")}</p>
-                <div className="chips">{aliases.map(phrase => <DialogButton className="editor-button" key={phrase} disabled={disabled} onClick={() => {
+                <Focusable className="chips" flow-children="row" data-nav-row>{aliases.map(phrase => <DialogButton className="editor-button" key={phrase} disabled={disabled} onClick={() => {
                     const next = { ...profile.channel_triggers }; delete next[phrase]; update({ ...profile, channel_triggers:next });
-                }}>{t("Remove trigger")}: {phrase} ×</DialogButton>)}</div>
-                <div className="inline"><EditorTextField label={t("New spoken trigger")} value={trigger} disabled={disabled} onChange={event => setTrigger(event.target.value)} />
+                }}>{t("Remove trigger")}: {phrase} ×</DialogButton>)}</Focusable>
+                <Focusable className="inline" flow-children="row" data-nav-row><EditorTextField label={t("New spoken trigger")} value={trigger} disabled={disabled} onChange={event => setTrigger(event.target.value)} />
                 <DialogButton className="editor-button" disabled={disabled || !trigger.trim()} onClick={() => {
                     const phrase = trigger.trim().toLowerCase();
                     if (phrase in profile.channel_triggers && profile.channel_triggers[phrase] !== selected) { setError(t("Each spoken trigger must belong to one channel.")); return; }
                     update({ ...profile, channel_triggers:{ ...profile.channel_triggers, [phrase]:selected } }); setTrigger("");
-                }}>{t("Add trigger")}</DialogButton></div></div>
-                <p className="hint">{t("Example")}: <strong>{aliases[0] || title(selected)} {t("hello everyone")}</strong> → <code>{profile.channels[selected].trim()} {t("hello everyone")}</code></p>
+                }}>{t("Add trigger")}</DialogButton></Focusable></div>
+                <p className="hint">{t("Use a space after channel names or spoken triggers.")}<br />{t("Example")}: <strong>{aliases[0] || title(selected)} {t("hello everyone")}</strong> → <code>{profile.channels[selected].trim()} {t("hello everyone")}</code></p>
             </div></Focusable>
         </div>}
-        {profile && tab === "keywords" && <Focusable className="keywords"><h2>{t("Recognition keywords")}</h2>
+        {profile && tab === "keywords" && <Focusable className="keywords" flow-children="column"><h2>{t("Recognition keywords")}</h2>
             <p className="hint">{t("Names and game terms that help Whisper recognize speech. These hints apply to every channel in this game profile.")}</p>
-            <div className="inline"><EditorTextField label={t("New keyword")} value={keyword} disabled={disabled} onChange={event => setKeyword(event.target.value)} />
+            <Focusable className="inline" flow-children="row" data-nav-row><EditorTextField label={t("New keyword")} value={keyword} disabled={disabled} onChange={event => setKeyword(event.target.value)} />
                 <DialogButton className="editor-button" disabled={disabled || !keyword.trim() || profile.hotwords.length >= 100} onClick={() => {
                     const word = keyword.trim(); if (!profile.hotwords.includes(word)) update({ ...profile, hotwords:[...profile.hotwords, word] }); setKeyword("");
-                }}>{t("Add keyword")}</DialogButton></div>
-            <div className="chips">{profile.hotwords.map((word, index) => <DialogButton className="editor-button" key={`${index}-${word}`} disabled={disabled}
-                onClick={() => update({ ...profile, hotwords:profile.hotwords.filter((_, position) => position !== index) })}>{t("Remove keyword")}: {word} ×</DialogButton>)}</div>
+                }}>{t("Add keyword")}</DialogButton></Focusable>
+            <Focusable className="chips" flow-children="row" data-nav-row>{profile.hotwords.map((word, index) => <DialogButton className="editor-button" key={`${index}-${word}`} disabled={disabled}
+                onClick={() => update({ ...profile, hotwords:profile.hotwords.filter((_, position) => position !== index) })}>{t("Remove keyword")}: {word} ×</DialogButton>)}</Focusable>
             {!profile.hotwords.length && <p className="hint">{t("No custom keywords yet. Add character names, places, or unusual game terms.")}</p>}
         </Focusable>}
-        <footer><DialogButton className="editor-button" disabled={busy} onClick={() => leave()}>{t("Back")}</DialogButton>
+        <Focusable className="editor-footer" role="contentinfo" flow-children="row" data-nav-row><DialogButton className="editor-button" disabled={busy} onClick={() => leave()}>{t("Back")}</DialogButton>
             <div role={error ? "alert" : "status"} className={error ? "error" : "hint"}>{error || (dirty ? t("Unsaved changes") : message)}</div>
-            <DialogButton className="editor-button" disabled={disabled || !profile || !dirty} onClick={save}>{busy ? t("Saving...") : t("Save changes")}</DialogButton></footer>
+            <DialogButton className="editor-button" disabled={disabled || !profile || !dirty} onClick={save}>{busy ? t("Saving...") : t("Save changes")}</DialogButton></Focusable>
     </Focusable>;
 }

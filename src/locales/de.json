@@ -249,5 +249,6 @@
   "Type (only English keyboard)": "Tippen (nur englische Tastatur)",
   "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Tippen erfordert eine englische US-Tastaturbelegung und ASCII-Text. Anderer Text wird weder eingegeben noch gesendet.",
   "Paste": "Einfügen (Standard)",
-  "Edit game profile": "Spielprofil bearbeiten"
+  "Edit game profile": "Spielprofil bearbeiten",
+  "Use a space after channel names or spoken triggers.": "Verwende ein Leerzeichen nach Kanalnamen oder gesprochenen Auslösern."
 }

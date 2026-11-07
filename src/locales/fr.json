@@ -249,5 +249,6 @@
   "Type (only English keyboard)": "Saisir (clavier anglais uniquement)",
   "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "La saisie nécessite un clavier anglais (US) et du texte ASCII. Les autres caractères ne sont ni saisis ni envoyés.",
   "Paste": "Coller (par défaut)",
-  "Edit game profile": "Modifier le profil du jeu"
+  "Edit game profile": "Modifier le profil du jeu",
+  "Use a space after channel names or spoken triggers.": "Ajoutez une espace après les noms de canal ou les déclencheurs vocaux."
 }

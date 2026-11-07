@@ -370,7 +370,8 @@
       "Type (only English keyboard)": "Type (only English keyboard)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.",
       Paste: Paste$9,
-      "Edit game profile": "Edit game profile"
+      "Edit game profile": "Edit game profile",
+      "Use a space after channel names or spoken triggers.": "Use a space after channel names or spoken triggers."
     };
 
     var af = "Afrikaans";
@@ -865,7 +866,8 @@
       "Type (only English keyboard)": "Escribir (solo teclado inglés)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Escribir requiere un teclado inglés (EE. UU.) y texto ASCII. Los demás caracteres no se introducen ni se envían.",
       Paste: Paste$8,
-      "Edit game profile": "Editar perfil del juego"
+      "Edit game profile": "Editar perfil del juego",
+      "Use a space after channel names or spoken triggers.": "Usa un espacio después de los nombres de canal o activadores hablados."
     };
 
     var Back$7 = "Назад";
@@ -1157,7 +1159,8 @@
       "Type (only English keyboard)": "Ввод (только английская раскладка)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Для ввода нужны английская раскладка (США) и текст ASCII. Другие символы не будут введены или отправлены.",
       Paste: Paste$7,
-      "Edit game profile": "Изменить профиль игры"
+      "Edit game profile": "Изменить профиль игры",
+      "Use a space after channel names or spoken triggers.": "Добавляйте пробел после названий каналов или голосовых команд."
     };
 
     var Back$6 = "Voltar";
@@ -1449,7 +1452,8 @@
       "Type (only English keyboard)": "Digitar (somente teclado inglês)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Digitar requer layout de teclado inglês (EUA) e texto ASCII. Outros caracteres não serão digitados nem enviados.",
       Paste: Paste$6,
-      "Edit game profile": "Editar perfil do jogo"
+      "Edit game profile": "Editar perfil do jogo",
+      "Use a space after channel names or spoken triggers.": "Use um espaço após os nomes dos canais ou gatilhos de voz."
     };
 
     var Back$5 = "Wstecz";
@@ -1741,7 +1745,8 @@
       "Type (only English keyboard)": "Wpisuj (tylko klawiatura angielska)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Wpisywanie wymaga angielskiego (US) układu klawiatury i tekstu ASCII. Inny tekst nie zostanie wpisany ani wysłany.",
       Paste: Paste$5,
-      "Edit game profile": "Edytuj profil gry"
+      "Edit game profile": "Edytuj profil gry",
+      "Use a space after channel names or spoken triggers.": "Użyj spacji po nazwach kanałów lub wyzwalaczach głosowych."
     };
 
     var Back$4 = "뒤로";
@@ -2033,7 +2038,8 @@
       "Type (only English keyboard)": "입력 (영어 키보드만)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "입력에는 영어(미국) 키보드 배열과 ASCII 텍스트가 필요합니다. 다른 문자는 입력하거나 전송하지 않습니다.",
       Paste: Paste$4,
-      "Edit game profile": "게임 프로필 편집"
+      "Edit game profile": "게임 프로필 편집",
+      "Use a space after channel names or spoken triggers.": "채널 이름이나 음성 트리거 뒤에 공백을 넣으세요."
     };
 
     var Back$3 = "戻る";
@@ -2325,7 +2331,8 @@
       "Type (only English keyboard)": "入力（英語キーボードのみ）",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "入力には英語（米国）キーボード配列とASCII文字が必要です。それ以外の文字は入力・送信されません。",
       Paste: Paste$3,
-      "Edit game profile": "ゲームプロファイルを編集"
+      "Edit game profile": "ゲームプロファイルを編集",
+      "Use a space after channel names or spoken triggers.": "チャンネル名や音声トリガーの後にスペースを入れてください。"
     };
 
     var Back$2 = "Zurück";
@@ -2617,7 +2624,8 @@
       "Type (only English keyboard)": "Tippen (nur englische Tastatur)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Tippen erfordert eine englische US-Tastaturbelegung und ASCII-Text. Anderer Text wird weder eingegeben noch gesendet.",
       Paste: Paste$2,
-      "Edit game profile": "Spielprofil bearbeiten"
+      "Edit game profile": "Spielprofil bearbeiten",
+      "Use a space after channel names or spoken triggers.": "Verwende ein Leerzeichen nach Kanalnamen oder gesprochenen Auslösern."
     };
 
     var Back$1 = "Retour";
@@ -2909,7 +2917,8 @@
       "Type (only English keyboard)": "Saisir (clavier anglais uniquement)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "La saisie nécessite un clavier anglais (US) et du texte ASCII. Les autres caractères ne sont ni saisis ni envoyés.",
       Paste: Paste$1,
-      "Edit game profile": "Modifier le profil du jeu"
+      "Edit game profile": "Modifier le profil du jeu",
+      "Use a space after channel names or spoken triggers.": "Ajoutez une espace après les noms de canal ou les déclencheurs vocaux."
     };
 
     var Back = "返回";
@@ -3201,7 +3210,8 @@
       "Type (only English keyboard)": "键入（仅限英文键盘）",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "键入需要英语（美国）键盘布局和 ASCII 文本。其他字符不会输入或发送。",
       Paste: Paste,
-      "Edit game profile": "编辑游戏配置"
+      "Edit game profile": "编辑游戏配置",
+      "Use a space after channel names or spoken triggers.": "在频道名称或语音触发词后添加空格。"
     };
 
     const catalogs = { en: en$1, es, ru, pt, pl, ko, ja, de, fr, zh };
@@ -3282,6 +3292,57 @@
         return nativeLanguageNames[code] || fallback;
     }
 
+    const controls = 'button, input, select, textarea, [role="button"]';
+    function available(root) {
+        return Array.from(root.querySelectorAll(controls)).filter(element => !element.matches(':disabled, [aria-disabled="true"]') && element.getClientRects().length > 0);
+    }
+    function focus(element) {
+        if (!element)
+            return false;
+        element.focus({ preventScroll: true });
+        element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        return true;
+    }
+    // Steam's default column traversal does not follow these full-screen rows.
+    function moveEditorFocus(root, direction) {
+        const active = document.activeElement;
+        if (!active || !root.contains(active))
+            return false;
+        const horizontal = direction === deckyFrontendLib.GamepadButton.DIR_LEFT || direction === deckyFrontendLib.GamepadButton.DIR_RIGHT;
+        const vertical = direction === deckyFrontendLib.GamepadButton.DIR_UP || direction === deckyFrontendLib.GamepadButton.DIR_DOWN;
+        if (!horizontal && !vertical)
+            return false;
+        const forward = direction === deckyFrontendLib.GamepadButton.DIR_RIGHT || direction === deckyFrontendLib.GamepadButton.DIR_DOWN ? 1 : -1;
+        const scope = root.querySelector('[role="alertdialog"]') || root;
+        const from = active.getBoundingClientRect();
+        const centerX = from.left + from.width / 2, centerY = from.top + from.height / 2;
+        const row = active.closest('[data-nav-row]');
+        if (horizontal && row && scope.contains(row)) {
+            const peers = available(row).filter(element => element !== active).map(element => ({ element, rect: element.getBoundingClientRect() }))
+                .filter(({ rect }) => rect.bottom > from.top && rect.top < from.bottom && (rect.left + rect.width / 2 - centerX) * forward > 2)
+                .sort((a, b) => Math.abs(a.rect.left + a.rect.width / 2 - centerX) - Math.abs(b.rect.left + b.rect.width / 2 - centerX));
+            if (peers.length)
+                return focus(peers[0].element);
+        }
+        const pane = active.closest('.channel-list, .details, .keywords');
+        if (scope === root && horizontal) {
+            if (direction === deckyFrontendLib.GamepadButton.DIR_RIGHT && pane?.matches('.channel-list'))
+                return focus(available(root.querySelector('.details'))[0]);
+            if (direction === deckyFrontendLib.GamepadButton.DIR_LEFT && pane?.matches('.details'))
+                return focus(root.querySelector('.channel-row.selected button, .channel-row.selected [role="button"]') || undefined);
+        }
+        const candidates = available(scope).filter(element => element !== active && !element.contains(active) &&
+            (!vertical || !pane || pane.contains(element) || !!element.closest('.editor-header, .editor-footer')))
+            .map(element => {
+            const rect = element.getBoundingClientRect();
+            const dx = rect.left + rect.width / 2 - centerX, dy = rect.top + rect.height / 2 - centerY;
+            const advance = (horizontal ? dx : dy) * forward;
+            const cross = Math.abs(horizontal ? dy : dx);
+            return { element, advance, score: advance + cross * 3 };
+        }).filter(candidate => candidate.advance > 2).sort((a, b) => a.score - b.score);
+        return focus(candidates[0]?.element);
+    }
+
     const PROFILE_EDITOR_ROUTE = "/decktation/profiles";
     let initialGame = "wow";
     function openProfileEditor(game) {
@@ -3305,8 +3366,8 @@
 .decktation-editor * { box-sizing:border-box; }
 .decktation-editor h1 { font-size:20px; line-height:1.2; margin:0; white-space:nowrap; }
 .decktation-editor h2 { font-size:17px; line-height:1.25; margin:0; text-transform:capitalize; }
-.decktation-editor header,.decktation-editor footer,.decktation-editor .tabs,.decktation-editor .inline { display:flex; align-items:center; gap:8px; min-width:0; }
-.decktation-editor header { flex-shrink:0; justify-content:space-between; background:transparent; padding:0; min-height:36px; }
+.decktation-editor .editor-header,.decktation-editor .editor-footer,.decktation-editor .tabs,.decktation-editor .inline { display:flex; align-items:center; gap:8px; min-width:0; }
+.decktation-editor .editor-header { flex-shrink:0; justify-content:space-between; background:transparent; padding:0; min-height:36px; }
 .decktation-editor .tabs { flex-shrink:0; }
 .decktation-editor .profile-picker { display:flex; align-items:center; gap:8px; min-width:0; }
 .decktation-editor .profile-picker > span { font-size:12px; color:#aab8c7; white-space:nowrap; }
@@ -3326,6 +3387,10 @@
 .decktation-editor .channel-label > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .decktation-editor code { color:#9cc7e3; text-transform:none; font-size:13px; }
 .decktation-editor .details { overflow-y:auto; }
+.decktation-editor .details,.decktation-editor .keywords { scrollbar-gutter:stable; }
+.decktation-editor .details[data-editor-editing="true"],.decktation-editor .keywords[data-editor-editing="true"] { padding-bottom:min(45vh,320px); scroll-padding-top:10px; }
+.decktation-editor .details::-webkit-scrollbar,.decktation-editor .keywords::-webkit-scrollbar { width:8px; }
+.decktation-editor .details::-webkit-scrollbar-thumb,.decktation-editor .keywords::-webkit-scrollbar-thumb { background:#60788a; border-radius:4px; }
 .decktation-editor .details-body { display:flex; flex-direction:column; gap:12px; }
 .decktation-editor .editor-field { display:flex; flex-direction:column; gap:4px; min-width:0; }
 .decktation-editor .editor-label { font-size:13px; color:#cdd7e2; line-height:18px; }
@@ -3336,8 +3401,8 @@
 .decktation-editor .inline .editor-field { flex:1; }
 .decktation-editor .chips { display:flex; flex-wrap:wrap; gap:6px; margin:0; }
 .decktation-editor .hint { color:#aab8c7; font-size:12px; line-height:1.4; margin:0; }
-.decktation-editor footer { flex-shrink:0; border-top:1px solid #344659; padding-top:8px; justify-content:space-between; min-height:40px; }
-.decktation-editor footer [role="alert"],.decktation-editor footer [role="status"] { flex:1; min-width:0; text-align:center; }
+.decktation-editor .editor-footer { flex-shrink:0; border-top:1px solid #344659; padding-top:8px; justify-content:space-between; min-height:40px; }
+.decktation-editor .editor-footer [role="alert"],.decktation-editor .editor-footer [role="status"] { flex:1; min-width:0; text-align:center; }
 .decktation-editor .keywords { flex:1; min-height:0; overflow-y:auto; background:#1b2836; padding:16px; border-radius:6px; display:flex; flex-direction:column; gap:12px; }
 .decktation-editor .notice { padding:10px; background:#354557; border-radius:6px; flex-shrink:0; }
 .decktation-editor .error { color:#ffb7b7; font-size:12px; }
@@ -3360,6 +3425,48 @@
         const [error, setError] = React.useState("");
         const [pendingAction, setPendingAction] = React.useState(null);
         const details = React.useRef(null);
+        const editor = React.useRef(null);
+        const [viewport, setViewport] = React.useState(() => ({ height: Math.min(window.innerHeight, window.visualViewport?.height ?? window.innerHeight), top: window.visualViewport?.offsetTop || 0 }));
+        React.useEffect(() => {
+            const root = editor.current;
+            if (!root)
+                return;
+            let frame = 0;
+            let input = null;
+            const revealInput = () => {
+                cancelAnimationFrame(frame);
+                frame = requestAnimationFrame(() => {
+                    if (!input || !root.contains(input))
+                        return;
+                    const pane = input.closest('.details, .keywords');
+                    if (!pane)
+                        return;
+                    pane.setAttribute('data-editor-editing', 'true');
+                    pane.scrollTop += input.getBoundingClientRect().top - pane.getBoundingClientRect().top - 10;
+                });
+            };
+            const resize = () => {
+                setViewport({ height: Math.min(window.innerHeight, window.visualViewport?.height ?? window.innerHeight), top: window.visualViewport?.offsetTop || 0 });
+                revealInput();
+            };
+            const onFocus = (event) => {
+                const target = event.target;
+                root.querySelectorAll('[data-editor-editing]').forEach(pane => pane.removeAttribute('data-editor-editing'));
+                input = target.matches('input, textarea') ? target : null;
+                revealInput();
+            };
+            root.addEventListener('focusin', onFocus);
+            window.addEventListener('resize', resize);
+            window.visualViewport?.addEventListener('resize', resize);
+            window.visualViewport?.addEventListener('scroll', resize);
+            return () => {
+                cancelAnimationFrame(frame);
+                root.removeEventListener('focusin', onFocus);
+                window.removeEventListener('resize', resize);
+                window.visualViewport?.removeEventListener('resize', resize);
+                window.visualViewport?.removeEventListener('scroll', resize);
+            };
+        }, []);
         const mounted = React.useRef(true);
         React.useEffect(() => {
             mounted.current = true;
@@ -3445,14 +3552,19 @@
         const disabled = busy || pending;
         const filtered = profile ? Object.keys(profile.channels).filter(channel => `${title(channel)} ${profile.channels[channel]} ${Object.entries(profile.channel_triggers).filter(([, value]) => value === channel).map(([key]) => key).join(" ")}`.toLowerCase().includes(search.toLowerCase())) : [];
         const aliases = profile ? Object.entries(profile.channel_triggers).filter(([, channel]) => channel === selected).map(([phrase]) => phrase) : [];
-        return React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "decktation-editor", onCancel: (event) => { event.stopPropagation(); event.preventDefault(); if (pending)
+        return React__default["default"].createElement(deckyFrontendLib.Focusable, { ref: editor, className: "decktation-editor", style: { height: viewport.height, top: viewport.top }, onGamepadDirection: event => {
+                if (!busy && editor.current && moveEditorFocus(editor.current, event.detail.button)) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+            }, onCancel: (event) => { event.stopPropagation(); event.preventDefault(); if (pending)
                 setPendingAction(null);
             else
                 leave(); }, onCancelActionDescription: t("Back") },
             React__default["default"].createElement("style", null, styles),
-            React__default["default"].createElement("header", null,
+            React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "editor-header", role: "banner", "flow-children": "row", "data-nav-row": true },
                 React__default["default"].createElement("h1", null, t("Game profiles")),
-                React__default["default"].createElement("div", { className: "tabs" },
+                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "tabs", "flow-children": "row", "data-nav-row": true },
                     React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled, onClick: () => setTab("channels") },
                         tab === "channels" ? "● " : "",
                         t("Channels")),
@@ -3465,7 +3577,7 @@
                             leave(String(option.data)); } }))),
             pending && React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "notice", role: "alertdialog", "aria-label": t("Unsaved changes") },
                 React__default["default"].createElement("div", null, t("Discard unsaved changes?")),
-                React__default["default"].createElement("div", { className: "inline" },
+                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "inline", "flow-children": "row", "data-nav-row": true },
                     React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", onClick: () => setPendingAction(null) }, t("Keep editing")),
                     React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", onClick: () => { const next = pendingAction?.game; setPendingAction(null); if (next)
                             setGame(next);
@@ -3473,9 +3585,9 @@
                             deckyFrontendLib.Navigation.NavigateBack(); } }, t("Discard changes")))),
             !profile && React__default["default"].createElement("div", { role: "status" }, error || t("Loading...")),
             profile && tab === "channels" && React__default["default"].createElement("div", { className: "workspace" },
-                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "channel-list" },
+                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "channel-list", "flow-children": "column" },
                     React__default["default"].createElement(EditorTextField, { label: t("Search channels"), value: search, disabled: disabled, onChange: event => setSearch(event.target.value) }),
-                    React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "channel-rows", "aria-label": t("Channel list") },
+                    React__default["default"].createElement(deckyFrontendLib.Focusable, { "flow-children": "column", className: "channel-rows", "aria-label": t("Channel list") },
                         filtered.map(channel => React__default["default"].createElement("div", { key: channel, className: `channel-row ${selected === channel ? "selected" : ""}` },
                             React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled, onClick: () => {
                                     if (trigger.trim()) {
@@ -3512,7 +3624,7 @@
                             } }, t("Add channel")),
                         React__default["default"].createElement("div", { className: "hint" }, t("Use lowercase letters, numbers, or underscores. Start with a letter.")),
                         React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled, onClick: () => { setAddingChannel(false); setNewChannel(""); } }, t("Cancel")))),
-                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "details" },
+                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "details", "flow-children": "column" },
                     React__default["default"].createElement("div", { ref: details, className: "details-body" },
                         React__default["default"].createElement("h2", null, title(selected)),
                         React__default["default"].createElement("div", { className: "field" },
@@ -3524,7 +3636,7 @@
                         React__default["default"].createElement("div", { className: "trigger-section" },
                             React__default["default"].createElement("h2", null, t("Additional spoken triggers")),
                             React__default["default"].createElement("p", { className: "hint" }, t("Say a trigger before your message to select this channel. Built-in language triggers remain available.")),
-                            React__default["default"].createElement("div", { className: "chips" }, aliases.map(phrase => React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", key: phrase, disabled: disabled, onClick: () => {
+                            React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "chips", "flow-children": "row", "data-nav-row": true }, aliases.map(phrase => React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", key: phrase, disabled: disabled, onClick: () => {
                                     const next = { ...profile.channel_triggers };
                                     delete next[phrase];
                                     update({ ...profile, channel_triggers: next });
@@ -3533,7 +3645,7 @@
                                 ": ",
                                 phrase,
                                 " \u00D7"))),
-                            React__default["default"].createElement("div", { className: "inline" },
+                            React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "inline", "flow-children": "row", "data-nav-row": true },
                                 React__default["default"].createElement(EditorTextField, { label: t("New spoken trigger"), value: trigger, disabled: disabled, onChange: event => setTrigger(event.target.value) }),
                                 React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled || !trigger.trim(), onClick: () => {
                                         const phrase = trigger.trim().toLowerCase();
@@ -3545,6 +3657,8 @@
                                         setTrigger("");
                                     } }, t("Add trigger")))),
                         React__default["default"].createElement("p", { className: "hint" },
+                            t("Use a space after channel names or spoken triggers."),
+                            React__default["default"].createElement("br", null),
                             t("Example"),
                             ": ",
                             React__default["default"].createElement("strong", null,
@@ -3556,10 +3670,10 @@
                                 profile.channels[selected].trim(),
                                 " ",
                                 t("hello everyone")))))),
-            profile && tab === "keywords" && React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "keywords" },
+            profile && tab === "keywords" && React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "keywords", "flow-children": "column" },
                 React__default["default"].createElement("h2", null, t("Recognition keywords")),
                 React__default["default"].createElement("p", { className: "hint" }, t("Names and game terms that help Whisper recognize speech. These hints apply to every channel in this game profile.")),
-                React__default["default"].createElement("div", { className: "inline" },
+                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "inline", "flow-children": "row", "data-nav-row": true },
                     React__default["default"].createElement(EditorTextField, { label: t("New keyword"), value: keyword, disabled: disabled, onChange: event => setKeyword(event.target.value) }),
                     React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled || !keyword.trim() || profile.hotwords.length >= 100, onClick: () => {
                             const word = keyword.trim();
@@ -3567,13 +3681,13 @@
                                 update({ ...profile, hotwords: [...profile.hotwords, word] });
                             setKeyword("");
                         } }, t("Add keyword"))),
-                React__default["default"].createElement("div", { className: "chips" }, profile.hotwords.map((word, index) => React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", key: `${index}-${word}`, disabled: disabled, onClick: () => update({ ...profile, hotwords: profile.hotwords.filter((_, position) => position !== index) }) },
+                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "chips", "flow-children": "row", "data-nav-row": true }, profile.hotwords.map((word, index) => React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", key: `${index}-${word}`, disabled: disabled, onClick: () => update({ ...profile, hotwords: profile.hotwords.filter((_, position) => position !== index) }) },
                     t("Remove keyword"),
                     ": ",
                     word,
                     " \u00D7"))),
                 !profile.hotwords.length && React__default["default"].createElement("p", { className: "hint" }, t("No custom keywords yet. Add character names, places, or unusual game terms."))),
-            React__default["default"].createElement("footer", null,
+            React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "editor-footer", role: "contentinfo", "flow-children": "row", "data-nav-row": true },
                 React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: busy, onClick: () => leave() }, t("Back")),
                 React__default["default"].createElement("div", { role: error ? "alert" : "status", className: error ? "error" : "hint" }, error || (dirty ? t("Unsaved changes") : message)),
                 React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled || !profile || !dirty, onClick: save }, busy ? t("Saving...") : t("Save changes"))));
