@@ -141,3 +141,22 @@ test('trigger remains visible above an overlay keyboard and in a reduced viewpor
   await expect(trigger).toHaveValue('group chat');
   await expect(page.getByText('Use a space after channel names or spoken triggers.')).toBeAttached();
 });
+
+
+test('Steam overlay visual viewport metrics cannot collapse the editor', async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 600 });
+  await page.addInitScript(() => {
+    // Steam can expose overlay/zoom viewport metrics instead of the route size.
+    const viewport = new EventTarget();
+    Object.assign(viewport, { height: 48, offsetTop: 500, scale: 1 });
+    Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport });
+  });
+  await openEditor(page);
+  const bounds = await page.locator('.decktation-editor').boundingBox();
+  expect(bounds!.y).toBe(0);
+  expect(bounds!.height).toBe(600);
+  await expect(page.getByLabel('Chat command')).toBeInViewport();
+  await expect(page.getByRole('button', { name: 'Save changes', exact: true })).toBeInViewport();
+  await page.evaluate(() => window.visualViewport!.dispatchEvent(new Event('resize')));
+  await expect.poll(() => page.locator('.decktation-editor').evaluate(root => root.getBoundingClientRect().height)).toBe(600);
+});

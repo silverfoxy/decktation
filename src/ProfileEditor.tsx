@@ -96,7 +96,6 @@ export function ProfileEditor() {
     const [pendingAction, setPendingAction] = useState<{ game?: string } | null>(null);
     const details = useRef<HTMLDivElement>(null);
     const editor = useRef<HTMLDivElement>(null);
-    const [viewport, setViewport] = useState(() => ({ height: Math.min(window.innerHeight, window.visualViewport?.height ?? window.innerHeight), top: window.visualViewport?.offsetTop || 0 }));
     useEffect(() => {
         const root = editor.current;
         if (!root) return;
@@ -113,7 +112,6 @@ export function ProfileEditor() {
             });
         };
         const resize = () => {
-            setViewport({ height: Math.min(window.innerHeight, window.visualViewport?.height ?? window.innerHeight), top: window.visualViewport?.offsetTop || 0 });
             revealInput();
         };
         const onFocus = (event: FocusEvent) => {
@@ -180,7 +178,7 @@ export function ProfileEditor() {
     const filtered = profile ? Object.keys(profile.channels).filter(channel =>
         `${title(channel)} ${profile.channels[channel]} ${Object.entries(profile.channel_triggers).filter(([, value]) => value === channel).map(([key]) => key).join(" ")}`.toLowerCase().includes(search.toLowerCase())) : [];
     const aliases = profile ? Object.entries(profile.channel_triggers).filter(([, channel]) => channel === selected).map(([phrase]) => phrase) : [];
-    return <Focusable ref={editor} className="decktation-editor" style={{ height: viewport.height, top: viewport.top }} onGamepadDirection={event => {
+    return <Focusable ref={editor} className="decktation-editor" onGamepadDirection={event => {
         if (!busy && editor.current && moveEditorFocus(editor.current, event.detail.button)) { event.preventDefault(); event.stopPropagation(); }
     }} onCancel={(event: any) => { event.stopPropagation(); event.preventDefault(); if (pending) setPendingAction(null); else leave(); }} onCancelActionDescription={t("Back")}>
         <style>{styles}</style>

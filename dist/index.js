@@ -3426,7 +3426,6 @@
         const [pendingAction, setPendingAction] = React.useState(null);
         const details = React.useRef(null);
         const editor = React.useRef(null);
-        const [viewport, setViewport] = React.useState(() => ({ height: Math.min(window.innerHeight, window.visualViewport?.height ?? window.innerHeight), top: window.visualViewport?.offsetTop || 0 }));
         React.useEffect(() => {
             const root = editor.current;
             if (!root)
@@ -3446,7 +3445,6 @@
                 });
             };
             const resize = () => {
-                setViewport({ height: Math.min(window.innerHeight, window.visualViewport?.height ?? window.innerHeight), top: window.visualViewport?.offsetTop || 0 });
                 revealInput();
             };
             const onFocus = (event) => {
@@ -3552,7 +3550,7 @@
         const disabled = busy || pending;
         const filtered = profile ? Object.keys(profile.channels).filter(channel => `${title(channel)} ${profile.channels[channel]} ${Object.entries(profile.channel_triggers).filter(([, value]) => value === channel).map(([key]) => key).join(" ")}`.toLowerCase().includes(search.toLowerCase())) : [];
         const aliases = profile ? Object.entries(profile.channel_triggers).filter(([, channel]) => channel === selected).map(([phrase]) => phrase) : [];
-        return React__default["default"].createElement(deckyFrontendLib.Focusable, { ref: editor, className: "decktation-editor", style: { height: viewport.height, top: viewport.top }, onGamepadDirection: event => {
+        return React__default["default"].createElement(deckyFrontendLib.Focusable, { ref: editor, className: "decktation-editor", onGamepadDirection: event => {
                 if (!busy && editor.current && moveEditorFocus(editor.current, event.detail.button)) {
                     event.preventDefault();
                     event.stopPropagation();
