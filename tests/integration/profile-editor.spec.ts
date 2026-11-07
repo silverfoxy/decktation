@@ -70,3 +70,32 @@ test('profile editor rejects conflicting triggers and controller Back keeps unsa
   await page.getByRole('button', { name: /party/i }).click();
   await expect(page.getByRole('button', { name: 'Remove trigger: group ×', exact: true })).toBeVisible();
 });
+
+for (const viewport of [{ width: 1280, height: 800, rows: 10 }, { width: 800, height: 600, rows: 8 }]) {
+  test(`profile editor fits compact controls and multiple channels at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await openEditor(page);
+    const layout = await page.locator('.decktation-editor').evaluate(root => {
+      const list = root.querySelector('.channel-rows')!;
+      const bounds = list.getBoundingClientRect();
+      const rows = Array.from(list.querySelectorAll('button')).map(button => button.getBoundingClientRect());
+      const details = root.querySelector('.details')!;
+      return {
+        visibleRows: rows.filter(row => row.top >= bounds.top && row.bottom <= bounds.bottom).length,
+        tallestRow: Math.max(...rows.map(row => row.height)),
+        outerScroll: root.scrollHeight > root.clientHeight,
+        outerHorizontalScroll: root.scrollWidth > root.clientWidth,
+        listParentScroll: list.parentElement!.scrollHeight > list.parentElement!.clientHeight,
+        detailsScroll: details.scrollHeight > details.clientHeight,
+      };
+    });
+    expect(layout.visibleRows).toBeGreaterThanOrEqual(viewport.rows);
+    expect(layout.tallestRow).toBeLessThanOrEqual(36);
+    expect(layout.outerScroll).toBe(false);
+    expect(layout.outerHorizontalScroll).toBe(false);
+    expect(layout.listParentScroll).toBe(false);
+    expect(layout.detailsScroll).toBe(false);
+    await expect(page.getByRole('button', { name: 'Save changes', exact: true })).toBeInViewport();
+    await page.screenshot({ path: `/tmp/decktation-profile-editor-compact-${viewport.width}.png` });
+  });
+}

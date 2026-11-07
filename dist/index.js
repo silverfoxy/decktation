@@ -3293,32 +3293,55 @@
     const saveProfile = callable("save_profile_editor");
     const getPresets$1 = callable("get_presets");
     const title = (channel) => channel.replace(/_/g, " ");
+    // Use raw full-screen controls, rather than Steam's tall quick-access form rows.
+    function EditorTextField({ label, description, ...props }) {
+        return React__default["default"].createElement("div", { className: "editor-field" },
+            React__default["default"].createElement("div", { className: "editor-label" }, label),
+            React__default["default"].createElement(deckyFrontendLib.TextField, { ...props, "aria-label": String(label), style: { height: 32, minHeight: 32, padding: "5px 8px", fontSize: 14, lineHeight: "20px", margin: 0 } }),
+            description && React__default["default"].createElement("div", { className: "hint" }, description));
+    }
     const styles = `
-.decktation-editor { position:fixed; inset:0; z-index:1; box-sizing:border-box; height:100vh; padding:40px 36px 24px; background:#101923; color:#ecf1f6; display:flex; flex-direction:column; gap:16px; font-size:16px; }
+.decktation-editor { position:fixed; inset:0; z-index:1; box-sizing:border-box; height:100vh; padding:44px 20px 16px; background:#101923; color:#ecf1f6; display:flex; flex-direction:column; gap:10px; font-size:14px; line-height:1.35; overflow:hidden; }
 .decktation-editor * { box-sizing:border-box; }
-.decktation-editor h1 { font-size:26px; margin:0; }
-.decktation-editor h2 { font-size:21px; margin:0 0 14px; text-transform:capitalize; }
-.decktation-editor header,.decktation-editor footer,.decktation-editor .tabs,.decktation-editor .inline { display:flex; align-items:center; gap:12px; }
-.decktation-editor header { justify-content:space-between; background:transparent; padding:0; }
-.decktation-editor .subtitle { color:#aab8c7; font-size:14px; margin-top:5px; }
-.decktation-editor .tabs > * { flex:1; }
-.decktation-editor .workspace { display:grid; grid-template-columns: minmax(240px, 32%) 1fr; gap:20px; min-height:0; flex:1; }
-.decktation-editor .channel-list,.decktation-editor .details { min-height:0; overflow-y:auto; padding:16px; border-radius:8px; background:#1b2836; }
-.decktation-editor .channel-list { display:flex; flex-direction:column; gap:8px; }
-.decktation-editor .channel-rows { flex:1; overflow-y:auto; min-height:80px; }
-.decktation-editor .channel-row { margin:4px 0; border-left:3px solid transparent; }
+.decktation-editor h1 { font-size:20px; line-height:1.2; margin:0; white-space:nowrap; }
+.decktation-editor h2 { font-size:17px; line-height:1.25; margin:0; text-transform:capitalize; }
+.decktation-editor header,.decktation-editor footer,.decktation-editor .tabs,.decktation-editor .inline { display:flex; align-items:center; gap:8px; min-width:0; }
+.decktation-editor header { flex-shrink:0; justify-content:space-between; background:transparent; padding:0; min-height:36px; }
+.decktation-editor .tabs { flex-shrink:0; }
+.decktation-editor .profile-picker { display:flex; align-items:center; gap:8px; min-width:0; }
+.decktation-editor .profile-picker > span { font-size:12px; color:#aab8c7; white-space:nowrap; }
+.decktation-editor .profile-picker > :last-child { width:210px; min-width:0; }
+.decktation-editor .profile-picker button,.decktation-editor .profile-picker [role="button"],.decktation-editor .profile-picker select { min-height:32px !important; height:32px !important; padding:4px 8px !important; font-size:14px !important; margin:0 !important; }
+.decktation-editor .editor-button { display:block; min-height:32px !important; height:32px; min-width:0 !important; width:auto; margin:0 !important; padding:5px 10px !important; font-size:14px !important; line-height:20px !important; flex-shrink:0; white-space:nowrap; }
+.decktation-editor .tabs .editor-button { width:100px; }
+.decktation-editor .workspace { display:grid; grid-template-columns:minmax(210px,30%) minmax(0,1fr); gap:12px; min-height:0; flex:1; }
+.decktation-editor .channel-list,.decktation-editor .details { min-height:0; min-width:0; padding:12px; border-radius:6px; background:#1b2836; }
+.decktation-editor .channel-list { display:flex; flex-direction:column; gap:8px; overflow:hidden; }
+.decktation-editor .channel-list > :not(.channel-rows) { flex-shrink:0; }
+.decktation-editor .channel-rows { flex:1; overflow-y:auto; min-height:0; }
+.decktation-editor .channel-row { margin:0 0 3px; border-left:3px solid transparent; }
 .decktation-editor .channel-row.selected { border-color:#66c0f4; background:#263f53; }
-.decktation-editor .channel-row > * { width:100%; margin:0; }
-.decktation-editor .channel-label { display:flex; justify-content:space-between; gap:12px; width:100%; text-transform:capitalize; }
-.decktation-editor code { color:#9cc7e3; text-transform:none; }
-.decktation-editor .field { margin-bottom:18px; }
-.decktation-editor .chips { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 20px; }
-.decktation-editor .hint { color:#aab8c7; font-size:14px; line-height:1.5; }
-.decktation-editor footer { border-top:1px solid #344659; padding-top:12px; justify-content:space-between; }
-.decktation-editor .keywords { flex:1; overflow-y:auto; background:#1b2836; padding:24px; border-radius:8px; }
-.decktation-editor .notice { padding:12px; background:#354557; border-radius:6px; }
-.decktation-editor .error { color:#ffb7b7; }
-@media (max-width:700px) { .decktation-editor { padding:30px 16px 16px; } .decktation-editor .workspace { grid-template-columns:220px 1fr; gap:12px; } }
+.decktation-editor .channel-row .editor-button { width:100%; text-align:left; border-radius:3px; }
+.decktation-editor .channel-label { display:flex; justify-content:space-between; align-items:center; gap:10px; width:100%; text-transform:capitalize; }
+.decktation-editor .channel-label > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.decktation-editor code { color:#9cc7e3; text-transform:none; font-size:13px; }
+.decktation-editor .details { overflow-y:auto; }
+.decktation-editor .details-body { display:flex; flex-direction:column; gap:12px; }
+.decktation-editor .editor-field { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.decktation-editor .editor-label { font-size:13px; color:#cdd7e2; line-height:18px; }
+.decktation-editor .editor-field input { width:100%; min-width:0; height:32px !important; min-height:32px !important; margin:0 !important; padding:5px 8px !important; font-size:14px !important; line-height:20px !important; background:#101923 !important; color:#ecf1f6 !important; border:1px solid #53687c !important; border-radius:4px; }
+.decktation-editor .field { margin:0; }
+.decktation-editor .trigger-section { display:flex; flex-direction:column; gap:8px; }
+.decktation-editor .trigger-section .inline { align-items:flex-end; }
+.decktation-editor .inline .editor-field { flex:1; }
+.decktation-editor .chips { display:flex; flex-wrap:wrap; gap:6px; margin:0; }
+.decktation-editor .hint { color:#aab8c7; font-size:12px; line-height:1.4; margin:0; }
+.decktation-editor footer { flex-shrink:0; border-top:1px solid #344659; padding-top:8px; justify-content:space-between; min-height:40px; }
+.decktation-editor footer [role="alert"],.decktation-editor footer [role="status"] { flex:1; min-width:0; text-align:center; }
+.decktation-editor .keywords { flex:1; min-height:0; overflow-y:auto; background:#1b2836; padding:16px; border-radius:6px; display:flex; flex-direction:column; gap:12px; }
+.decktation-editor .notice { padding:10px; background:#354557; border-radius:6px; flex-shrink:0; }
+.decktation-editor .error { color:#ffb7b7; font-size:12px; }
+@media (max-width:850px) { .decktation-editor { padding:36px 12px 12px; gap:8px; } .decktation-editor h1 { font-size:18px; } .decktation-editor .profile-picker > span { display:none; } .decktation-editor .profile-picker > :last-child { width:190px; } .decktation-editor .tabs .editor-button { width:88px; } .decktation-editor .channel-list,.decktation-editor .details { padding:10px; } }
 `;
     function ProfileEditor() {
         const [game, setGame] = React.useState(initialGame);
@@ -3428,33 +3451,33 @@
                 leave(); }, onCancelActionDescription: t("Back") },
             React__default["default"].createElement("style", null, styles),
             React__default["default"].createElement("header", null,
-                React__default["default"].createElement("div", null,
-                    React__default["default"].createElement("h1", null, t("Game profiles")),
-                    React__default["default"].createElement("div", { className: "subtitle" }, t("Keywords and channel routing for each game"))),
-                React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: t("Game profile"), rgOptions: presets.map(preset => ({ data: preset.id, label: t(preset.name) })), selectedOption: game, disabled: disabled, onChange: option => { if (String(option.data) !== game)
-                        leave(String(option.data)); } })),
+                React__default["default"].createElement("h1", null, t("Game profiles")),
+                React__default["default"].createElement("div", { className: "tabs" },
+                    React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled, onClick: () => setTab("channels") },
+                        tab === "channels" ? "● " : "",
+                        t("Channels")),
+                    React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled, onClick: () => setTab("keywords") },
+                        tab === "keywords" ? "● " : "",
+                        t("Keywords"))),
+                React__default["default"].createElement("div", { className: "profile-picker" },
+                    React__default["default"].createElement("span", null, t("Game profile")),
+                    React__default["default"].createElement(deckyFrontendLib.Dropdown, { menuLabel: t("Game profile"), rgOptions: presets.map(preset => ({ data: preset.id, label: t(preset.name) })), selectedOption: game, disabled: disabled, onChange: option => { if (String(option.data) !== game)
+                            leave(String(option.data)); } }))),
             pending && React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "notice", role: "alertdialog", "aria-label": t("Unsaved changes") },
                 React__default["default"].createElement("div", null, t("Discard unsaved changes?")),
                 React__default["default"].createElement("div", { className: "inline" },
-                    React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: () => setPendingAction(null) }, t("Keep editing")),
-                    React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: () => { const next = pendingAction?.game; setPendingAction(null); if (next)
+                    React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", onClick: () => setPendingAction(null) }, t("Keep editing")),
+                    React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", onClick: () => { const next = pendingAction?.game; setPendingAction(null); if (next)
                             setGame(next);
                         else
                             deckyFrontendLib.Navigation.NavigateBack(); } }, t("Discard changes")))),
-            React__default["default"].createElement("div", { className: "tabs" },
-                React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: disabled, onClick: () => setTab("channels") },
-                    tab === "channels" ? "● " : "",
-                    t("Channels")),
-                React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: disabled, onClick: () => setTab("keywords") },
-                    tab === "keywords" ? "● " : "",
-                    t("Keywords"))),
             !profile && React__default["default"].createElement("div", { role: "status" }, error || t("Loading...")),
             profile && tab === "channels" && React__default["default"].createElement("div", { className: "workspace" },
                 React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "channel-list" },
-                    React__default["default"].createElement(deckyFrontendLib.TextField, { label: t("Search channels"), value: search, disabled: disabled, onChange: event => setSearch(event.target.value) }),
+                    React__default["default"].createElement(EditorTextField, { label: t("Search channels"), value: search, disabled: disabled, onChange: event => setSearch(event.target.value) }),
                     React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "channel-rows", "aria-label": t("Channel list") },
                         filtered.map(channel => React__default["default"].createElement("div", { key: channel, className: `channel-row ${selected === channel ? "selected" : ""}` },
-                            React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: disabled, onClick: () => {
+                            React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled, onClick: () => {
                                     if (trigger.trim()) {
                                         setError(t("Add or clear the spoken trigger before selecting another channel."));
                                         return;
@@ -3469,10 +3492,10 @@
                                         profile.default_channel === channel ? " ★" : ""),
                                     React__default["default"].createElement("code", null, profile.channels[channel].trim() || t("Text only")))))),
                         !filtered.length && React__default["default"].createElement("p", { className: "hint" }, t("No matching channels"))),
-                    !addingChannel && React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: disabled, onClick: () => setAddingChannel(true) }, t("Add channel")),
+                    !addingChannel && React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled, onClick: () => setAddingChannel(true) }, t("Add channel")),
                     addingChannel && React__default["default"].createElement(React__default["default"].Fragment, null,
-                        React__default["default"].createElement(deckyFrontendLib.TextField, { label: t("New channel name"), value: newChannel, disabled: disabled, onChange: event => setNewChannel(event.target.value) }),
-                        React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: disabled || !/^[a-z][a-z0-9_]{0,39}$/.test(newChannel) || newChannel in profile.channels || Object.keys(profile.channels).length >= 40, onClick: () => {
+                        React__default["default"].createElement(EditorTextField, { label: t("New channel name"), value: newChannel, disabled: disabled, onChange: event => setNewChannel(event.target.value) }),
+                        React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled || !/^[a-z][a-z0-9_]{0,39}$/.test(newChannel) || newChannel in profile.channels || Object.keys(profile.channels).length >= 40, onClick: () => {
                                 if (trigger.trim()) {
                                     setError(t("Add or clear the spoken trigger before adding a channel."));
                                     return;
@@ -3488,35 +3511,39 @@
                                 setAddingChannel(false);
                             } }, t("Add channel")),
                         React__default["default"].createElement("div", { className: "hint" }, t("Use lowercase letters, numbers, or underscores. Start with a letter.")),
-                        React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: disabled, onClick: () => { setAddingChannel(false); setNewChannel(""); } }, t("Cancel")))),
+                        React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled, onClick: () => { setAddingChannel(false); setNewChannel(""); } }, t("Cancel")))),
                 React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "details" },
-                    React__default["default"].createElement("div", { ref: details },
+                    React__default["default"].createElement("div", { ref: details, className: "details-body" },
                         React__default["default"].createElement("h2", null, title(selected)),
                         React__default["default"].createElement("div", { className: "field" },
-                            React__default["default"].createElement(deckyFrontendLib.TextField, { label: t("Chat command"), value: profile.channels[selected] || "", disabled: disabled, description: t("For example /p. Leave empty to type without a channel command."), onChange: event => update({ ...profile, channels: { ...profile.channels, [selected]: event.target.value } }) })),
+                            React__default["default"].createElement(EditorTextField, { label: t("Chat command"), value: profile.channels[selected] || "", disabled: disabled, description: t("For example /p. Leave empty to type without a channel command."), onChange: event => update({ ...profile, channels: { ...profile.channels, [selected]: event.target.value } }) })),
                         React__default["default"].createElement("div", { className: "field" },
-                            React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: t("Use as default channel"), checked: profile.default_channel === selected, disabled: disabled || profile.default_channel === selected, onChange: () => update({ ...profile, default_channel: selected }) })),
-                        React__default["default"].createElement("h2", null, t("Additional spoken triggers")),
-                        React__default["default"].createElement("p", { className: "hint" }, t("Say a trigger before your message to select this channel. Built-in language triggers remain available.")),
-                        React__default["default"].createElement("div", { className: "chips" }, aliases.map(phrase => React__default["default"].createElement(deckyFrontendLib.ButtonItem, { key: phrase, layout: "below", disabled: disabled, onClick: () => {
-                                const next = { ...profile.channel_triggers };
-                                delete next[phrase];
-                                update({ ...profile, channel_triggers: next });
-                            } },
-                            t("Remove trigger"),
-                            ": ",
-                            phrase,
-                            " \u00D7"))),
-                        React__default["default"].createElement(deckyFrontendLib.TextField, { label: t("New spoken trigger"), value: trigger, disabled: disabled, onChange: event => setTrigger(event.target.value) }),
-                        React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: disabled || !trigger.trim(), onClick: () => {
-                                const phrase = trigger.trim().toLowerCase();
-                                if (phrase in profile.channel_triggers && profile.channel_triggers[phrase] !== selected) {
-                                    setError(t("Each spoken trigger must belong to one channel."));
-                                    return;
-                                }
-                                update({ ...profile, channel_triggers: { ...profile.channel_triggers, [phrase]: selected } });
-                                setTrigger("");
-                            } }, t("Add trigger")),
+                            React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled || profile.default_channel === selected, onClick: () => update({ ...profile, default_channel: selected }) },
+                                profile.default_channel === selected ? "★ " : "☆ ",
+                                t("Use as default channel"))),
+                        React__default["default"].createElement("div", { className: "trigger-section" },
+                            React__default["default"].createElement("h2", null, t("Additional spoken triggers")),
+                            React__default["default"].createElement("p", { className: "hint" }, t("Say a trigger before your message to select this channel. Built-in language triggers remain available.")),
+                            React__default["default"].createElement("div", { className: "chips" }, aliases.map(phrase => React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", key: phrase, disabled: disabled, onClick: () => {
+                                    const next = { ...profile.channel_triggers };
+                                    delete next[phrase];
+                                    update({ ...profile, channel_triggers: next });
+                                } },
+                                t("Remove trigger"),
+                                ": ",
+                                phrase,
+                                " \u00D7"))),
+                            React__default["default"].createElement("div", { className: "inline" },
+                                React__default["default"].createElement(EditorTextField, { label: t("New spoken trigger"), value: trigger, disabled: disabled, onChange: event => setTrigger(event.target.value) }),
+                                React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled || !trigger.trim(), onClick: () => {
+                                        const phrase = trigger.trim().toLowerCase();
+                                        if (phrase in profile.channel_triggers && profile.channel_triggers[phrase] !== selected) {
+                                            setError(t("Each spoken trigger must belong to one channel."));
+                                            return;
+                                        }
+                                        update({ ...profile, channel_triggers: { ...profile.channel_triggers, [phrase]: selected } });
+                                        setTrigger("");
+                                    } }, t("Add trigger")))),
                         React__default["default"].createElement("p", { className: "hint" },
                             t("Example"),
                             ": ",
@@ -3533,23 +3560,23 @@
                 React__default["default"].createElement("h2", null, t("Recognition keywords")),
                 React__default["default"].createElement("p", { className: "hint" }, t("Names and game terms that help Whisper recognize speech. These hints apply to every channel in this game profile.")),
                 React__default["default"].createElement("div", { className: "inline" },
-                    React__default["default"].createElement(deckyFrontendLib.TextField, { label: t("New keyword"), value: keyword, disabled: disabled, onChange: event => setKeyword(event.target.value) }),
-                    React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: disabled || !keyword.trim() || profile.hotwords.length >= 100, onClick: () => {
+                    React__default["default"].createElement(EditorTextField, { label: t("New keyword"), value: keyword, disabled: disabled, onChange: event => setKeyword(event.target.value) }),
+                    React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled || !keyword.trim() || profile.hotwords.length >= 100, onClick: () => {
                             const word = keyword.trim();
                             if (!profile.hotwords.includes(word))
                                 update({ ...profile, hotwords: [...profile.hotwords, word] });
                             setKeyword("");
                         } }, t("Add keyword"))),
-                React__default["default"].createElement("div", { className: "chips" }, profile.hotwords.map((word, index) => React__default["default"].createElement(deckyFrontendLib.ButtonItem, { key: `${index}-${word}`, layout: "below", disabled: disabled, onClick: () => update({ ...profile, hotwords: profile.hotwords.filter((_, position) => position !== index) }) },
+                React__default["default"].createElement("div", { className: "chips" }, profile.hotwords.map((word, index) => React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", key: `${index}-${word}`, disabled: disabled, onClick: () => update({ ...profile, hotwords: profile.hotwords.filter((_, position) => position !== index) }) },
                     t("Remove keyword"),
                     ": ",
                     word,
                     " \u00D7"))),
                 !profile.hotwords.length && React__default["default"].createElement("p", { className: "hint" }, t("No custom keywords yet. Add character names, places, or unusual game terms."))),
             React__default["default"].createElement("footer", null,
-                React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: busy, onClick: () => leave() }, t("Back")),
+                React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: busy, onClick: () => leave() }, t("Back")),
                 React__default["default"].createElement("div", { role: error ? "alert" : "status", className: error ? "error" : "hint" }, error || (dirty ? t("Unsaved changes") : message)),
-                React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: disabled || !profile || !dirty, onClick: save }, busy ? t("Saving...") : t("Save changes"))));
+                React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled || !profile || !dirty, onClick: save }, busy ? t("Saving...") : t("Save changes"))));
     }
 
     const ACTIVE = new Set(["starting", "recording", "stopping"]);
