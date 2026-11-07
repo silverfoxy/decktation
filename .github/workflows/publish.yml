@@ -73,7 +73,7 @@ jobs:
         if: steps.source-ref.outputs.current == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_SHA: ${{ github.event.workflow_run.head_sha }}
+          BUILD_SHA: ${{ github.event.workflow_run.head_sha }}
           REF_NAME: ${{ github.event.workflow_run.head_branch }}
           REF_TYPE: ${{ steps.source-ref.outputs.ref_type }}
           RELEASE_TAG: ${{ github.event.workflow_run.head_branch }}
@@ -133,7 +133,7 @@ jobs:
       - name: Publish immutable PR build through trusted scripts
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_SHA: ${{ github.event.workflow_run.head_sha }}
+          BUILD_SHA: ${{ github.event.workflow_run.head_sha }}
           REF_NAME: pr-${{ steps.candidate.outputs.number }}
           REF_TYPE: pull_request
           PR_NUMBER: ${{ steps.candidate.outputs.number }}

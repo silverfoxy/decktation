@@ -6,6 +6,24 @@ import subprocess
 REPO = Path(__file__).resolve().parents[1]
 
 
+def test_publisher_uses_build_sha_instead_of_workflow_run_master_sha(tmp_path):
+    artifact = tmp_path / 'candidate.zip'
+    artifact.write_bytes(b'candidate bytes')
+    script = (REPO / 'scripts/publish-pages.sh').read_text().split('\nfor attempt in 1 2 3;')[0]
+    script += '\nPAGES_DIR="$TEST_PAGES_DIR"\nZIP_SOURCE="$TEST_ARTIFACT"\nrender_pr_content\n'
+    env = dict(os.environ, GITHUB_TOKEN='unused', GITHUB_REPOSITORY='silverfoxy/decktation',
+               CLEANUP_ONLY='true', PAGES_BASE_URL='https://decktation.com',
+               TEST_PAGES_DIR=str(tmp_path / 'pages'), TEST_ARTIFACT=str(artifact),
+               PR_NUMBER='94', PR_RUN_ID='123', PR_RUN_ATTEMPT='1',
+               PR_HEAD_REPO='silverfoxy/decktation', GITHUB_SHA='a' * 40, BUILD_SHA='b' * 40)
+    subprocess.run(['bash', '-c', script], cwd=REPO, env=env, check=True, capture_output=True)
+    metadata = json.loads((tmp_path / 'pages/pulls/94/123/1/metadata.json').read_text())
+    assert metadata['commit'] == 'b' * 40
+    workflow = (REPO / '.github/workflows/publish.yml').read_text()
+    assert workflow.count('BUILD_SHA: ${{ github.event.workflow_run.head_sha }}') == 2
+    assert 'GITHUB_SHA:' not in workflow
+
+
 def test_trusted_publisher_keeps_canonical_and_catalog_release_assets(tmp_path):
     workflow = (REPO / '.github/workflows/publish.yml').read_text()
     step = workflow.split('- name: Name the public release download', 1)[1].split('- name:', 1)[0]
@@ -31,8 +49,8 @@ def test_publisher_refreshes_testing_catalog_after_branch_package_is_written():
 
 def test_tag_stable_catalog_reads_release_manifests_not_current_master():
     script = (REPO / 'scripts/publish-pages.sh').read_text()
-    assert 'git -C "$WORKSPACE_DIR" show "$GITHUB_SHA:plugin.json"' in script
-    assert 'git -C "$WORKSPACE_DIR" show "$GITHUB_SHA:package.json"' in script
+    assert 'git -C "$WORKSPACE_DIR" show "$BUILD_SHA:plugin.json"' in script
+    assert 'git -C "$WORKSPACE_DIR" show "$BUILD_SHA:package.json"' in script
 
 
 def test_published_branch_names_are_html_escaped(tmp_path):
