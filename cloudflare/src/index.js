@@ -29,15 +29,28 @@ async function handleCatalog(request, testing = false) {
   if (deckyVersion) headers.set("X-Decky-Version", deckyVersion);
 
   try {
-    const upstream = await fetch(testing ? `${UPSTREAM_BASE}/store/testing/plugins.json` : UPSTREAM_CATALOG, {
+    const target = new URL(testing ? `${UPSTREAM_BASE}/store/testing/plugins.json` : UPSTREAM_CATALOG);
+    if (testing) {
+      // Pages caches mutable catalogs for ten minutes. Use a fresh origin key
+      // and prevent Decky's client from retaining obsolete PR selections.
+      target.searchParams.set("catalog_refresh", String(Date.now()));
+      headers.set("Cache-Control", "no-cache");
+    }
+    const upstream = await fetch(target.href, {
       method: request.method,
       headers,
       redirect: "manual",
+      ...(testing ? { cf: { cacheTtl: 0, cacheEverything: false } } : {}),
     });
     if (upstream.status >= 300 && upstream.status < 400) {
       throw new Error("Unexpected catalog redirect");
     }
-    return withCors(upstream);
+    const response = withCors(upstream);
+    if (testing) {
+      response.headers.set("Cache-Control", "no-store");
+      for (const name of ["Age", "Expires", "ETag"]) response.headers.delete(name);
+    }
+    return response;
   } catch {
     return new Response(
       request.method === "HEAD" ? null : JSON.stringify({

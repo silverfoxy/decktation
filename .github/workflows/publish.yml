@@ -214,6 +214,12 @@ jobs:
       name: decktation-previews
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Checkout trusted deployment code
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          path: trusted-tools
+          persist-credentials: false
       - uses: actions/checkout@v4
         with:
           ref: gh-pages
@@ -222,5 +228,11 @@ jobs:
       - uses: actions/upload-pages-artifact@v4
         with:
           path: pages-site
-      - uses: actions/deploy-pages@v4
+      - uses: actions/github-script@v7
         id: deployment
+        with:
+          script: |
+            const { execFileSync } = require('node:child_process');
+            const snapshot = execFileSync('git', ['-C', 'pages-site', 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+            const { deployPages } = require(`${process.env.GITHUB_WORKSPACE}/trusted-tools/scripts/deploy-pages.cjs`);
+            await deployPages({ github, core, context, snapshot });
