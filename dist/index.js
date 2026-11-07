@@ -369,7 +369,8 @@
       "Report submitted. Event ID": "Report submitted. Event ID",
       "Type (only English keyboard)": "Type (only English keyboard)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.",
-      Paste: Paste$9
+      Paste: Paste$9,
+      "Edit game profile": "Edit game profile"
     };
 
     var af = "Afrikaans";
@@ -863,7 +864,8 @@
       "Paste (default)": "Pegar (predeterminado)",
       "Type (only English keyboard)": "Escribir (solo teclado inglés)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Escribir requiere un teclado inglés (EE. UU.) y texto ASCII. Los demás caracteres no se introducen ni se envían.",
-      Paste: Paste$8
+      Paste: Paste$8,
+      "Edit game profile": "Editar perfil del juego"
     };
 
     var Back$7 = "Назад";
@@ -1154,7 +1156,8 @@
       "Paste (default)": "Вставка (по умолчанию)",
       "Type (only English keyboard)": "Ввод (только английская раскладка)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Для ввода нужны английская раскладка (США) и текст ASCII. Другие символы не будут введены или отправлены.",
-      Paste: Paste$7
+      Paste: Paste$7,
+      "Edit game profile": "Изменить профиль игры"
     };
 
     var Back$6 = "Voltar";
@@ -1445,7 +1448,8 @@
       "Paste (default)": "Colar (padrão)",
       "Type (only English keyboard)": "Digitar (somente teclado inglês)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Digitar requer layout de teclado inglês (EUA) e texto ASCII. Outros caracteres não serão digitados nem enviados.",
-      Paste: Paste$6
+      Paste: Paste$6,
+      "Edit game profile": "Editar perfil do jogo"
     };
 
     var Back$5 = "Wstecz";
@@ -1736,7 +1740,8 @@
       "Paste (default)": "Wklej (domyślnie)",
       "Type (only English keyboard)": "Wpisuj (tylko klawiatura angielska)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Wpisywanie wymaga angielskiego (US) układu klawiatury i tekstu ASCII. Inny tekst nie zostanie wpisany ani wysłany.",
-      Paste: Paste$5
+      Paste: Paste$5,
+      "Edit game profile": "Edytuj profil gry"
     };
 
     var Back$4 = "뒤로";
@@ -2027,7 +2032,8 @@
       "Paste (default)": "붙여넣기 (기본값)",
       "Type (only English keyboard)": "입력 (영어 키보드만)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "입력에는 영어(미국) 키보드 배열과 ASCII 텍스트가 필요합니다. 다른 문자는 입력하거나 전송하지 않습니다.",
-      Paste: Paste$4
+      Paste: Paste$4,
+      "Edit game profile": "게임 프로필 편집"
     };
 
     var Back$3 = "戻る";
@@ -2318,7 +2324,8 @@
       "Paste (default)": "貼り付け（既定）",
       "Type (only English keyboard)": "入力（英語キーボードのみ）",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "入力には英語（米国）キーボード配列とASCII文字が必要です。それ以外の文字は入力・送信されません。",
-      Paste: Paste$3
+      Paste: Paste$3,
+      "Edit game profile": "ゲームプロファイルを編集"
     };
 
     var Back$2 = "Zurück";
@@ -2609,7 +2616,8 @@
       "Paste (default)": "Einfügen (Standard)",
       "Type (only English keyboard)": "Tippen (nur englische Tastatur)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Tippen erfordert eine englische US-Tastaturbelegung und ASCII-Text. Anderer Text wird weder eingegeben noch gesendet.",
-      Paste: Paste$2
+      Paste: Paste$2,
+      "Edit game profile": "Spielprofil bearbeiten"
     };
 
     var Back$1 = "Retour";
@@ -2900,7 +2908,8 @@
       "Paste (default)": "Coller (par défaut)",
       "Type (only English keyboard)": "Saisir (clavier anglais uniquement)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "La saisie nécessite un clavier anglais (US) et du texte ASCII. Les autres caractères ne sont ni saisis ni envoyés.",
-      Paste: Paste$1
+      Paste: Paste$1,
+      "Edit game profile": "Modifier le profil du jeu"
     };
 
     var Back = "返回";
@@ -3191,7 +3200,8 @@
       "Paste (default)": "粘贴（默认）",
       "Type (only English keyboard)": "键入（仅限英文键盘）",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "键入需要英语（美国）键盘布局和 ASCII 文本。其他字符不会输入或发送。",
-      Paste: Paste
+      Paste: Paste,
+      "Edit game profile": "编辑游戏配置"
     };
 
     const catalogs = { en: en$1, es, ru, pt, pl, ko, ja, de, fr, zh };

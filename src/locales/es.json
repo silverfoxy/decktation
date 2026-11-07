@@ -248,5 +248,6 @@
   "Paste (default)": "Pegar (predeterminado)",
   "Type (only English keyboard)": "Escribir (solo teclado inglés)",
   "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Escribir requiere un teclado inglés (EE. UU.) y texto ASCII. Los demás caracteres no se introducen ni se envían.",
-  "Paste": "Pegar (predeterminado)"
+  "Paste": "Pegar (predeterminado)",
+  "Edit game profile": "Editar perfil del juego"
 }

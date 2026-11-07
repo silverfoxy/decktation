@@ -248,5 +248,6 @@
   "Paste (default)": "Coller (par défaut)",
   "Type (only English keyboard)": "Saisir (clavier anglais uniquement)",
   "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "La saisie nécessite un clavier anglais (US) et du texte ASCII. Les autres caractères ne sont ni saisis ni envoyés.",
-  "Paste": "Coller (par défaut)"
+  "Paste": "Coller (par défaut)",
+  "Edit game profile": "Modifier le profil du jeu"
 }

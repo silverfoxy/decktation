@@ -248,5 +248,6 @@
   "Paste (default)": "Colar (padrão)",
   "Type (only English keyboard)": "Digitar (somente teclado inglês)",
   "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Digitar requer layout de teclado inglês (EUA) e texto ASCII. Outros caracteres não serão digitados nem enviados.",
-  "Paste": "Colar (padrão)"
+  "Paste": "Colar (padrão)",
+  "Edit game profile": "Editar perfil do jogo"
 }

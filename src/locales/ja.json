@@ -248,5 +248,6 @@
   "Paste (default)": "貼り付け（既定）",
   "Type (only English keyboard)": "入力（英語キーボードのみ）",
   "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "入力には英語（米国）キーボード配列とASCII文字が必要です。それ以外の文字は入力・送信されません。",
-  "Paste": "貼り付け（既定）"
+  "Paste": "貼り付け（既定）",
+  "Edit game profile": "ゲームプロファイルを編集"
 }

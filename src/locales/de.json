@@ -248,5 +248,6 @@
   "Paste (default)": "Einfügen (Standard)",
   "Type (only English keyboard)": "Tippen (nur englische Tastatur)",
   "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Tippen erfordert eine englische US-Tastaturbelegung und ASCII-Text. Anderer Text wird weder eingegeben noch gesendet.",
-  "Paste": "Einfügen (Standard)"
+  "Paste": "Einfügen (Standard)",
+  "Edit game profile": "Spielprofil bearbeiten"
 }
