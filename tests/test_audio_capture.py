@@ -9,8 +9,11 @@ def service():
 
 
 @pytest.fixture(autouse=True)
-def reset_audio_mock():
-    wow_voice_chat.sd.reset_mock(side_effect=True)
+def reset_audio_mock(monkeypatch):
+    # A patched dynamic MagicMock attribute can remain deleted after teardown;
+    # reset_mock() clears calls but does not restore that attribute. Isolate the
+    # audio module so shutdown tests never inherit another test's missing API.
+    monkeypatch.setattr(wow_voice_chat, "sd", MagicMock())
     wow_voice_chat.sd.default.device.__getitem__.return_value = 7
     wow_voice_chat.sd.query_devices.return_value = {
         "default_samplerate": 48000,
