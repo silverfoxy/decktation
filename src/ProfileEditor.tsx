@@ -108,6 +108,8 @@ export function ProfileEditor() {
     useEffect(() => {
         const root = editor.current;
         if (!root) return;
+        const document = root.ownerDocument;
+        const window = document.defaultView!;
         let frame = 0;
         let input: HTMLElement | null = null;
         let keyboardVisible = !!keyboardManager?.IsShowingVirtualKeyboard?.Value;
@@ -141,7 +143,7 @@ export function ProfileEditor() {
                 }
                 // Steam may render the keyboard in another window. Only reserve
                 // fallback space when its own manager confirms it is open.
-                if (keyboardVisible && !measuredKeyboard) visibleBottom = Math.min(visibleBottom, window.innerHeight * 0.55);
+                if (keyboardVisible && !measuredKeyboard) visibleBottom = Math.min(visibleBottom, window.innerHeight * 0.45);
                 // Use a viewport reduction only after mount; Steam's initial
                 // visual viewport can describe an unrelated overlay.
                 const viewport = window.visualViewport;
@@ -150,14 +152,14 @@ export function ProfileEditor() {
                     visibleBottom = Math.min(visibleBottom, viewport.offsetTop + viewport.height);
                 if (visibleBottom >= window.innerHeight && !viewportReduced) { restore(); return; }
                 const bottom = input.getBoundingClientRect().bottom;
-                const limit = Math.min(visibleBottom, pane.getBoundingClientRect().bottom) - 12;
+                const limit = Math.min(visibleBottom, pane.getBoundingClientRect().bottom) - 40;
                 if (bottom <= limit) return;
                 if (adjustedPane !== pane) { restore(); adjustedPane = pane; originalScroll = pane.scrollTop; }
-                const padding = `${Math.ceil(window.innerHeight - visibleBottom + input.offsetHeight + 24)}px`;
+                const padding = `${Math.ceil(window.innerHeight - visibleBottom + input.offsetHeight + 80)}px`;
                 if (pane.style.getPropertyValue('--editor-keyboard-padding') !== padding)
                     pane.style.setProperty('--editor-keyboard-padding', padding);
                 if (!pane.hasAttribute('data-editor-editing')) pane.setAttribute('data-editor-editing', 'true');
-                pane.scrollTop += bottom - limit;
+                pane.scrollTop += Math.ceil(bottom - limit);
             });
         };
         const keyboardSubscription = keyboardManager?.IsShowingVirtualKeyboard?.Subscribe((visible: boolean) => {
@@ -299,13 +301,13 @@ export function ProfileEditor() {
                 <Focusable className="chips" flow-children="row" data-nav-row>{aliases.map(phrase => <DialogButton className="editor-button" key={phrase} disabled={disabled} onClick={() => {
                     const next = { ...profile.channel_triggers }; delete next[phrase]; update({ ...profile, channel_triggers:next });
                 }}>{t("Remove trigger")}: {phrase} ×</DialogButton>)}</Focusable>
+                <p className="hint">{t("Use a space after channel names or spoken triggers.")}<br />{t("Example")}: <strong>{aliases[0] || title(selected)} {t("hello everyone")}</strong> → <code>{profile.channels[selected].trim()} {t("hello everyone")}</code></p>
                 <Focusable className="inline" flow-children="row" data-nav-row><EditorTextField label={t("New spoken trigger")} value={trigger} disabled={disabled} onChange={event => setTrigger(event.target.value)} />
                 <DialogButton className="editor-button" disabled={disabled || !trigger.trim()} onClick={() => {
                     const phrase = trigger.trim().toLowerCase();
                     if (phrase in profile.channel_triggers && profile.channel_triggers[phrase] !== selected) { setError(t("Each spoken trigger must belong to one channel.")); return; }
                     update({ ...profile, channel_triggers:{ ...profile.channel_triggers, [phrase]:selected } }); setTrigger("");
                 }}>{t("Add trigger")}</DialogButton></Focusable></div>
-                <p className="hint">{t("Use a space after channel names or spoken triggers.")}<br />{t("Example")}: <strong>{aliases[0] || title(selected)} {t("hello everyone")}</strong> → <code>{profile.channels[selected].trim()} {t("hello everyone")}</code></p>
             </Focusable></Focusable>
         </Focusable>}
         {profile && tab === "keywords" && <Focusable className="keywords" flow-children="column"><h2>{t("Recognition keywords")}</h2>

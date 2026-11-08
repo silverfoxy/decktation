@@ -145,7 +145,7 @@ test('trigger remains visible above an overlay keyboard and in a reduced viewpor
     keyboard.style.cssText = 'position:fixed;left:0;right:0;top:320px;bottom:0;background:#222;z-index:9999';
     document.body.append(keyboard);
   });
-  await expect.poll(async () => trigger.evaluate(input => input.getBoundingClientRect().bottom)).toBeLessThan(320);
+  await expect.poll(async () => trigger.evaluate(input => input.getBoundingClientRect().bottom)).toBeLessThanOrEqual(280);
   await expect.poll(() => page.locator('.details').evaluate(pane => pane.scrollHeight > pane.clientHeight)).toBe(true);
   await page.evaluate(() => document.querySelector('.fixture-virtual-keyboard')!.remove());
   await expect(page.locator('.details')).not.toHaveAttribute('data-editor-editing');
@@ -252,7 +252,7 @@ test('Steam keyboard visibility reveals covered input even without keyboard DOM'
   await field.fill('group');
   const before = await field.boundingBox();
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('fixture-keyboard-status', { detail: true })));
-  await expect.poll(() => field.evaluate(input => input.getBoundingClientRect().bottom)).toBeLessThan(330);
+  await expect.poll(() => field.evaluate(input => input.getBoundingClientRect().bottom)).toBeLessThanOrEqual(230);
   await expect(page.locator('.details')).toHaveAttribute('data-editor-editing', 'true');
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('fixture-keyboard-status', { detail: false })));
   await expect.poll(() => field.evaluate(input => input.getBoundingClientRect().y)).toBe(before!.y);

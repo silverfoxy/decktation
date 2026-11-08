@@ -3472,6 +3472,8 @@
             const root = editor.current;
             if (!root)
                 return;
+            const document = root.ownerDocument;
+            const window = document.defaultView;
             let frame = 0;
             let input = null;
             let keyboardVisible = !!keyboardManager?.IsShowingVirtualKeyboard?.Value;
@@ -3515,7 +3517,7 @@
                     // Steam may render the keyboard in another window. Only reserve
                     // fallback space when its own manager confirms it is open.
                     if (keyboardVisible && !measuredKeyboard)
-                        visibleBottom = Math.min(visibleBottom, window.innerHeight * 0.55);
+                        visibleBottom = Math.min(visibleBottom, window.innerHeight * 0.45);
                     // Use a viewport reduction only after mount; Steam's initial
                     // visual viewport can describe an unrelated overlay.
                     const viewport = window.visualViewport;
@@ -3527,7 +3529,7 @@
                         return;
                     }
                     const bottom = input.getBoundingClientRect().bottom;
-                    const limit = Math.min(visibleBottom, pane.getBoundingClientRect().bottom) - 12;
+                    const limit = Math.min(visibleBottom, pane.getBoundingClientRect().bottom) - 40;
                     if (bottom <= limit)
                         return;
                     if (adjustedPane !== pane) {
@@ -3535,12 +3537,12 @@
                         adjustedPane = pane;
                         originalScroll = pane.scrollTop;
                     }
-                    const padding = `${Math.ceil(window.innerHeight - visibleBottom + input.offsetHeight + 24)}px`;
+                    const padding = `${Math.ceil(window.innerHeight - visibleBottom + input.offsetHeight + 80)}px`;
                     if (pane.style.getPropertyValue('--editor-keyboard-padding') !== padding)
                         pane.style.setProperty('--editor-keyboard-padding', padding);
                     if (!pane.hasAttribute('data-editor-editing'))
                         pane.setAttribute('data-editor-editing', 'true');
-                    pane.scrollTop += bottom - limit;
+                    pane.scrollTop += Math.ceil(bottom - limit);
                 });
             };
             const keyboardSubscription = keyboardManager?.IsShowingVirtualKeyboard?.Subscribe((visible) => {
@@ -3766,6 +3768,20 @@
                                 ": ",
                                 phrase,
                                 " \u00D7"))),
+                            React__default["default"].createElement("p", { className: "hint" },
+                                t("Use a space after channel names or spoken triggers."),
+                                React__default["default"].createElement("br", null),
+                                t("Example"),
+                                ": ",
+                                React__default["default"].createElement("strong", null,
+                                    aliases[0] || title(selected),
+                                    " ",
+                                    t("hello everyone")),
+                                " \u2192 ",
+                                React__default["default"].createElement("code", null,
+                                    profile.channels[selected].trim(),
+                                    " ",
+                                    t("hello everyone"))),
                             React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "inline", "flow-children": "row", "data-nav-row": true },
                                 React__default["default"].createElement(EditorTextField, { label: t("New spoken trigger"), value: trigger, disabled: disabled, onChange: event => setTrigger(event.target.value) }),
                                 React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled || !trigger.trim(), onClick: () => {
@@ -3776,21 +3792,7 @@
                                         }
                                         update({ ...profile, channel_triggers: { ...profile.channel_triggers, [phrase]: selected } });
                                         setTrigger("");
-                                    } }, t("Add trigger")))),
-                        React__default["default"].createElement("p", { className: "hint" },
-                            t("Use a space after channel names or spoken triggers."),
-                            React__default["default"].createElement("br", null),
-                            t("Example"),
-                            ": ",
-                            React__default["default"].createElement("strong", null,
-                                aliases[0] || title(selected),
-                                " ",
-                                t("hello everyone")),
-                            " \u2192 ",
-                            React__default["default"].createElement("code", null,
-                                profile.channels[selected].trim(),
-                                " ",
-                                t("hello everyone")))))),
+                                    } }, t("Add trigger"))))))),
             profile && tab === "keywords" && React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "keywords", "flow-children": "column" },
                 React__default["default"].createElement("h2", null, t("Recognition keywords")),
                 React__default["default"].createElement("p", { className: "hint" }, t("Names and game terms that help Whisper recognize speech. These hints apply to every channel in this game profile.")),
