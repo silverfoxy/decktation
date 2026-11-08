@@ -45,221 +45,6 @@
         }
     }
 
-    const ACTIVE = new Set(["starting", "recording", "stopping"]);
-    const STATES = new Set(["idle", ...ACTIVE, "ready", "failed"]);
-    const idle = () => ({ success: true, session: null, revision: 0, state: "idle",
-        remaining_ms: 0, event_count: 0, device_count: 0, metadata: {}, report: null });
-    const object = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
-    const LIVE_BUTTONS = new Set(["A", "B", "X", "Y", "L1", "R1", "L2", "R2", "L3", "R3",
-        "L4", "R4", "L5", "R5", "View", "Menu", "D-pad Up", "D-pad Down", "D-pad Left", "D-pad Right",
-        "Left Trackpad", "Right Trackpad"]);
-    const liveSource = (value) => typeof value === "string" && /^source_([1-9]|1[0-6])$/.test(value);
-    const liveCode = (value) => Number.isInteger(value) &&
-        ((value >= 0x100 && value <= 0x15f) || (value >= 0x220 && value <= 0x223) || (value >= 0x2c0 && value <= 0x2ff));
-    function liveInput(value) {
-        if (!object(value) || !Array.isArray(value.pressed) || value.pressed.length > 32 ||
-            !value.pressed.every((entry) => object(entry) && liveSource(entry.source) && LIVE_BUTTONS.has(entry.button)))
-            return null;
-        const event = value.last_event;
-        if (event !== null && (!object(event) || !Number.isFinite(event.at_ms) || event.at_ms < 0 || event.at_ms > 30000 ||
-            !liveSource(event.source) || !["key", "hid", "mapped", "binding"].includes(event.kind) || typeof event.pressed !== "boolean" ||
-            (event.button !== undefined && !LIVE_BUTTONS.has(event.button)) ||
-            (event.code !== undefined && !liveCode(event.code)) ||
-            (event.kind === "key" ? !liveCode(event.code) : !LIVE_BUTTONS.has(event.button))))
-            return null;
-        return { pressed: value.pressed.map(({ source, button }) => ({ source, button })),
-            last_event: event === null ? null : { at_ms: event.at_ms, source: event.source, kind: event.kind,
-                ...(event.button !== undefined ? { button: event.button } : {}),
-                ...(event.code !== undefined ? { code: event.code } : {}), pressed: event.pressed } };
-    }
-    class ControllerDebugClient {
-        constructor(rpc) {
-            this.rpc = rpc;
-            this.view = { snapshot: idle(), pending: null, error: "" };
-            this.listeners = new Set();
-            this.epoch = 0;
-            this.disposed = false;
-            this.cancelRequests = new Set();
-        }
-        subscribe(listener) {
-            this.listeners.add(listener);
-            listener(this.view);
-            return () => { this.listeners.delete(listener); };
-        }
-        emit(patch) {
-            this.view = { ...this.view, ...patch };
-            for (const listener of this.listeners)
-                listener(this.view);
-        }
-        clearPoll() {
-            if (this.pollTimer !== undefined)
-                clearTimeout(this.pollTimer);
-            this.pollTimer = undefined;
-        }
-        async request(invoke, timeout = 5000) {
-            let timer;
-            let cancel = () => { };
-            try {
-                return await new Promise((resolve, reject) => {
-                    cancel = () => reject(new Error("Controller debugger disconnected."));
-                    this.cancelRequests.add(cancel);
-                    timer = setTimeout(() => reject(new Error("Controller debugger did not respond. Try a new capture.")), timeout);
-                    Promise.resolve().then(invoke).then(resolve, reject);
-                });
-            }
-            finally {
-                if (timer !== undefined)
-                    clearTimeout(timer);
-                this.cancelRequests.delete(cancel);
-            }
-        }
-        accept(result, expectedSession) {
-            if (!result?.success)
-                throw new Error(result?.error || "Could not read controller report");
-            if (!STATES.has(result.state) || !Number.isInteger(result.revision) || result.revision < 0 ||
-                !Number.isInteger(result.remaining_ms) || result.remaining_ms < 0 || result.remaining_ms > 30000 ||
-                !Number.isInteger(result.event_count) || result.event_count < 0 ||
-                !Number.isInteger(result.device_count) || result.device_count < 0 ||
-                !object(result.metadata) ||
-                (result.state === "idle" ? result.session !== null : typeof result.session !== "string" || !result.session) ||
-                (expectedSession !== undefined && result.session !== expectedSession) ||
-                (result.state === "ready" && (!object(result.report) || !["complete", "stopped"].includes(result.report.phase)))) {
-                throw new Error("Invalid controller capture status. Reopen Diagnostics to reconnect.");
-            }
-            const current = this.view.snapshot;
-            if (current.session === result.session && result.revision < current.revision)
-                return;
-            // Even a newer stale transport response cannot resurrect a terminal session.
-            if (current.session === result.session && ["ready", "failed"].includes(current.state) && ACTIVE.has(result.state))
-                return;
-            this.emit({ snapshot: { ...result, report: result.state === "ready" ? result.report : null,
-                    live_input: result.state === "recording" ? liveInput(result.live_input) : null }, error: "" });
-        }
-        schedulePoll() {
-            this.clearPoll();
-            if (this.disposed || this.view.pending || this.view.error || !ACTIVE.has(this.view.snapshot.state))
-                return;
-            this.pollTimer = setTimeout(() => this.poll(), 250);
-        }
-        async poll() {
-            this.pollTimer = undefined;
-            const token = this.epoch;
-            const session = this.view.snapshot.session;
-            if (!session || this.disposed || this.view.pending)
-                return;
-            try {
-                const result = await this.request(() => this.rpc.get(session));
-                if (!this.disposed && token === this.epoch)
-                    this.accept(result, session);
-            }
-            catch (error) {
-                if (!this.disposed && token === this.epoch)
-                    this.emit({ error: error.message, snapshot: { ...this.view.snapshot, live_input: null } });
-            }
-            finally {
-                if (!this.disposed && token === this.epoch)
-                    this.schedulePoll();
-            }
-        }
-        async command(pending, invoke, expectedSession) {
-            const token = ++this.epoch;
-            this.clearPoll();
-            this.emit({ pending, error: "" });
-            try {
-                const result = await this.request(invoke, pending === "upload" ? 15000 : 5000);
-                if (!this.disposed && token === this.epoch)
-                    this.accept(result, expectedSession);
-            }
-            catch (error) {
-                if (!this.disposed && token === this.epoch)
-                    this.emit({ error: error.message, snapshot: { ...this.view.snapshot, live_input: null } });
-            }
-            finally {
-                if (!this.disposed && token === this.epoch) {
-                    this.emit({ pending: null });
-                    this.schedulePoll();
-                }
-            }
-        }
-        async connect() {
-            this.disposed = false;
-            await this.command("resume", () => this.rpc.resume());
-        }
-        async start() {
-            if (this.disposed || (this.view.pending && this.view.pending !== "resume") || ACTIVE.has(this.view.snapshot.state))
-                return;
-            await this.command("start", () => this.rpc.start());
-        }
-        async stop() {
-            const { snapshot, pending } = this.view;
-            if (this.disposed || pending || !snapshot.session || !["starting", "recording"].includes(snapshot.state))
-                return;
-            await this.command("stop", () => this.rpc.stop(snapshot.session), snapshot.session);
-        }
-        async refresh() {
-            if (!this.disposed && !this.view.pending)
-                await this.command("resume", () => this.rpc.resume());
-        }
-        async upload() {
-            const { snapshot, pending } = this.view;
-            if (this.disposed || pending || snapshot.state !== "ready" || !snapshot.session || snapshot.event_id)
-                return;
-            await this.command("upload", () => this.rpc.upload(snapshot.session, true), snapshot.session);
-        }
-        dispose() {
-            this.disposed = true;
-            ++this.epoch;
-            this.clearPoll();
-            for (const cancel of this.cancelRequests)
-                cancel();
-            this.listeners.clear();
-        }
-    }
-
-    var version = "0.3.21";
-
-    // Read the actual QAM surface. Document visibility alone does not establish
-    // whether a persistent Steam sidebar is on screen.
-    function quickAccessVisibility(documents, classNames) {
-        let foundMenu = false;
-        for (const doc of documents) {
-            // Prefer the sidebar itself over its full-screen transparent container.
-            for (const name of classNames) {
-                if (!name)
-                    continue;
-                const menus = Array.from(doc.getElementsByClassName(name));
-                if (!menus.length)
-                    continue;
-                foundMenu = true;
-                if (doc.hidden)
-                    break;
-                const view = doc.defaultView;
-                if (!view)
-                    break;
-                for (const menu of menus) {
-                    if (!menu.isConnected)
-                        continue;
-                    const rect = menu.getBoundingClientRect();
-                    if (rect.width <= 0 || rect.height <= 0 || rect.right <= 0 || rect.bottom <= 0 || rect.left >= view.innerWidth || rect.top >= view.innerHeight)
-                        continue;
-                    let visible = true;
-                    for (let node = menu; node; node = node.parentElement) {
-                        const style = view.getComputedStyle(node);
-                        if (style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse" || Number(style.opacity) === 0) {
-                            visible = false;
-                            break;
-                        }
-                    }
-                    if (visible)
-                        return true;
-                }
-                break;
-            }
-        }
-        // Missing markup is unknown, rather than an assertion that QAM is open.
-        return foundMenu ? false : null;
-    }
-
     var _manifest = {"name":"Decktation","version":"0.3.21","author":"silverfoxy","flags":["root"],"api_version":1,"publish":{"tags":["voice","dictation","speech-to-text","input","chat","gaming","accessibility"],"description":"Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using whisper.cpp.","image":"https://raw.githubusercontent.com/silverfoxy/decktation/master/store-card.png"}};
 
     const manifest = _manifest;
@@ -286,7 +71,7 @@
     const callable = api.callable;
     api.addEventListener;
     api.removeEventListener;
-    api.routerHook;
+    const routerHook = api.routerHook;
     const toaster = api.toaster;
     api.openFilePicker;
     api.executeInTab;
@@ -295,84 +80,6 @@
     api.fetchNoCors;
     api.getExternalResourceURL;
     api.useQuickAccessVisible;
-
-    var DefaultContext = {
-      color: undefined,
-      size: undefined,
-      className: undefined,
-      style: undefined,
-      attr: undefined
-    };
-    var IconContext = React__default["default"].createContext && React__default["default"].createContext(DefaultContext);
-
-    var __assign = window && window.__assign || function () {
-      __assign = Object.assign || function (t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-          s = arguments[i];
-          for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
-        }
-        return t;
-      };
-      return __assign.apply(this, arguments);
-    };
-    var __rest = window && window.__rest || function (s, e) {
-      var t = {};
-      for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0) t[p] = s[p];
-      if (s != null && typeof Object.getOwnPropertySymbols === "function") for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
-        if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i])) t[p[i]] = s[p[i]];
-      }
-      return t;
-    };
-    function Tree2Element(tree) {
-      return tree && tree.map(function (node, i) {
-        return React__default["default"].createElement(node.tag, __assign({
-          key: i
-        }, node.attr), Tree2Element(node.child));
-      });
-    }
-    function GenIcon(data) {
-      // eslint-disable-next-line react/display-name
-      return function (props) {
-        return React__default["default"].createElement(IconBase, __assign({
-          attr: __assign({}, data.attr)
-        }, props), Tree2Element(data.child));
-      };
-    }
-    function IconBase(props) {
-      var elem = function (conf) {
-        var attr = props.attr,
-          size = props.size,
-          title = props.title,
-          svgProps = __rest(props, ["attr", "size", "title"]);
-        var computedSize = size || conf.size || "1em";
-        var className;
-        if (conf.className) className = conf.className;
-        if (props.className) className = (className ? className + " " : "") + props.className;
-        return React__default["default"].createElement("svg", __assign({
-          stroke: "currentColor",
-          fill: "currentColor",
-          strokeWidth: "0"
-        }, conf.attr, attr, svgProps, {
-          className: className,
-          style: __assign(__assign({
-            color: props.color || conf.color
-          }, conf.style), props.style),
-          height: computedSize,
-          width: computedSize,
-          xmlns: "http://www.w3.org/2000/svg"
-        }), title && React__default["default"].createElement("title", null, title), props.children);
-      };
-      return IconContext !== undefined ? React__default["default"].createElement(IconContext.Consumer, null, function (conf) {
-        return elem(conf);
-      }) : elem(DefaultContext);
-    }
-
-    // THIS FILE IS AUTO GENERATED
-    function FaArrowCircleUp (props) {
-      return GenIcon({"tag":"svg","attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M8 256C8 119 119 8 256 8s248 111 248 248-111 248-248 248S8 393 8 256zm143.6 28.9l72.4-75.5V392c0 13.3 10.7 24 24 24h16c13.3 0 24-10.7 24-24V209.4l72.4 75.5c9.3 9.7 24.8 9.9 34.3.4l10.9-11c9.4-9.4 9.4-24.6 0-33.9L273 107.7c-9.4-9.4-24.6-9.4-33.9 0L106.3 240.4c-9.4 9.4-9.4 24.6 0 33.9l10.9 11c9.6 9.5 25.1 9.3 34.4-.4z"}}]})(props);
-    }function FaMicrophone (props) {
-      return GenIcon({"tag":"svg","attr":{"viewBox":"0 0 352 512"},"child":[{"tag":"path","attr":{"d":"M176 352c53.02 0 96-42.98 96-96V96c0-53.02-42.98-96-96-96S80 42.98 80 96v160c0 53.02 42.98 96 96 96zm160-160h-16c-8.84 0-16 7.16-16 16v48c0 74.8-64.49 134.82-140.79 127.38C96.71 376.89 48 317.11 48 250.3V208c0-8.84-7.16-16-16-16H16c-8.84 0-16 7.16-16 16v40.16c0 89.64 63.97 169.55 152 181.69V464H96c-8.84 0-16 7.16-16 16v16c0 8.84 7.16 16 16 16h160c8.84 0 16-7.16 16-16v-16c0-8.84-7.16-16-16-16h-56v-33.77C285.71 418.47 352 344.9 352 256v-48c0-8.84-7.16-16-16-16z"}}]})(props);
-    }
 
     var Back$9 = "Back";
     var Enable$9 = "Enable";
@@ -662,7 +369,16 @@
       "Report submitted. Event ID": "Report submitted. Event ID",
       "Type (only English keyboard)": "Type (only English keyboard)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.",
-      Paste: Paste$9
+      Paste: Paste$9,
+      "Edit game profile": "Edit game profile",
+      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.",
+      "New profile": "New profile",
+      "New profile name": "New profile name",
+      "Create profile": "Create profile",
+      "Save or discard your changes before creating a profile.": "Save or discard your changes before creating a profile.",
+      "Delete profile": "Delete profile",
+      "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.",
+      "Switch to another active profile in Mode before deleting this profile.": "Switch to another active profile in Mode before deleting this profile."
     };
 
     var af = "Afrikaans";
@@ -1156,7 +872,16 @@
       "Paste (default)": "Pegar (predeterminado)",
       "Type (only English keyboard)": "Escribir (solo teclado inglés)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Escribir requiere un teclado inglés (EE. UU.) y texto ASCII. Los demás caracteres no se introducen ni se envían.",
-      Paste: Paste$8
+      Paste: Paste$8,
+      "Edit game profile": "Editar perfil del juego",
+      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "Incluye un espacio después del comando de chat, por ejemplo \"/p \". Déjalo vacío para escribir sin un comando de canal.",
+      "New profile": "Nuevo perfil",
+      "New profile name": "Nombre del nuevo perfil",
+      "Create profile": "Crear perfil",
+      "Save or discard your changes before creating a profile.": "Guarda o descarta los cambios antes de crear un perfil.",
+      "Delete profile": "Eliminar perfil",
+      "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "¿Eliminar el perfil \"{name}\" y todos sus ajustes? También se perderán los cambios sin guardar.",
+      "Switch to another active profile in Mode before deleting this profile.": "Activa otro perfil en Modo antes de eliminar este perfil."
     };
 
     var Back$7 = "Назад";
@@ -1447,7 +1172,16 @@
       "Paste (default)": "Вставка (по умолчанию)",
       "Type (only English keyboard)": "Ввод (только английская раскладка)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Для ввода нужны английская раскладка (США) и текст ASCII. Другие символы не будут введены или отправлены.",
-      Paste: Paste$7
+      Paste: Paste$7,
+      "Edit game profile": "Изменить профиль игры",
+      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "Добавьте пробел после команды чата, например \"/p \". Оставьте поле пустым, чтобы вводить текст без команды канала.",
+      "New profile": "Новый профиль",
+      "New profile name": "Название нового профиля",
+      "Create profile": "Создать профиль",
+      "Save or discard your changes before creating a profile.": "Сохраните или отмените изменения перед созданием профиля.",
+      "Delete profile": "Удалить профиль",
+      "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "Удалить профиль «{name}» и все его настройки? Несохранённые изменения также будут потеряны.",
+      "Switch to another active profile in Mode before deleting this profile.": "Перед удалением этого профиля активируйте другой профиль в меню «Режим»."
     };
 
     var Back$6 = "Voltar";
@@ -1738,7 +1472,16 @@
       "Paste (default)": "Colar (padrão)",
       "Type (only English keyboard)": "Digitar (somente teclado inglês)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Digitar requer layout de teclado inglês (EUA) e texto ASCII. Outros caracteres não serão digitados nem enviados.",
-      Paste: Paste$6
+      Paste: Paste$6,
+      "Edit game profile": "Editar perfil do jogo",
+      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "Inclua um espaço após o comando de chat, por exemplo \"/p \". Deixe vazio para digitar sem um comando de canal.",
+      "New profile": "Novo perfil",
+      "New profile name": "Nome do novo perfil",
+      "Create profile": "Criar perfil",
+      "Save or discard your changes before creating a profile.": "Salve ou descarte suas alterações antes de criar um perfil.",
+      "Delete profile": "Excluir perfil",
+      "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "Excluir o perfil \"{name}\" e todas as suas configurações? As alterações não salvas também serão perdidas.",
+      "Switch to another active profile in Mode before deleting this profile.": "Ative outro perfil em Modo antes de excluir este perfil."
     };
 
     var Back$5 = "Wstecz";
@@ -2029,7 +1772,16 @@
       "Paste (default)": "Wklej (domyślnie)",
       "Type (only English keyboard)": "Wpisuj (tylko klawiatura angielska)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Wpisywanie wymaga angielskiego (US) układu klawiatury i tekstu ASCII. Inny tekst nie zostanie wpisany ani wysłany.",
-      Paste: Paste$5
+      Paste: Paste$5,
+      "Edit game profile": "Edytuj profil gry",
+      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "Dodaj spację po poleceniu czatu, na przykład \"/p \". Pozostaw puste, aby pisać bez polecenia kanału.",
+      "New profile": "Nowy profil",
+      "New profile name": "Nazwa nowego profilu",
+      "Create profile": "Utwórz profil",
+      "Save or discard your changes before creating a profile.": "Zapisz lub odrzuć zmiany przed utworzeniem profilu.",
+      "Delete profile": "Usuń profil",
+      "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "Usunąć profil „{name}” i wszystkie jego ustawienia? Niezapisane zmiany również zostaną utracone.",
+      "Switch to another active profile in Mode before deleting this profile.": "Aktywuj inny profil w menu Tryb przed usunięciem tego profilu."
     };
 
     var Back$4 = "뒤로";
@@ -2320,7 +2072,16 @@
       "Paste (default)": "붙여넣기 (기본값)",
       "Type (only English keyboard)": "입력 (영어 키보드만)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "입력에는 영어(미국) 키보드 배열과 ASCII 텍스트가 필요합니다. 다른 문자는 입력하거나 전송하지 않습니다.",
-      Paste: Paste$4
+      Paste: Paste$4,
+      "Edit game profile": "게임 프로필 편집",
+      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "채팅 명령 뒤에 공백을 넣으세요. 예: \"/p \". 채널 명령 없이 입력하려면 비워 두세요.",
+      "New profile": "새 프로필",
+      "New profile name": "새 프로필 이름",
+      "Create profile": "프로필 만들기",
+      "Save or discard your changes before creating a profile.": "프로필을 만들기 전에 변경 사항을 저장하거나 취소하세요.",
+      "Delete profile": "프로필 삭제",
+      "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "프로필 \"{name}\" 및 모든 설정을 삭제할까요? 저장하지 않은 변경 사항도 사라집니다.",
+      "Switch to another active profile in Mode before deleting this profile.": "이 프로필을 삭제하기 전에 모드에서 다른 프로필을 활성화하세요."
     };
 
     var Back$3 = "戻る";
@@ -2611,7 +2372,16 @@
       "Paste (default)": "貼り付け（既定）",
       "Type (only English keyboard)": "入力（英語キーボードのみ）",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "入力には英語（米国）キーボード配列とASCII文字が必要です。それ以外の文字は入力・送信されません。",
-      Paste: Paste$3
+      Paste: Paste$3,
+      "Edit game profile": "ゲームプロファイルを編集",
+      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "チャットコマンドの後にスペースを入れてください（例：\"/p \"）。チャンネルコマンドなしで入力する場合は空欄にします。",
+      "New profile": "新しいプロフィール",
+      "New profile name": "新しいプロフィール名",
+      "Create profile": "プロフィールを作成",
+      "Save or discard your changes before creating a profile.": "プロフィールを作成する前に変更を保存または破棄してください。",
+      "Delete profile": "プロフィールを削除",
+      "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "プロフィール「{name}」とすべての設定を削除しますか？未保存の変更も失われます。",
+      "Switch to another active profile in Mode before deleting this profile.": "このプロフィールを削除する前に、モードで別のプロフィールを有効にしてください。"
     };
 
     var Back$2 = "Zurück";
@@ -2902,7 +2672,16 @@
       "Paste (default)": "Einfügen (Standard)",
       "Type (only English keyboard)": "Tippen (nur englische Tastatur)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Tippen erfordert eine englische US-Tastaturbelegung und ASCII-Text. Anderer Text wird weder eingegeben noch gesendet.",
-      Paste: Paste$2
+      Paste: Paste$2,
+      "Edit game profile": "Spielprofil bearbeiten",
+      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "Füge nach dem Chatbefehl ein Leerzeichen ein, zum Beispiel \"/p \". Leer lassen, um ohne Kanalbefehl zu schreiben.",
+      "New profile": "Neues Profil",
+      "New profile name": "Name des neuen Profils",
+      "Create profile": "Profil erstellen",
+      "Save or discard your changes before creating a profile.": "Speichere oder verwirf deine Änderungen, bevor du ein Profil erstellst.",
+      "Delete profile": "Profil löschen",
+      "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "Profil „{name}“ und alle Einstellungen löschen? Ungespeicherte Änderungen gehen ebenfalls verloren.",
+      "Switch to another active profile in Mode before deleting this profile.": "Aktiviere unter Modus ein anderes Profil, bevor du dieses Profil löschst."
     };
 
     var Back$1 = "Retour";
@@ -3193,7 +2972,16 @@
       "Paste (default)": "Coller (par défaut)",
       "Type (only English keyboard)": "Saisir (clavier anglais uniquement)",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "La saisie nécessite un clavier anglais (US) et du texte ASCII. Les autres caractères ne sont ni saisis ni envoyés.",
-      Paste: Paste$1
+      Paste: Paste$1,
+      "Edit game profile": "Modifier le profil du jeu",
+      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "Ajoutez un espace après la commande de discussion, par exemple \"/p \". Laissez vide pour écrire sans commande de canal.",
+      "New profile": "Nouveau profil",
+      "New profile name": "Nom du nouveau profil",
+      "Create profile": "Créer un profil",
+      "Save or discard your changes before creating a profile.": "Enregistrez ou abandonnez vos modifications avant de créer un profil.",
+      "Delete profile": "Supprimer le profil",
+      "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "Supprimer le profil « {name} » et tous ses paramètres ? Les modifications non enregistrées seront également perdues.",
+      "Switch to another active profile in Mode before deleting this profile.": "Activez un autre profil dans Mode avant de supprimer ce profil."
     };
 
     var Back = "返回";
@@ -3484,7 +3272,16 @@
       "Paste (default)": "粘贴（默认）",
       "Type (only English keyboard)": "键入（仅限英文键盘）",
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "键入需要英语（美国）键盘布局和 ASCII 文本。其他字符不会输入或发送。",
-      Paste: Paste
+      Paste: Paste,
+      "Edit game profile": "编辑游戏配置",
+      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "请在聊天命令后加一个空格，例如 \"/p \"。留空则直接输入，不使用频道命令。",
+      "New profile": "新建配置",
+      "New profile name": "新配置名称",
+      "Create profile": "创建配置",
+      "Save or discard your changes before creating a profile.": "创建配置前，请保存或放弃更改。",
+      "Delete profile": "删除配置",
+      "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "删除配置“{name}”及其所有设置？未保存的更改也将丢失。",
+      "Switch to another active profile in Mode before deleting this profile.": "删除此配置前，请在模式菜单中激活其他配置。"
     };
 
     const catalogs = { en: en$1, es, ru, pt, pl, ko, ja, de, fr, zh };
@@ -3563,6 +3360,894 @@
         // Autonyms are independent of the interface locale and ICU/browser data.
         // Keep Whisper codes untouched; only change the displayed names.
         return nativeLanguageNames[code] || fallback;
+    }
+
+    const controls = 'button, input, select, textarea, [role="button"]';
+    function available(root) {
+        return Array.from(root.querySelectorAll(controls)).filter(element => !element.matches(':disabled, [aria-disabled="true"]') && element.getClientRects().length > 0);
+    }
+    function focus(element) {
+        if (!element)
+            return false;
+        // Ask Steam to transfer virtual focus, including when the editor is mounted
+        // in its separate SP window. DOM focus alone does not move the focus ring.
+        const CustomEvent = element.ownerDocument.defaultView?.CustomEvent;
+        if (CustomEvent)
+            element.dispatchEvent(new CustomEvent("vgp_requestfocus", { bubbles: true, cancelable: true, detail: { button: deckyFrontendLib.GamepadButton.INVALID } }));
+        // Steam tracks virtual controller focus separately from DOM focus.
+        let nativeNode;
+        const visit = (node) => {
+            if (!node?.Element?.contains(element))
+                return;
+            nativeNode = node;
+            for (const child of node.GetChildren?.()[0] || [])
+                visit(child);
+        };
+        try {
+            for (const tree of deckyFrontendLib.getGamepadNavigationTrees() || [])
+                visit(tree.Root);
+            nativeNode?.BTakeFocus?.(0);
+        }
+        catch { /* DOM-only environments do not have a Steam navigation tree. */ }
+        element.focus({ preventScroll: true });
+        element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        return true;
+    }
+    // Steam's default column traversal does not follow these full-screen rows.
+    function moveEditorFocus(root, direction, source) {
+        const ElementClass = root.ownerDocument.defaultView?.HTMLElement;
+        const active = (ElementClass && source instanceof ElementClass && root.contains(source)
+            ? source : root.ownerDocument.activeElement);
+        if (!active || !root.contains(active))
+            return false;
+        const horizontal = direction === deckyFrontendLib.GamepadButton.DIR_LEFT || direction === deckyFrontendLib.GamepadButton.DIR_RIGHT;
+        const vertical = direction === deckyFrontendLib.GamepadButton.DIR_UP || direction === deckyFrontendLib.GamepadButton.DIR_DOWN;
+        if (!horizontal && !vertical)
+            return false;
+        const forward = direction === deckyFrontendLib.GamepadButton.DIR_RIGHT || direction === deckyFrontendLib.GamepadButton.DIR_DOWN ? 1 : -1;
+        const scope = root.querySelector('[role="alertdialog"]') || root;
+        const from = active.getBoundingClientRect();
+        const centerX = from.left + from.width / 2, centerY = from.top + from.height / 2;
+        const row = active.closest('[data-nav-row]');
+        if (horizontal && row && scope.contains(row)) {
+            const peers = available(row).filter(element => element !== active).map(element => ({ element, rect: element.getBoundingClientRect() }))
+                .filter(({ rect }) => rect.bottom > from.top && rect.top < from.bottom && (rect.left + rect.width / 2 - centerX) * forward > 2)
+                .sort((a, b) => Math.abs(a.rect.left + a.rect.width / 2 - centerX) - Math.abs(b.rect.left + b.rect.width / 2 - centerX));
+            if (peers.length)
+                return focus(peers[0].element);
+        }
+        const pane = active.closest('.channel-list, .details, .keywords');
+        if (scope === root && horizontal) {
+            if (direction === deckyFrontendLib.GamepadButton.DIR_RIGHT && pane?.matches('.channel-list'))
+                return focus(available(root.querySelector('.details'))[0]);
+            if (direction === deckyFrontendLib.GamepadButton.DIR_LEFT && pane?.matches('.details'))
+                return focus(root.querySelector('.channel-row.selected button, .channel-row.selected [role="button"]') || undefined);
+        }
+        const candidates = available(scope).filter(element => element !== active && !element.contains(active) &&
+            (!vertical || !pane || pane.contains(element) || !!element.closest('.editor-header, .editor-footer')))
+            .map(element => {
+            const rect = element.getBoundingClientRect();
+            const dx = rect.left + rect.width / 2 - centerX, dy = rect.top + rect.height / 2 - centerY;
+            const advance = (horizontal ? dx : dy) * forward;
+            const cross = Math.abs(horizontal ? dy : dx);
+            return { element, advance, score: advance + cross * 3 };
+        }).filter(candidate => candidate.advance > 2).sort((a, b) => a.score - b.score);
+        return focus(candidates[0]?.element);
+    }
+    function moveEditorKeyFocus(root, event) {
+        const directions = { ArrowLeft: deckyFrontendLib.GamepadButton.DIR_LEFT, ArrowRight: deckyFrontendLib.GamepadButton.DIR_RIGHT, ArrowUp: deckyFrontendLib.GamepadButton.DIR_UP, ArrowDown: deckyFrontendLib.GamepadButton.DIR_DOWN };
+        if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || !(event.key in directions))
+            return false;
+        const target = event.target;
+        // Keep caret movement while editing text. Escape/Tab or the controller can
+        // leave the field; physical arrows navigate when a button has focus.
+        if (target.matches('input, textarea, select, [contenteditable="true"]'))
+            return false;
+        return moveEditorFocus(root, directions[event.key], target);
+    }
+
+    const PROFILE_EDITOR_ROUTE = "/decktation/profiles";
+    function openProfileEditor() {
+        deckyFrontendLib.Navigation.Navigate(PROFILE_EDITOR_ROUTE);
+        deckyFrontendLib.Navigation.CloseSideMenus();
+    }
+    const loadProfile = callable("get_profile_editor");
+    const saveProfile = callable("save_profile_editor");
+    const getPresets$1 = callable("get_presets");
+    const getActivePreset = callable("get_active_preset");
+    const createProfile = callable("create_profile");
+    const deleteProfile = callable("delete_profile");
+    const title = (channel) => channel.replace(/_/g, " ");
+    // Use raw full-screen controls, rather than Steam's tall quick-access form rows.
+    function EditorTextField({ label, description, ...props }) {
+        return React__default["default"].createElement("div", { className: "editor-field" },
+            React__default["default"].createElement("div", { className: "editor-label" }, label),
+            React__default["default"].createElement(deckyFrontendLib.TextField, { ...props, "aria-label": String(label), style: { height: 32, minHeight: 32, padding: "5px 8px", fontSize: 14, lineHeight: "20px", margin: 0 } }),
+            description && React__default["default"].createElement("div", { className: "hint" }, description));
+    }
+    // Resolve Steam's keyboard styles rather than relying on version-specific hashes.
+    const keyboardStyles = deckyFrontendLib.findModuleChild((module) => module?.VirtualKeyboardContainer && module?.Keyboard ? module : undefined) || {};
+    const useSteamKeyboardManager = deckyFrontendLib.findModuleChild((module) => {
+        if (!module || typeof module !== 'object')
+            return undefined;
+        return Object.values(module).find(value => typeof value === 'function' &&
+            value.toString().length < 180 && value.toString().includes('?.VirtualKeyboardManager'));
+    });
+    const styles = `
+.decktation-editor { position:fixed; inset:0; z-index:1; box-sizing:border-box; height:100vh; padding:44px 20px calc(56px + env(safe-area-inset-bottom,0px)); background:#101923; color:#ecf1f6; display:flex; flex-direction:column; gap:10px; font-size:14px; line-height:1.35; overflow:hidden; }
+.decktation-editor * { box-sizing:border-box; }
+.decktation-editor h1 { font-size:20px; line-height:1.2; margin:0; white-space:nowrap; }
+.decktation-editor h2 { font-size:17px; line-height:1.25; margin:0; text-transform:capitalize; }
+.decktation-editor .editor-header,.decktation-editor .editor-footer,.decktation-editor .tabs,.decktation-editor .inline { display:flex; align-items:center; gap:8px; min-width:0; }
+.decktation-editor .editor-header { flex-shrink:0; justify-content:space-between; background:transparent; padding:0; min-height:36px; }
+.decktation-editor .tabs { flex-shrink:0; }
+.decktation-editor .profile-picker { display:flex; align-items:center; gap:8px; min-width:0; }
+.decktation-editor .profile-picker > span { font-size:12px; color:#aab8c7; white-space:nowrap; }
+.decktation-editor .profile-picker > :last-child { width:210px; min-width:0; }
+.decktation-editor .profile-picker button,.decktation-editor .profile-picker [role="button"],.decktation-editor .profile-picker select { min-height:32px !important; height:32px !important; padding:4px 8px !important; font-size:14px !important; margin:0 !important; }
+.decktation-editor .editor-button { display:block; min-height:32px !important; height:32px; min-width:0 !important; width:auto; margin:0 !important; padding:5px 10px !important; font-size:14px !important; line-height:20px !important; flex-shrink:0; white-space:nowrap; }
+.decktation-editor .tabs .editor-button { width:100px; }
+.decktation-editor .workspace { display:grid; grid-template-columns:minmax(210px,30%) minmax(0,1fr); gap:12px; min-height:0; flex:1; }
+.decktation-editor .channel-list,.decktation-editor .details { min-height:0; min-width:0; padding:12px; border-radius:6px; background:#1b2836; }
+.decktation-editor .channel-list { display:flex; flex-direction:column; gap:8px; overflow:hidden; }
+.decktation-editor .channel-list > :not(.channel-rows) { flex-shrink:0; }
+.decktation-editor .channel-rows { flex:1; overflow-y:auto; min-height:0; }
+.decktation-editor .channel-row { margin:0 0 3px; border-left:3px solid transparent; }
+.decktation-editor .channel-row.selected { border-color:#66c0f4; background:#263f53; }
+.decktation-editor .channel-row .editor-button { width:100%; text-align:left; border-radius:3px; }
+.decktation-editor .channel-label { display:flex; justify-content:space-between; align-items:center; gap:10px; width:100%; text-transform:capitalize; }
+.decktation-editor .channel-label > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.decktation-editor code { color:#9cc7e3; text-transform:none; font-size:13px; }
+.decktation-editor .details { overflow-y:auto; }
+.decktation-editor .details,.decktation-editor .keywords { scrollbar-gutter:stable; }
+.decktation-editor .details[data-editor-editing="true"],.decktation-editor .keywords[data-editor-editing="true"] { padding-bottom:var(--editor-keyboard-padding,0px); scroll-padding-top:10px; }
+.decktation-editor .details::-webkit-scrollbar,.decktation-editor .keywords::-webkit-scrollbar { width:8px; }
+.decktation-editor .details::-webkit-scrollbar-thumb,.decktation-editor .keywords::-webkit-scrollbar-thumb { background:#60788a; border-radius:4px; }
+.decktation-editor .details-body { display:flex; flex-direction:column; gap:12px; }
+.decktation-editor .editor-field { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.decktation-editor .editor-label { font-size:13px; color:#cdd7e2; line-height:18px; }
+.decktation-editor .editor-field input { width:100%; min-width:0; height:32px !important; min-height:32px !important; margin:0 !important; padding:5px 8px !important; font-size:14px !important; line-height:20px !important; background:#101923 !important; color:#ecf1f6 !important; border:1px solid #53687c !important; border-radius:4px; }
+.decktation-editor .field { margin:0; }
+.decktation-editor .trigger-section { display:flex; flex-direction:column; gap:8px; }
+.decktation-editor .trigger-section .inline { align-items:flex-end; }
+.decktation-editor .inline .editor-field { flex:1; }
+.decktation-editor .chips { display:flex; flex-wrap:wrap; gap:6px; margin:0; }
+.decktation-editor .hint { color:#aab8c7; font-size:12px; line-height:1.4; margin:0; }
+.decktation-editor .editor-footer { flex-shrink:0; border-top:1px solid #344659; padding-top:8px; justify-content:space-between; min-height:40px; }
+.decktation-editor .editor-footer [role="alert"],.decktation-editor .editor-footer [role="status"] { flex:1; min-width:0; text-align:center; }
+.decktation-editor .keywords { flex:1; min-height:0; overflow-y:auto; background:#1b2836; padding:16px; border-radius:6px; display:flex; flex-direction:column; gap:12px; }
+.decktation-editor .notice { padding:10px; background:#354557; border-radius:6px; flex-shrink:0; }
+.decktation-editor .error { color:#ffb7b7; font-size:12px; }
+@media (max-width:850px) { .decktation-editor { padding:36px 12px calc(56px + env(safe-area-inset-bottom,0px)); gap:8px; } .decktation-editor h1 { font-size:18px; } .decktation-editor .profile-picker > span { display:none; } .decktation-editor .profile-picker > :last-child { width:190px; } .decktation-editor .tabs .editor-button { width:88px; } .decktation-editor .channel-list,.decktation-editor .details { padding:10px; } }
+`;
+    function ProfileEditor() {
+        const [game, setGame] = React.useState("");
+        const [presets, setPresets] = React.useState([]);
+        const [profile, setProfile] = React.useState(null);
+        const [selected, setSelected] = React.useState("");
+        const [tab, setTab] = React.useState("channels");
+        const [canDelete, setCanDelete] = React.useState(false);
+        const [confirmDelete, setConfirmDelete] = React.useState(false);
+        const [activeGame, setActiveGame] = React.useState("");
+        const [creatingProfile, setCreatingProfile] = React.useState(false);
+        const [profileName, setProfileName] = React.useState("");
+        const [search, setSearch] = React.useState("");
+        const [newChannel, setNewChannel] = React.useState("");
+        const [addingChannel, setAddingChannel] = React.useState(false);
+        const [trigger, setTrigger] = React.useState("");
+        const [keyword, setKeyword] = React.useState("");
+        const [busy, setBusy] = React.useState(false);
+        const [dirty, setDirty] = React.useState(false);
+        const [message, setMessage] = React.useState("");
+        const [error, setError] = React.useState("");
+        const [pendingAction, setPendingAction] = React.useState(null);
+        const keyboardManager = useSteamKeyboardManager?.();
+        const details = React.useRef(null);
+        const editor = React.useRef(null);
+        React.useEffect(() => {
+            const root = editor.current;
+            if (!root)
+                return;
+            const document = root.ownerDocument;
+            const window = document.defaultView;
+            let frame = 0;
+            let input = null;
+            let keyboardVisible = !!keyboardManager?.IsShowingVirtualKeyboard?.Value;
+            const initialViewportHeight = window.visualViewport?.height ?? window.innerHeight;
+            let adjustedPane = null;
+            let originalScroll = 0;
+            const restore = () => {
+                if (!adjustedPane)
+                    return;
+                adjustedPane.removeAttribute('data-editor-editing');
+                adjustedPane.style.removeProperty('--editor-keyboard-padding');
+                adjustedPane.scrollTop = originalScroll;
+                adjustedPane = null;
+            };
+            const revealInput = () => {
+                cancelAnimationFrame(frame);
+                frame = requestAnimationFrame(() => {
+                    if (!input || !root.contains(input)) {
+                        restore();
+                        return;
+                    }
+                    const pane = input.closest('.details, .keywords');
+                    if (!pane) {
+                        restore();
+                        return;
+                    }
+                    let visibleBottom = window.innerHeight;
+                    let measuredKeyboard = false;
+                    for (const className of [keyboardStyles.Keyboard]) {
+                        if (!className)
+                            continue;
+                        for (const keyboard of Array.from(document.getElementsByClassName(className))) {
+                            const bounds = keyboard.getBoundingClientRect();
+                            if (bounds.height > 0 && bounds.width > 0 && bounds.bottom > 0 && bounds.top < window.innerHeight &&
+                                getComputedStyle(keyboard).visibility !== 'hidden') {
+                                visibleBottom = Math.min(visibleBottom, Math.max(0, bounds.top));
+                                measuredKeyboard = true;
+                            }
+                        }
+                    }
+                    // Steam may render the keyboard in another window. Only reserve
+                    // fallback space when its own manager confirms it is open.
+                    if (keyboardVisible && !measuredKeyboard)
+                        visibleBottom = Math.min(visibleBottom, window.innerHeight * 0.45);
+                    // Use a viewport reduction only after mount; Steam's initial
+                    // visual viewport can describe an unrelated overlay.
+                    const viewport = window.visualViewport;
+                    const viewportReduced = !!viewport && initialViewportHeight - viewport.height > 100;
+                    if (viewportReduced && viewport)
+                        visibleBottom = Math.min(visibleBottom, viewport.offsetTop + viewport.height);
+                    if (visibleBottom >= window.innerHeight && !viewportReduced) {
+                        restore();
+                        return;
+                    }
+                    const bottom = input.getBoundingClientRect().bottom;
+                    const limit = Math.min(visibleBottom, pane.getBoundingClientRect().bottom) - 40;
+                    if (bottom <= limit)
+                        return;
+                    if (adjustedPane !== pane) {
+                        restore();
+                        adjustedPane = pane;
+                        originalScroll = pane.scrollTop;
+                    }
+                    const padding = `${Math.ceil(window.innerHeight - visibleBottom + input.offsetHeight + 80)}px`;
+                    if (pane.style.getPropertyValue('--editor-keyboard-padding') !== padding)
+                        pane.style.setProperty('--editor-keyboard-padding', padding);
+                    if (!pane.hasAttribute('data-editor-editing'))
+                        pane.setAttribute('data-editor-editing', 'true');
+                    pane.scrollTop += Math.ceil(bottom - limit);
+                });
+            };
+            const keyboardSubscription = keyboardManager?.IsShowingVirtualKeyboard?.Subscribe((visible) => {
+                keyboardVisible = visible;
+                revealInput();
+            });
+            const resize = revealInput;
+            const observer = new MutationObserver(revealInput);
+            observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'] });
+            const onFocus = (event) => {
+                const target = event.target;
+                restore();
+                input = target.matches('input, textarea') ? target : null;
+                revealInput();
+            };
+            const onDirection = (event) => {
+                if (moveEditorFocus(root, event.detail.button, event.target)) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+            };
+            const onKey = (event) => {
+                if (moveEditorKeyFocus(root, event)) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+            };
+            root.addEventListener('vgp_ondirection', onDirection, true);
+            root.addEventListener('keydown', onKey, true);
+            root.addEventListener('focusin', onFocus);
+            window.addEventListener('resize', resize);
+            window.visualViewport?.addEventListener('resize', resize);
+            window.visualViewport?.addEventListener('scroll', resize);
+            return () => {
+                keyboardSubscription?.Unsubscribe?.();
+                observer.disconnect();
+                cancelAnimationFrame(frame);
+                restore();
+                root.removeEventListener('vgp_ondirection', onDirection, true);
+                root.removeEventListener('keydown', onKey, true);
+                root.removeEventListener('focusin', onFocus);
+                window.removeEventListener('resize', resize);
+                window.visualViewport?.removeEventListener('resize', resize);
+                window.visualViewport?.removeEventListener('scroll', resize);
+            };
+        }, [keyboardManager]);
+        const mounted = React.useRef(true);
+        React.useEffect(() => {
+            mounted.current = true;
+            Promise.all([getPresets$1(), getActivePreset()]).then(([result, active]) => {
+                if (!mounted.current)
+                    return;
+                if (!result.success || !active.success) {
+                    setError(result.error || active.error);
+                    return;
+                }
+                setPresets(result.presets);
+                setGame(active.game);
+                setActiveGame(active.game);
+            }).catch(error => { if (mounted.current)
+                setError(String(error)); });
+            return () => { mounted.current = false; };
+        }, []);
+        React.useEffect(() => {
+            if (!game)
+                return;
+            let active = true;
+            setCanDelete(false);
+            setProfile(null);
+            setError("");
+            setMessage("");
+            setDirty(false);
+            setSearch("");
+            setTrigger("");
+            setKeyword("");
+            setNewChannel("");
+            setAddingChannel(false);
+            loadProfile(game).then(result => {
+                if (!active)
+                    return;
+                if (!result.success) {
+                    setError(result.error);
+                    return;
+                }
+                setCanDelete(!!result.can_delete);
+                const loaded = result.profile;
+                setProfile({ ...loaded, hotwords: Array.isArray(loaded.hotwords) ? loaded.hotwords : loaded.hotwords ? [loaded.hotwords] : [] });
+                setSelected(loaded.default_channel);
+            }).catch(error => { if (active)
+                setError(String(error)); });
+            return () => { active = false; };
+        }, [game]);
+        function update(next) { setProfile(next); setDirty(true); setMessage(""); setError(""); }
+        function leave(nextGame) {
+            if (busy)
+                return;
+            if (dirty || trigger.trim() || keyword.trim() || newChannel.trim()) {
+                setPendingAction(nextGame ? { game: nextGame } : {});
+                return;
+            }
+            if (nextGame)
+                setGame(nextGame);
+            else
+                deckyFrontendLib.Navigation.NavigateBack();
+        }
+        async function save() {
+            if (!profile)
+                return;
+            if (trigger.trim() || keyword.trim() || newChannel.trim()) {
+                setError(t("Add or clear the text you entered before saving."));
+                return;
+            }
+            setBusy(true);
+            setError("");
+            try {
+                const channels = Object.fromEntries(Object.entries(profile.channels).map(([key, command]) => [key, command.trim() ? command.trim() + " " : ""]));
+                const result = await saveProfile(game, { ...profile, channels });
+                if (!mounted.current)
+                    return;
+                if (!result.success)
+                    throw new Error(result.error);
+                setProfile({ ...profile, channels });
+                setDirty(false);
+                setMessage(t("Saved"));
+            }
+            catch (error) {
+                if (mounted.current)
+                    setError(String(error));
+            }
+            finally {
+                if (mounted.current)
+                    setBusy(false);
+            }
+        }
+        const pending = pendingAction !== null;
+        const disabled = busy || pending || creatingProfile || confirmDelete;
+        const filtered = profile ? Object.keys(profile.channels).filter(channel => `${title(channel)} ${profile.channels[channel]} ${Object.entries(profile.channel_triggers).filter(([, value]) => value === channel).map(([key]) => key).join(" ")}`.toLowerCase().includes(search.toLowerCase())) : [];
+        const aliases = profile ? Object.entries(profile.channel_triggers).filter(([, channel]) => channel === selected).map(([phrase]) => phrase) : [];
+        const navigate = (event) => {
+            if (!busy && editor.current && moveEditorFocus(editor.current, event.detail.button, event.target)) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+        };
+        return React__default["default"].createElement(deckyFrontendLib.Focusable, { ref: editor, className: "decktation-editor", "flow-children": "column", onGamepadDirection: navigate, onCancel: (event) => { event.stopPropagation(); event.preventDefault(); if (busy)
+                return; if (confirmDelete)
+                setConfirmDelete(false);
+            else if (pending)
+                setPendingAction(null);
+            else if (creatingProfile)
+                setCreatingProfile(false);
+            else
+                leave(); }, onCancelActionDescription: t("Back") },
+            React__default["default"].createElement("style", null, styles),
+            React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "editor-header", role: "banner", "flow-children": "row", "data-nav-row": true },
+                React__default["default"].createElement("h1", null, t("Game profiles")),
+                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "tabs", "flow-children": "row", "data-nav-row": true },
+                    React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled, onClick: () => setTab("channels") },
+                        tab === "channels" ? "● " : "",
+                        t("Channels")),
+                    React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled, onClick: () => setTab("keywords") },
+                        tab === "keywords" ? "● " : "",
+                        t("Keywords"))),
+                React__default["default"].createElement("div", { className: "profile-picker" },
+                    React__default["default"].createElement("span", null, t("Game profile")),
+                    React__default["default"].createElement(deckyFrontendLib.Dropdown, { menuLabel: t("Game profile"), rgOptions: presets.map(preset => ({ data: preset.id, label: t(preset.name) })), selectedOption: game, disabled: disabled, onChange: option => { if (String(option.data) !== game)
+                            leave(String(option.data)); } }))),
+            confirmDelete && React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "notice", role: "alertdialog", "aria-label": t("Delete profile") },
+                React__default["default"].createElement("div", null, t('Delete profile "{name}" and all its settings? Unsaved changes will also be lost.', { name: presets.find(preset => preset.id === game)?.name || game })),
+                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "inline", "flow-children": "row", "data-nav-row": true },
+                    React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", autoFocus: true, disabled: busy, onClick: () => setConfirmDelete(false) }, t("Cancel")),
+                    React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: busy, onClick: async () => {
+                            setBusy(true);
+                            setError("");
+                            try {
+                                const result = await deleteProfile(game);
+                                if (!result.success) {
+                                    setError(t(result.error));
+                                    return;
+                                }
+                                setPresets(current => current.filter(preset => preset.id !== game));
+                                setGame(result.active_game);
+                                setActiveGame(result.active_game);
+                                setConfirmDelete(false);
+                            }
+                            catch (error) {
+                                setError(String(error));
+                            }
+                            finally {
+                                setBusy(false);
+                            }
+                        } }, t("Delete profile")))),
+            creatingProfile && React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "notice", "flow-children": "column" },
+                React__default["default"].createElement(EditorTextField, { label: t("New profile name"), autoFocus: true, value: profileName, disabled: busy, onChange: event => setProfileName(event.target.value) }),
+                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "inline", "flow-children": "row", "data-nav-row": true },
+                    React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: busy || !profileName.trim(), onClick: async () => {
+                            setBusy(true);
+                            setError("");
+                            try {
+                                const result = await createProfile(profileName.trim());
+                                if (!result.success) {
+                                    setError(result.error);
+                                    return;
+                                }
+                                setPresets(current => [...current, { id: result.id, name: result.name }]);
+                                setGame(result.id);
+                                setTab("channels");
+                                setCreatingProfile(false);
+                                setProfileName("");
+                            }
+                            catch (error) {
+                                setError(String(error));
+                            }
+                            finally {
+                                setBusy(false);
+                            }
+                        } }, t("Create profile")),
+                    React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: busy, onClick: () => setCreatingProfile(false) }, t("Cancel")))),
+            pending && React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "notice", role: "alertdialog", "aria-label": t("Unsaved changes") },
+                React__default["default"].createElement("div", null, t("Discard unsaved changes?")),
+                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "inline", "flow-children": "row", "data-nav-row": true },
+                    React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", onClick: () => setPendingAction(null) }, t("Keep editing")),
+                    React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", onClick: () => { const next = pendingAction?.game; setPendingAction(null); if (next)
+                            setGame(next);
+                        else
+                            deckyFrontendLib.Navigation.NavigateBack(); } }, t("Discard changes")))),
+            !profile && React__default["default"].createElement("div", { role: "status" }, error || t("Loading...")),
+            profile && tab === "channels" && React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "workspace", "flow-children": "row" },
+                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "channel-list", "flow-children": "column", onGamepadDirection: navigate },
+                    React__default["default"].createElement(EditorTextField, { label: t("Search channels"), value: search, disabled: disabled, onChange: event => setSearch(event.target.value) }),
+                    React__default["default"].createElement(deckyFrontendLib.Focusable, { "flow-children": "column", onGamepadDirection: navigate, className: "channel-rows", "aria-label": t("Channel list") },
+                        filtered.map(channel => React__default["default"].createElement("div", { key: channel, className: `channel-row ${selected === channel ? "selected" : ""}` },
+                            React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled, onClick: () => {
+                                    if (trigger.trim()) {
+                                        setError(t("Add or clear the spoken trigger before selecting another channel."));
+                                        return;
+                                    }
+                                    setSelected(channel);
+                                    setError("");
+                                    details.current?.querySelector('input, button, [role="button"]')?.focus();
+                                } },
+                                React__default["default"].createElement("span", { className: "channel-label" },
+                                    React__default["default"].createElement("span", null,
+                                        title(channel),
+                                        profile.default_channel === channel ? " ★" : ""),
+                                    React__default["default"].createElement("code", null, profile.channels[channel].trim() || t("Text only")))))),
+                        !filtered.length && React__default["default"].createElement("p", { className: "hint" }, t("No matching channels"))),
+                    !addingChannel && React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled, onClick: () => setAddingChannel(true) }, t("Add channel")),
+                    addingChannel && React__default["default"].createElement(React__default["default"].Fragment, null,
+                        React__default["default"].createElement(EditorTextField, { label: t("New channel name"), value: newChannel, disabled: disabled, onChange: event => setNewChannel(event.target.value) }),
+                        React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled || !/^[a-z][a-z0-9_]{0,39}$/.test(newChannel) || newChannel in profile.channels || Object.keys(profile.channels).length >= 40, onClick: () => {
+                                if (trigger.trim()) {
+                                    setError(t("Add or clear the spoken trigger before adding a channel."));
+                                    return;
+                                }
+                                if (profile.channel_triggers[title(newChannel)]) {
+                                    setError(t("This name is already a spoken trigger for another channel."));
+                                    return;
+                                }
+                                update({ ...profile, channels: { ...profile.channels, [newChannel]: "" }, channel_triggers: { ...profile.channel_triggers, [title(newChannel)]: newChannel } });
+                                setSelected(newChannel);
+                                setSearch("");
+                                setNewChannel("");
+                                setAddingChannel(false);
+                            } }, t("Add channel")),
+                        React__default["default"].createElement("div", { className: "hint" }, t("Use lowercase letters, numbers, or underscores. Start with a letter.")),
+                        React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled, onClick: () => { setAddingChannel(false); setNewChannel(""); } }, t("Cancel")))),
+                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "details", "flow-children": "column", onGamepadDirection: navigate },
+                    React__default["default"].createElement(deckyFrontendLib.Focusable, { ref: details, className: "details-body", "flow-children": "column" },
+                        React__default["default"].createElement("h2", null, title(selected)),
+                        React__default["default"].createElement("div", { className: "field" },
+                            React__default["default"].createElement(EditorTextField, { label: t("Chat command"), value: profile.channels[selected] || "", disabled: disabled, description: t('Include a space after the chat command, for example "/p ". Leave empty to type without a channel command.'), onChange: event => update({ ...profile, channels: { ...profile.channels, [selected]: event.target.value } }) })),
+                        React__default["default"].createElement("div", { className: "field" },
+                            React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled || profile.default_channel === selected, onClick: () => update({ ...profile, default_channel: selected }) },
+                                profile.default_channel === selected ? "★ " : "☆ ",
+                                t("Use as default channel"))),
+                        React__default["default"].createElement("div", { className: "trigger-section" },
+                            React__default["default"].createElement("h2", null, t("Additional spoken triggers")),
+                            React__default["default"].createElement("p", { className: "hint" }, t("Say a trigger before your message to select this channel. Built-in language triggers remain available.")),
+                            React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "chips", "flow-children": "row", "data-nav-row": true }, aliases.map(phrase => React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", key: phrase, disabled: disabled, onClick: () => {
+                                    const next = { ...profile.channel_triggers };
+                                    delete next[phrase];
+                                    update({ ...profile, channel_triggers: next });
+                                } },
+                                t("Remove trigger"),
+                                ": ",
+                                phrase,
+                                " \u00D7"))),
+                            React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "inline", "flow-children": "row", "data-nav-row": true },
+                                React__default["default"].createElement(EditorTextField, { label: t("New spoken trigger"), value: trigger, disabled: disabled, onChange: event => setTrigger(event.target.value) }),
+                                React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled || !trigger.trim(), onClick: () => {
+                                        const phrase = trigger.trim().toLowerCase();
+                                        if (phrase in profile.channel_triggers && profile.channel_triggers[phrase] !== selected) {
+                                            setError(t("Each spoken trigger must belong to one channel."));
+                                            return;
+                                        }
+                                        update({ ...profile, channel_triggers: { ...profile.channel_triggers, [phrase]: selected } });
+                                        setTrigger("");
+                                    } }, t("Add trigger"))))))),
+            profile && tab === "keywords" && React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "keywords", "flow-children": "column" },
+                React__default["default"].createElement("h2", null, t("Recognition keywords")),
+                React__default["default"].createElement("p", { className: "hint" }, t("Names and game terms that help Whisper recognize speech. These hints apply to every channel in this game profile.")),
+                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "inline", "flow-children": "row", "data-nav-row": true },
+                    React__default["default"].createElement(EditorTextField, { label: t("New keyword"), value: keyword, disabled: disabled, onChange: event => setKeyword(event.target.value) }),
+                    React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled || !keyword.trim() || profile.hotwords.length >= 100, onClick: () => {
+                            const word = keyword.trim();
+                            if (!profile.hotwords.includes(word))
+                                update({ ...profile, hotwords: [...profile.hotwords, word] });
+                            setKeyword("");
+                        } }, t("Add keyword"))),
+                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "chips", "flow-children": "row", "data-nav-row": true }, profile.hotwords.map((word, index) => React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", key: `${index}-${word}`, disabled: disabled, onClick: () => update({ ...profile, hotwords: profile.hotwords.filter((_, position) => position !== index) }) },
+                    t("Remove keyword"),
+                    ": ",
+                    word,
+                    " \u00D7"))),
+                !profile.hotwords.length && React__default["default"].createElement("p", { className: "hint" }, t("No custom keywords yet. Add character names, places, or unusual game terms."))),
+            React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "editor-footer", role: "contentinfo", "flow-children": "row", "data-nav-row": true },
+                React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled || !profile, onClick: () => {
+                        if (dirty) {
+                            setError(t("Save or discard your changes before creating a profile."));
+                            return;
+                        }
+                        setCreatingProfile(true);
+                        setError("");
+                    } }, t("New profile")),
+                canDelete && React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled, onClick: () => {
+                        if (game === activeGame) {
+                            setError(t("Switch to another active profile in Mode before deleting this profile."));
+                            return;
+                        }
+                        setConfirmDelete(true);
+                        setError("");
+                    } }, t("Delete profile")),
+                React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: busy || confirmDelete, onClick: () => leave() }, t("Back")),
+                React__default["default"].createElement("div", { role: error ? "alert" : "status", className: error ? "error" : "hint" }, error || (dirty ? t("Unsaved changes") : message)),
+                React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled || !profile || !dirty, onClick: save }, busy ? t("Saving...") : t("Save changes"))));
+    }
+
+    const ACTIVE = new Set(["starting", "recording", "stopping"]);
+    const STATES = new Set(["idle", ...ACTIVE, "ready", "failed"]);
+    const idle = () => ({ success: true, session: null, revision: 0, state: "idle",
+        remaining_ms: 0, event_count: 0, device_count: 0, metadata: {}, report: null });
+    const object = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+    const LIVE_BUTTONS = new Set(["A", "B", "X", "Y", "L1", "R1", "L2", "R2", "L3", "R3",
+        "L4", "R4", "L5", "R5", "View", "Menu", "D-pad Up", "D-pad Down", "D-pad Left", "D-pad Right",
+        "Left Trackpad", "Right Trackpad"]);
+    const liveSource = (value) => typeof value === "string" && /^source_([1-9]|1[0-6])$/.test(value);
+    const liveCode = (value) => Number.isInteger(value) &&
+        ((value >= 0x100 && value <= 0x15f) || (value >= 0x220 && value <= 0x223) || (value >= 0x2c0 && value <= 0x2ff));
+    function liveInput(value) {
+        if (!object(value) || !Array.isArray(value.pressed) || value.pressed.length > 32 ||
+            !value.pressed.every((entry) => object(entry) && liveSource(entry.source) && LIVE_BUTTONS.has(entry.button)))
+            return null;
+        const event = value.last_event;
+        if (event !== null && (!object(event) || !Number.isFinite(event.at_ms) || event.at_ms < 0 || event.at_ms > 30000 ||
+            !liveSource(event.source) || !["key", "hid", "mapped", "binding"].includes(event.kind) || typeof event.pressed !== "boolean" ||
+            (event.button !== undefined && !LIVE_BUTTONS.has(event.button)) ||
+            (event.code !== undefined && !liveCode(event.code)) ||
+            (event.kind === "key" ? !liveCode(event.code) : !LIVE_BUTTONS.has(event.button))))
+            return null;
+        return { pressed: value.pressed.map(({ source, button }) => ({ source, button })),
+            last_event: event === null ? null : { at_ms: event.at_ms, source: event.source, kind: event.kind,
+                ...(event.button !== undefined ? { button: event.button } : {}),
+                ...(event.code !== undefined ? { code: event.code } : {}), pressed: event.pressed } };
+    }
+    class ControllerDebugClient {
+        constructor(rpc) {
+            this.rpc = rpc;
+            this.view = { snapshot: idle(), pending: null, error: "" };
+            this.listeners = new Set();
+            this.epoch = 0;
+            this.disposed = false;
+            this.cancelRequests = new Set();
+        }
+        subscribe(listener) {
+            this.listeners.add(listener);
+            listener(this.view);
+            return () => { this.listeners.delete(listener); };
+        }
+        emit(patch) {
+            this.view = { ...this.view, ...patch };
+            for (const listener of this.listeners)
+                listener(this.view);
+        }
+        clearPoll() {
+            if (this.pollTimer !== undefined)
+                clearTimeout(this.pollTimer);
+            this.pollTimer = undefined;
+        }
+        async request(invoke, timeout = 5000) {
+            let timer;
+            let cancel = () => { };
+            try {
+                return await new Promise((resolve, reject) => {
+                    cancel = () => reject(new Error("Controller debugger disconnected."));
+                    this.cancelRequests.add(cancel);
+                    timer = setTimeout(() => reject(new Error("Controller debugger did not respond. Try a new capture.")), timeout);
+                    Promise.resolve().then(invoke).then(resolve, reject);
+                });
+            }
+            finally {
+                if (timer !== undefined)
+                    clearTimeout(timer);
+                this.cancelRequests.delete(cancel);
+            }
+        }
+        accept(result, expectedSession) {
+            if (!result?.success)
+                throw new Error(result?.error || "Could not read controller report");
+            if (!STATES.has(result.state) || !Number.isInteger(result.revision) || result.revision < 0 ||
+                !Number.isInteger(result.remaining_ms) || result.remaining_ms < 0 || result.remaining_ms > 30000 ||
+                !Number.isInteger(result.event_count) || result.event_count < 0 ||
+                !Number.isInteger(result.device_count) || result.device_count < 0 ||
+                !object(result.metadata) ||
+                (result.state === "idle" ? result.session !== null : typeof result.session !== "string" || !result.session) ||
+                (expectedSession !== undefined && result.session !== expectedSession) ||
+                (result.state === "ready" && (!object(result.report) || !["complete", "stopped"].includes(result.report.phase)))) {
+                throw new Error("Invalid controller capture status. Reopen Diagnostics to reconnect.");
+            }
+            const current = this.view.snapshot;
+            if (current.session === result.session && result.revision < current.revision)
+                return;
+            // Even a newer stale transport response cannot resurrect a terminal session.
+            if (current.session === result.session && ["ready", "failed"].includes(current.state) && ACTIVE.has(result.state))
+                return;
+            this.emit({ snapshot: { ...result, report: result.state === "ready" ? result.report : null,
+                    live_input: result.state === "recording" ? liveInput(result.live_input) : null }, error: "" });
+        }
+        schedulePoll() {
+            this.clearPoll();
+            if (this.disposed || this.view.pending || this.view.error || !ACTIVE.has(this.view.snapshot.state))
+                return;
+            this.pollTimer = setTimeout(() => this.poll(), 250);
+        }
+        async poll() {
+            this.pollTimer = undefined;
+            const token = this.epoch;
+            const session = this.view.snapshot.session;
+            if (!session || this.disposed || this.view.pending)
+                return;
+            try {
+                const result = await this.request(() => this.rpc.get(session));
+                if (!this.disposed && token === this.epoch)
+                    this.accept(result, session);
+            }
+            catch (error) {
+                if (!this.disposed && token === this.epoch)
+                    this.emit({ error: error.message, snapshot: { ...this.view.snapshot, live_input: null } });
+            }
+            finally {
+                if (!this.disposed && token === this.epoch)
+                    this.schedulePoll();
+            }
+        }
+        async command(pending, invoke, expectedSession) {
+            const token = ++this.epoch;
+            this.clearPoll();
+            this.emit({ pending, error: "" });
+            try {
+                const result = await this.request(invoke, pending === "upload" ? 15000 : 5000);
+                if (!this.disposed && token === this.epoch)
+                    this.accept(result, expectedSession);
+            }
+            catch (error) {
+                if (!this.disposed && token === this.epoch)
+                    this.emit({ error: error.message, snapshot: { ...this.view.snapshot, live_input: null } });
+            }
+            finally {
+                if (!this.disposed && token === this.epoch) {
+                    this.emit({ pending: null });
+                    this.schedulePoll();
+                }
+            }
+        }
+        async connect() {
+            this.disposed = false;
+            await this.command("resume", () => this.rpc.resume());
+        }
+        async start() {
+            if (this.disposed || (this.view.pending && this.view.pending !== "resume") || ACTIVE.has(this.view.snapshot.state))
+                return;
+            await this.command("start", () => this.rpc.start());
+        }
+        async stop() {
+            const { snapshot, pending } = this.view;
+            if (this.disposed || pending || !snapshot.session || !["starting", "recording"].includes(snapshot.state))
+                return;
+            await this.command("stop", () => this.rpc.stop(snapshot.session), snapshot.session);
+        }
+        async refresh() {
+            if (!this.disposed && !this.view.pending)
+                await this.command("resume", () => this.rpc.resume());
+        }
+        async upload() {
+            const { snapshot, pending } = this.view;
+            if (this.disposed || pending || snapshot.state !== "ready" || !snapshot.session || snapshot.event_id)
+                return;
+            await this.command("upload", () => this.rpc.upload(snapshot.session, true), snapshot.session);
+        }
+        dispose() {
+            this.disposed = true;
+            ++this.epoch;
+            this.clearPoll();
+            for (const cancel of this.cancelRequests)
+                cancel();
+            this.listeners.clear();
+        }
+    }
+
+    var version = "0.3.21";
+
+    // Read the actual QAM surface. Document visibility alone does not establish
+    // whether a persistent Steam sidebar is on screen.
+    function quickAccessVisibility(documents, classNames) {
+        let foundMenu = false;
+        for (const doc of documents) {
+            // Prefer the sidebar itself over its full-screen transparent container.
+            for (const name of classNames) {
+                if (!name)
+                    continue;
+                const menus = Array.from(doc.getElementsByClassName(name));
+                if (!menus.length)
+                    continue;
+                foundMenu = true;
+                if (doc.hidden)
+                    break;
+                const view = doc.defaultView;
+                if (!view)
+                    break;
+                for (const menu of menus) {
+                    if (!menu.isConnected)
+                        continue;
+                    const rect = menu.getBoundingClientRect();
+                    if (rect.width <= 0 || rect.height <= 0 || rect.right <= 0 || rect.bottom <= 0 || rect.left >= view.innerWidth || rect.top >= view.innerHeight)
+                        continue;
+                    let visible = true;
+                    for (let node = menu; node; node = node.parentElement) {
+                        const style = view.getComputedStyle(node);
+                        if (style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse" || Number(style.opacity) === 0) {
+                            visible = false;
+                            break;
+                        }
+                    }
+                    if (visible)
+                        return true;
+                }
+                break;
+            }
+        }
+        // Missing markup is unknown, rather than an assertion that QAM is open.
+        return foundMenu ? false : null;
+    }
+
+    var DefaultContext = {
+      color: undefined,
+      size: undefined,
+      className: undefined,
+      style: undefined,
+      attr: undefined
+    };
+    var IconContext = React__default["default"].createContext && React__default["default"].createContext(DefaultContext);
+
+    var __assign = window && window.__assign || function () {
+      __assign = Object.assign || function (t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+          s = arguments[i];
+          for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
+        }
+        return t;
+      };
+      return __assign.apply(this, arguments);
+    };
+    var __rest = window && window.__rest || function (s, e) {
+      var t = {};
+      for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0) t[p] = s[p];
+      if (s != null && typeof Object.getOwnPropertySymbols === "function") for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+        if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i])) t[p[i]] = s[p[i]];
+      }
+      return t;
+    };
+    function Tree2Element(tree) {
+      return tree && tree.map(function (node, i) {
+        return React__default["default"].createElement(node.tag, __assign({
+          key: i
+        }, node.attr), Tree2Element(node.child));
+      });
+    }
+    function GenIcon(data) {
+      // eslint-disable-next-line react/display-name
+      return function (props) {
+        return React__default["default"].createElement(IconBase, __assign({
+          attr: __assign({}, data.attr)
+        }, props), Tree2Element(data.child));
+      };
+    }
+    function IconBase(props) {
+      var elem = function (conf) {
+        var attr = props.attr,
+          size = props.size,
+          title = props.title,
+          svgProps = __rest(props, ["attr", "size", "title"]);
+        var computedSize = size || conf.size || "1em";
+        var className;
+        if (conf.className) className = conf.className;
+        if (props.className) className = (className ? className + " " : "") + props.className;
+        return React__default["default"].createElement("svg", __assign({
+          stroke: "currentColor",
+          fill: "currentColor",
+          strokeWidth: "0"
+        }, conf.attr, attr, svgProps, {
+          className: className,
+          style: __assign(__assign({
+            color: props.color || conf.color
+          }, conf.style), props.style),
+          height: computedSize,
+          width: computedSize,
+          xmlns: "http://www.w3.org/2000/svg"
+        }), title && React__default["default"].createElement("title", null, title), props.children);
+      };
+      return IconContext !== undefined ? React__default["default"].createElement(IconContext.Consumer, null, function (conf) {
+        return elem(conf);
+      }) : elem(DefaultContext);
+    }
+
+    // THIS FILE IS AUTO GENERATED
+    function FaArrowCircleUp (props) {
+      return GenIcon({"tag":"svg","attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M8 256C8 119 119 8 256 8s248 111 248 248-111 248-248 248S8 393 8 256zm143.6 28.9l72.4-75.5V392c0 13.3 10.7 24 24 24h16c13.3 0 24-10.7 24-24V209.4l72.4 75.5c9.3 9.7 24.8 9.9 34.3.4l10.9-11c9.4-9.4 9.4-24.6 0-33.9L273 107.7c-9.4-9.4-24.6-9.4-33.9 0L106.3 240.4c-9.4 9.4-9.4 24.6 0 33.9l10.9 11c9.6 9.5 25.1 9.3 34.4-.4z"}}]})(props);
+    }function FaMicrophone (props) {
+      return GenIcon({"tag":"svg","attr":{"viewBox":"0 0 352 512"},"child":[{"tag":"path","attr":{"d":"M176 352c53.02 0 96-42.98 96-96V96c0-53.02-42.98-96-96-96S80 42.98 80 96v160c0 53.02 42.98 96 96 96zm160-160h-16c-8.84 0-16 7.16-16 16v48c0 74.8-64.49 134.82-140.79 127.38C96.71 376.89 48 317.11 48 250.3V208c0-8.84-7.16-16-16-16H16c-8.84 0-16 7.16-16 16v40.16c0 89.64 63.97 169.55 152 181.69V464H96c-8.84 0-16 7.16-16 16v16c0 8.84 7.16 16 16 16h160c8.84 0 16-7.16 16-16v-16c0-8.84-7.16-16-16-16h-56v-33.77C285.71 418.47 352 344.9 352 256v-48c0-8.84-7.16-16-16-16z"}}]})(props);
     }
 
     const setOverlayLabel = callable("set_overlay_transcribing_label");
@@ -4123,6 +4808,19 @@
                 }
             }).catch((error) => setRpcError(String(error)));
         }, []);
+        React.useEffect(() => {
+            if (page !== "game")
+                return;
+            let active = true;
+            getPresets().then(result => {
+                if (active && result.success)
+                    setPresets(result.presets.map((preset) => ({
+                        data: preset.id, label: PRESET_DISPLAY_NAMES[preset.id] || preset.name,
+                    })));
+            }).catch(error => { if (active)
+                setRpcError(String(error)); });
+            return () => { active = false; };
+        }, [page, qamVisible]);
         React.useEffect(() => {
             let cancelled = false;
             let timeout;
@@ -4856,6 +5554,8 @@
                                     }
                                 } })))),
                 page === "game" && React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Mode") },
+                    React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                        React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: () => openProfileEditor() }, t("Edit game profile"))),
                     rpcError && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                         React__default["default"].createElement("div", { role: "alert" }, rpcError)),
                     presets.map(option => React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, { key: String(option.data) },
@@ -4935,6 +5635,7 @@
             available && React__default["default"].createElement("span", { "aria-hidden": "true", style: { position: "absolute", right: "-3px", top: "-3px", width: "7px", height: "7px", borderRadius: "50%", background: "#7cdb98" } }));
     };
     var index = deckyFrontendLib.definePlugin(() => {
+        routerHook.addRoute(PROFILE_EDITOR_ROUTE, ProfileEditor, { exact: true });
         let logic = new DecktationLogic();
         let disposed = false;
         // One cached discovery check per plugin lifecycle, even before opening its panel.
@@ -5006,6 +5707,7 @@
             icon: React__default["default"].createElement(DecktationIcon, { logic: logic }),
             onDismount() {
                 disposed = true;
+                routerHook.removeRoute(PROFILE_EDITOR_ROUTE);
                 logic.updateListeners.clear();
                 clearInterval(bgNotifyInterval);
                 if (logic.recording) {

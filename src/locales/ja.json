@@ -248,5 +248,14 @@
   "Paste (default)": "貼り付け（既定）",
   "Type (only English keyboard)": "入力（英語キーボードのみ）",
   "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "入力には英語（米国）キーボード配列とASCII文字が必要です。それ以外の文字は入力・送信されません。",
-  "Paste": "貼り付け（既定）"
+  "Paste": "貼り付け（既定）",
+  "Edit game profile": "ゲームプロファイルを編集",
+  "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "チャットコマンドの後にスペースを入れてください（例：\"/p \"）。チャンネルコマンドなしで入力する場合は空欄にします。",
+  "New profile": "新しいプロフィール",
+  "New profile name": "新しいプロフィール名",
+  "Create profile": "プロフィールを作成",
+  "Save or discard your changes before creating a profile.": "プロフィールを作成する前に変更を保存または破棄してください。",
+  "Delete profile": "プロフィールを削除",
+  "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "プロフィール「{name}」とすべての設定を削除しますか？未保存の変更も失われます。",
+  "Switch to another active profile in Mode before deleting this profile.": "このプロフィールを削除する前に、モードで別のプロフィールを有効にしてください。"
 }

@@ -3,15 +3,23 @@ import React, { forwardRef } from 'react';
 // UI adapter only: production panel and ControllerDebugClient remain untouched.
 export const definePlugin = (factory: () => any) => factory;
 export const Router = { NavigateToExternalWeb: () => { throw new Error('External navigation prohibited'); } };
+export const Navigation = {
+  Navigate: (path: string) => { history.pushState({}, '', path); window.dispatchEvent(new Event('fixture-navigate')); },
+  NavigateBack: () => history.back(),
+  CloseSideMenus: () => {},
+};
 export const quickAccessMenuClasses = { Title: 'fixture-title', QuickAccessMenu: 'fixture-qam', Menu: 'fixture-menu' };
 export const gamepadContextMenuClasses = {};
 export const getGamepadNavigationTrees = () => [];
-export const GamepadButton = { OK: 1, CANCEL: 2, DIR_UP: 9, DIR_DOWN: 10 };
+export const GamepadButton = { OK: 1, CANCEL: 2, DIR_UP: 9, DIR_DOWN: 10, DIR_LEFT: 11, DIR_RIGHT: 12 };
 export const PanelSection = ({ title, children }: any) => <section><h2>{title}</h2>{children}</section>;
 export const PanelSectionRow = ({ children }: any) => <div>{children}</div>;
+export const TextField = ({ label, description, ...props }: any) => <div style={{ width: '100%' }}><label style={{ display: 'block' }}>{label}<input style={{ display: 'block', width: '100%', padding: '10px', marginTop: '8px', marginBottom: '8px', background: '#101923', color: 'white', border: '1px solid #64748b', borderRadius: '4px', fontSize: '16px' }} {...props} /></label>{description && <div style={{ fontSize: '14px', color: '#aab8c7', lineHeight: 1.5 }}>{description}</div>}</div>;
 export const ButtonItem = ({ children, onClick, disabled }: any) => <button disabled={disabled} onClick={onClick}>{children}</button>;
+export const DialogButton = ({ children, onClick, disabled, className, style }: any) => <button className={className} style={style} disabled={disabled} onClick={onClick}>{children}</button>;
 export const ToggleField = ({ label, description, checked, disabled, onChange }: any) => <div><label><input type="checkbox" checked={checked} disabled={disabled} onChange={e => onChange(e.target.checked)} />{label}</label>{description && <div className="toggle-description">{description}</div>}</div>;
 export const DropdownItem = ({ label, rgOptions, selectedOption, onChange }: any) => <label>{label}<select value={selectedOption} onChange={e => onChange(rgOptions.find((option: any) => String(option.data) === e.target.value))}>{rgOptions.map((option: any) => <option key={option.data} value={option.data}>{option.label}</option>)}</select></label>;
+export const Dropdown = ({ menuLabel, rgOptions, selectedOption, onChange, disabled }: any) => <select aria-label={menuLabel} disabled={disabled} value={selectedOption} onChange={e => onChange(rgOptions.find((option: any) => String(option.data) === e.target.value))}>{rgOptions.map((option: any) => <option key={option.data} value={option.data}>{option.label}</option>)}</select>;
 export const Menu = PanelSection;
 export const MenuItem = ButtonItem;
 export const showContextMenu = () => {};
@@ -36,3 +44,17 @@ export function gamepad(kind: string, button: number) {
   }
   return { consumed: event.defaultPrevented, activeTag: document.activeElement?.tagName };
 }
+
+const fixtureKeyboardManager = {
+  IsShowingVirtualKeyboard: {
+    Value: false,
+    Subscribe(callback: (shown: boolean) => void) {
+      const listener = (event: any) => { this.Value = event.detail; callback(event.detail); };
+      window.addEventListener('fixture-keyboard-status', listener);
+      return { Unsubscribe: () => window.removeEventListener('fixture-keyboard-status', listener) };
+    },
+  },
+};
+const fixtureWindow = { VirtualKeyboardManager: fixtureKeyboardManager };
+function useFixtureKeyboardManager() { return fixtureWindow?.VirtualKeyboardManager; }
+export const findModuleChild = (find: any) => find({ Keyboard: "fixture-virtual-keyboard", VirtualKeyboardContainer: "fixture-keyboard-container" }) || find({ useFixtureKeyboardManager });

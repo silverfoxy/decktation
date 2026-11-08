@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import re
 import uuid
 import asyncio
 import traceback
@@ -1444,6 +1445,143 @@ class Plugin:
         if service and service.cancel_model_download():
             return {"success": True, "cancelling": True}
         return {"success": False, "error": "No model download is in progress."}
+
+    async def create_profile(self, name: str):
+        """Create an empty user profile without changing the active game."""
+        try:
+            if (not isinstance(name, str) or not name.strip() or len(name) > 60
+                    or any(ord(char) < 32 or ord(char) == 127 for char in name)):
+                raise ValueError("Use a profile name of 1 to 60 characters.")
+            name = name.strip()
+            game = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+            if not game:
+                raise ValueError("Include at least one English letter or number in the profile name.")
+            presets = _load_game_presets()
+            if game in presets:
+                raise ValueError("A profile with this name already exists.")
+            existing = {}
+            for filename in ("profiles.json", "custom_presets.json", "game_presets.json"):
+                path = os.path.join(CONFIG_DIR, filename)
+                if os.path.exists(path):
+                    with open(path) as source:
+                        existing = json.load(source)
+                    break
+            if not isinstance(existing, dict):
+                raise ValueError("Existing profiles file must contain an object.")
+            existing[game] = {"name": name, "channels": {"type": ""},
+                              "default_channel": "type", "channel_triggers": {}, "hotwords": []}
+            os.makedirs(CONFIG_DIR, exist_ok=True)
+            path = os.path.join(CONFIG_DIR, "profiles.json")
+            with open(path + ".tmp", "w") as target:
+                json.dump(existing, target, ensure_ascii=False, indent=2)
+            os.replace(path + ".tmp", path)
+            global _game_presets
+            _game_presets = _load_game_presets()
+            return {"success": True, "id": game, "name": name}
+        except Exception as error:
+            return {"success": False, "error": str(error)}
+
+    async def delete_profile(self, game: str):
+        """Delete a user-created profile, preserving built-ins and the active game."""
+        try:
+            with open(PRESETS_FILE) as source:
+                builtins = json.load(source)
+            if not isinstance(game, str) or game in builtins:
+                raise ValueError("Built-in profiles cannot be deleted.")
+            active_game = _read_button_config().get("game", "wow")
+            if game == active_game:
+                raise ValueError("Switch to another active profile in Mode before deleting this profile.")
+            existing = {}
+            for filename in ("profiles.json", "custom_presets.json", "game_presets.json"):
+                path = os.path.join(CONFIG_DIR, filename)
+                if os.path.exists(path):
+                    with open(path) as source:
+                        existing = json.load(source)
+                    break
+            if not isinstance(existing, dict) or game not in existing:
+                raise ValueError("Unknown user profile")
+            del existing[game]
+            path = os.path.join(CONFIG_DIR, "profiles.json")
+            with open(path + ".tmp", "w") as target:
+                json.dump(existing, target, ensure_ascii=False, indent=2)
+            os.replace(path + ".tmp", path)
+            global _game_presets
+            _game_presets = _load_game_presets()
+            return {"success": True, "active_game": active_game}
+        except Exception as error:
+            return {"success": False, "error": str(error)}
+
+    async def get_profile_editor(self, game: str):
+        presets = _load_game_presets()
+        if game not in presets:
+            return {"success": False, "error": "Unknown game profile"}
+        profile = presets[game]
+        with open(PRESETS_FILE) as source:
+            builtin_profiles = json.load(source)
+        return {"success": True, "can_delete": game not in builtin_profiles, "profile": {
+            "hotwords": profile.get("hotwords", []),
+            "channels": profile.get("channels", {}),
+            "channel_triggers": profile.get("channel_triggers", {}),
+            "default_channel": profile.get("default_channel", "type"),
+        }}
+
+    async def save_profile_editor(self, game: str, profile: dict):
+        """Persist the small profile editor without replacing unrelated settings."""
+        try:
+            presets = _load_game_presets()
+            if game not in presets:
+                raise ValueError("Unknown game profile")
+            if Plugin.voice_service and (
+                Plugin.voice_service.is_recording or Plugin.voice_service.is_transcribing
+                or Plugin.voice_service.pending_snapshot()
+            ):
+                raise ValueError("Finish recording or the pending draft before editing a profile.")
+            channels = profile.get("channels")
+            hotwords = profile.get("hotwords")
+            triggers = profile.get("channel_triggers")
+            def valid_text(value, limit):
+                return (isinstance(value, str) and len(value) <= limit
+                        and not any(ord(char) < 32 or ord(char) == 127 for char in value))
+            if (not isinstance(channels, dict) or not 1 <= len(channels) <= 40
+                or any(not isinstance(key, str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,39}", key)
+                       or not valid_text(value, 80) for key, value in channels.items())):
+                raise ValueError("Use up to 40 channels with simple lowercase names and single-line commands.")
+            if (not isinstance(hotwords, list) or len(hotwords) > 100
+                or any(not valid_text(word, 100) or not word.strip() for word in hotwords)):
+                raise ValueError("Use up to 100 keywords, each at most 100 characters.")
+            if (not isinstance(triggers, dict) or len(triggers) > 120
+                or any(not valid_text(key, 80) or not key.strip() or key != key.strip().lower()
+                       or not isinstance(value, str) or value not in channels
+                       for key, value in triggers.items())):
+                raise ValueError("Spoken triggers must be unique lowercase phrases targeting a channel.")
+            if profile.get("default_channel") not in channels:
+                raise ValueError("Choose an existing default channel.")
+            # Preserve overrides from whichever legacy profile file is active.
+            existing = {}
+            for name in ("profiles.json", "custom_presets.json", "game_presets.json"):
+                path = os.path.join(CONFIG_DIR, name)
+                if os.path.exists(path):
+                    with open(path) as source:
+                        existing = json.load(source)
+                    break
+            if not isinstance(existing, dict):
+                raise ValueError("Existing profiles file must contain an object.")
+            override = dict(existing.get(game, {}))
+            override.update({key: profile[key] for key in (
+                "hotwords", "channels", "channel_triggers", "default_channel")})
+            existing[game] = override
+            path = os.path.join(CONFIG_DIR, "profiles.json")
+            temporary = path + ".tmp"
+            with open(temporary, "w") as target:
+                json.dump(existing, target, ensure_ascii=False, indent=2)
+            os.replace(temporary, path)
+            global _game_presets
+            _game_presets = _load_game_presets()
+            if Plugin.voice_service and Plugin.active_preset == game:
+                Plugin.voice_service.set_preset(_game_presets[game])
+            return {"success": True}
+        except Exception as error:
+            return {"success": False, "error": str(error)}
 
     async def get_presets(self):
         """Get all available game presets"""

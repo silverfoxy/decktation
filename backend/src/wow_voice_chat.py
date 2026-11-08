@@ -28,6 +28,19 @@ from clipboard_injection import temporary_clipboard
 from resident_whisper import ResidentWhisper
 
 
+_AUDIO_CUE_PATTERN = re.compile(
+    r"\[(?:blank[ _]audio|silence|no[ _]speech|music|applause|laughter|laughing|inaudible)\]"
+    r"|\((?:blank[ _]audio|silence|no[ _]speech|music|applause|laughter|laughing|inaudible)\)",
+    re.IGNORECASE,
+)
+
+
+def _remove_audio_cues(text: str) -> str:
+    """Drop recognized non-speech annotations without removing bracketed speech."""
+    text = _AUDIO_CUE_PATTERN.sub(" ", text)
+    return re.sub(r"[ \t]+", " ", text).strip()
+
+
 def _capitalize_standalone_i(text: str) -> str:
     """Capitalize every standalone English first-person pronoun."""
     return re.sub(r"\bi\b", "I", text)
@@ -533,6 +546,7 @@ class WoWVoiceChat:
             # injection intentionally rejects control characters; convert
             # only presentation line breaks to spaces at this boundary.
             text = re.sub(r"[ \t]*[\r\n]+[ \t]*", " ", text).strip()
+            text = _remove_audio_cues(text)
             text = _capitalize_standalone_i(text)
             if self.transcription_language in (None, "en"):
                 text = _replace_spoken_slash_command(text, self._spoken_punctuation_active())
@@ -604,8 +618,9 @@ class WoWVoiceChat:
         text = text.strip()
         text_lower = text.lower()
 
+        triggers = {**self.channel_triggers, **self.preset.get("channel_triggers", {})}
         for trigger, channel_name in sorted(
-            self.channel_triggers.items(), key=lambda item: len(item[0]), reverse=True
+            triggers.items(), key=lambda item: len(item[0]), reverse=True
         ):
             prefixes = [f"{trigger}:", f"{trigger},", f"{trigger}.", f"{trigger} "]
             for prefix in prefixes:

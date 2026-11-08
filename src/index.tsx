@@ -18,12 +18,13 @@ import {
 } from "decky-frontend-lib";
 
 import { requestPluginUpdate } from "./pluginUpdate";
+import { ProfileEditor, openProfileEditor, PROFILE_EDITOR_ROUTE } from "./ProfileEditor";
 import { ControllerDebugClient } from "./controllerDebug";
 import { version as pluginVersion } from "../package.json";
 
 import { quickAccessVisibility } from "./quickAccessVisibility";
 
-import { callable, toaster } from "@decky/api";
+import { callable, toaster, routerHook } from "@decky/api";
 
 import React, {
 	VFC,
@@ -596,6 +597,17 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 		}).catch((error) => setRpcError(String(error)));
 	}, []);
 
+    useEffect(() => {
+        if (page !== "game") return;
+        let active = true;
+        getPresets().then(result => {
+            if (active && result.success) setPresets(result.presets.map((preset: { id: string; name: string }) => ({
+                data: preset.id, label: PRESET_DISPLAY_NAMES[preset.id] || preset.name,
+            })));
+        }).catch(error => { if (active) setRpcError(String(error)); });
+        return () => { active = false; };
+    }, [page, qamVisible]);
+
 	useEffect(() => {
 		let cancelled = false;
 		let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -1164,6 +1176,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					</PanelSection>
 				</>}
 				{page === "game" && <PanelSection title={t("Mode")}>
+					<PanelSectionRow><ButtonItem layout="below" onClick={() => openProfileEditor()}>{t("Edit game profile")}</ButtonItem></PanelSectionRow>
 					{rpcError && <PanelSectionRow><div role="alert">{rpcError}</div></PanelSectionRow>}
 					{presets.map(option => <PanelSectionRow key={String(option.data)}><ButtonItem layout="below" onClick={async () => {
 						const next = option.data as string;
@@ -1230,6 +1243,7 @@ const DecktationIcon: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 };
 
 export default definePlugin(() => {
+    routerHook.addRoute(PROFILE_EDITOR_ROUTE, ProfileEditor, { exact: true });
 	let logic = new DecktationLogic();
     let disposed = false;
     // One cached discovery check per plugin lifecycle, even before opening its panel.
@@ -1299,6 +1313,7 @@ export default definePlugin(() => {
 		icon: <DecktationIcon logic={logic} />,
 		onDismount() {
             disposed = true;
+            routerHook.removeRoute(PROFILE_EDITOR_ROUTE);
             logic.updateListeners.clear();
 			clearInterval(bgNotifyInterval);
 			if (logic.recording) {

@@ -36,6 +36,8 @@ def test_requests_reuse_worker_and_clear_previous_context(tmp_path):
     assert b'\r\nauto\r\n' in bodies[1] and b'Azeroth' not in bodies[1]
     assert b'name="prompt"\r\n\r\n\r\n' in bodies[1]
     assert b'name="no_context"' not in bodies[1]
+    for body in bodies:
+        assert b'name="token_timestamps"\r\n\r\nfalse\r\n' in body
 
 
 def test_startup_failure_reaps_worker(monkeypatch):

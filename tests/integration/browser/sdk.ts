@@ -10,3 +10,8 @@ export async function rpc(method: string, args: unknown[]) {
 }
 export const callable = (method: string) => (...args: unknown[]) => rpc(method, args);
 export const toaster = { toast: (value: unknown) => console.info('Fixture toast', value) };
+export const routeComponents = new Map<string, any>();
+export const routerHook = {
+  addRoute: (path: string, component: any) => routeComponents.set(path, component),
+  removeRoute: (path: string) => routeComponents.delete(path),
+};

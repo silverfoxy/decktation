@@ -34,6 +34,20 @@ def test_transcription_defaults_auto_detect_and_transcribe():
     assert service.whisper_worker.calls == [{"language": None, "prompt": ""}]
 
 
+@pytest.mark.parametrize("source, expected", [
+    ("[blank_audio]", ""),
+    ("  [BLANK_AUDIO]\n[Music] (laughter)  ", ""),
+    ("[silence] [no speech] [applause] [inaudible]", ""),
+    ("[music] hello [laughter] there [blank_audio]", "hello there"),
+    ("hello[music]there", "hello there"),
+    ("Use [party] and (raid) chat", "Use [party] and (raid) chat"),
+    ("The music is loud", "The music is loud"),
+])
+def test_transcription_removes_only_recognized_audio_cues(source, expected):
+    service = resident_service(source)
+    assert service.transcribe_audio([0.0, 0.1]) == expected
+
+
 def test_transcription_capitalizes_standalone_i():
     service = resident_service("party i think i'm ready, i really do")
 

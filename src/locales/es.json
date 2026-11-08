@@ -248,5 +248,14 @@
   "Paste (default)": "Pegar (predeterminado)",
   "Type (only English keyboard)": "Escribir (solo teclado inglés)",
   "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Escribir requiere un teclado inglés (EE. UU.) y texto ASCII. Los demás caracteres no se introducen ni se envían.",
-  "Paste": "Pegar (predeterminado)"
+  "Paste": "Pegar (predeterminado)",
+  "Edit game profile": "Editar perfil del juego",
+  "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "Incluye un espacio después del comando de chat, por ejemplo \"/p \". Déjalo vacío para escribir sin un comando de canal.",
+  "New profile": "Nuevo perfil",
+  "New profile name": "Nombre del nuevo perfil",
+  "Create profile": "Crear perfil",
+  "Save or discard your changes before creating a profile.": "Guarda o descarta los cambios antes de crear un perfil.",
+  "Delete profile": "Eliminar perfil",
+  "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "¿Eliminar el perfil \"{name}\" y todos sus ajustes? También se perderán los cambios sin guardar.",
+  "Switch to another active profile in Mode before deleting this profile.": "Activa otro perfil en Modo antes de eliminar este perfil."
 }
