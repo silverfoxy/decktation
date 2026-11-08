@@ -21,7 +21,7 @@ Speak naturally and Decktation transcribes your words locally, then types them i
 
 Decktation requires Decky Loader. If you haven’t installed it yet, follow the [official Decky Loader installation instructions](https://github.com/SteamDeckHomebrew/decky-loader#installation) and get the installer from [decky.xyz](https://decky.xyz/), then return here.
 
-Until Decktation is available in Decky’s official store, install its packaged release.
+Install Decktation from the packaged release below. Future stable releases are available through Decktation’s built-in updater.
 
 ### Recommended: Install from URL
 
@@ -33,7 +33,7 @@ Until Decktation is available in Decky’s official store, install its packaged 
    https://decktation.com/Decktation.zip
    ```
 
-Note: Decktation won't receive automatic updates, see updating section for more information.
+Decktation checks for stable updates automatically when you open the plugin. See [Updating Decktation](#updating-decktation) for the in-plugin update flow.
 
 ### Alternative: Install from a packaged ZIP
 
@@ -41,42 +41,23 @@ Download the [latest packaged Decktation ZIP](https://decktation.com/Decktation.
 
 > **Do not install GitHub’s automatically generated “Source code (zip)” or “Source code (tar.gz)” archives.** They are not Decktation plugin packages and do not include its bundled dependencies.
 
-### Optional / Advanced: Decktation Custom Store
+### Updating Decktation
 
-The [Decktation Custom Store](doc/DECKY_STORE.md) can list Decktation in Decky’s plugin browser:
+Decktation has a built-in updater that checks for newer stable releases when you open the plugin. When an update is available, open the update notice, select **Update to [version]**, and confirm Decky’s installation prompt.
 
-```text
-https://decktation.com/plugins.json
-```
+You can also check manually through **Advanced settings → Check for updates**. Finish any recording, transcription, or pending draft before installing an update. Updates preserve your saved settings and downloaded Whisper models.
 
-To opt in, open **Decky Settings → General → Store Channel**, select **Custom**, and enter the URL above.
-
-> **Important:** Decky’s Custom Store replaces the selected Default or Testing catalog; it is not added alongside the official store. While the Decktation Custom Store is selected, Decky may not detect updates for your other plugins from the official catalog. You can switch back to **Default** at any time.
-
-Use this option only if you specifically want Decktation listed in Decky and understand the catalog trade-off. It is not the recommended permanent setting for most users.
-
-### Updating to a new version
-
-Installing from `Decktation.zip` does not enable automatic updates. Until Decktation is in the official store, update it manually:
-
-1. Choose **Install Plugin from URL** and paste [`Decktation.zip`](https://decktation.com/Decktation.zip), or download it and choose **Install Plugin from ZIP**.
-2. Reopen Decktation.
-
-This replaces the plugin code; do not delete Decktation settings or downloaded Whisper models. See the [full update steps](doc/INSTALLATION.md#updating-decktation-before-it-reaches-the-official-store).
-
-### Official Decky Store
-
-Decktation has been [submitted to the official Decky Plugin Store](https://github.com/SteamDeckHomebrew/decky-plugin-database/pull/1126), and the request is open for review. Once listed, the official Default Store will be the preferred install and update route. Existing installations should normally receive official updates without a fresh install.
+If you are running an older version without the updater, or the in-plugin installer is unavailable, reinstall the [latest packaged ZIP](https://decktation.com/Decktation.zip) through Decky’s **Install Plugin from URL** or **Install Plugin from ZIP**. See the [installation and update guide](doc/INSTALLATION.md#updating-decktation).
 
 ## Quick start
 
 1. Open the Steam Deck **Quick Access Menu** (`...`) and open **Decktation**.
-2. Under **Game**, choose **WoW**, **GW2**, or **Generic**.
+2. Under **Mode**, choose **WoW**, **GW2**, or **Generic**. Use **Mode → Edit game profile** to customize channel commands, spoken triggers, and recognition keywords.
 3. Turn **Enable** on and wait for the status to show **Ready**. The first use of a model may need an internet connection to download it.
-4. Select **Test Recording (3s)**, speak, and check **Last Transcription** in the panel. A test recording displays the transcript without typing it into the active app.
+4. Select **Test Dictation (3s)**, speak, and check the **Result** in the panel. The test displays the transcript without typing it into the active app.
+5. Focus the game or text field. Hold **L1 + R1**, speak, then release to transcribe and enter the text. Use **Change binding** on the main page to choose another button combination.
 
-Under **Advanced → Sending → Text insertion**, choose **Paste** or **Type (only English keyboard)**. Type requires an English (US) keyboard layout and ASCII text. Gamescope typing is disabled pending testing of a keymap patch; see the [test results and follow-up](doc/gamescope-typing-research.md).
-5. Focus the game or text field. Hold **L1 + R1**, speak, then release to transcribe and enter the text. You can change this default combination in the Decktation panel’s **Input** settings.
+Under **Advanced settings → Sending → Text insertion**, choose **Paste** or **Type (only English keyboard)**. Type requires an English (US) keyboard layout and ASCII text. Under **Transcription sending**, choose immediate sending, review before sending, or a countdown. See [advanced configuration](doc/ADVANCED_CONFIGURATION.md) for the sending options and [typing research](doc/gamescope-typing-research.md) for the Gamescope work.
 
 WoW and GW2 presets normally open game chat, add the selected channel command, and send the message; the spoken **type** channel enters text without opening chat. **Generic** also enters text directly in the focused field. See [channel and preset configuration](doc/ADVANCED_CONFIGURATION.md) for details.
 
