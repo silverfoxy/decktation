@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Input-transparent Gamescope recording indicator for Decktation."""
-import math
 import ctypes
 import json
 import os
@@ -11,7 +10,7 @@ import time
 from pathlib import Path
 
 import cairo
-from overlay_render import draw_review, draw_result
+from overlay_render import draw_recording, draw_review, draw_result
 import gi
 
 gi.require_version("Gtk", "3.0")
@@ -27,15 +26,6 @@ WIDTH = 368
 HEIGHT = 80
 REFERENCE_HEIGHT = 800
 BOTTOM_MARGIN = 48
-
-
-def rounded(ctx, x, y, w, h, radius):
-    ctx.new_sub_path()
-    ctx.arc(x + w - radius, y + radius, radius, -math.pi / 2, 0)
-    ctx.arc(x + w - radius, y + h - radius, radius, 0, math.pi / 2)
-    ctx.arc(x + radius, y + h - radius, radius, math.pi / 2, math.pi)
-    ctx.arc(x + radius, y + radius, radius, math.pi, 3 * math.pi / 2)
-    ctx.close_path()
 
 
 class Indicator(Gtk.Window):
@@ -211,38 +201,13 @@ class Indicator(Gtk.Window):
         ctx.translate((width - WIDTH * scale) / 2,
                       height - (HEIGHT + BOTTOM_MARGIN) * scale)
         ctx.scale(2 * scale, 2 * scale)
-        rounded(ctx, 0.5, 0.5, 183, 39, 20)
-        ctx.set_source_rgba(0.12, 0.13, 0.16, 0.78)
-        ctx.fill_preserve()
-        ctx.set_line_width(1)
-        ctx.set_source_rgba(1, 1, 1, 0.17)
-        ctx.stroke()
+        label = "Transcribing..."
         if self.mode == "transcribing":
-            ctx.set_source_rgb(0.96, 0.96, 0.97)
             try:
-                label = STATE.with_name("label").read_text(encoding="utf-8").strip()
+                label = STATE.with_name("label").read_text(encoding="utf-8").strip() or label
             except (OSError, UnicodeError):
-                label = "Transcribing..."
-            layout = PangoCairo.create_layout(ctx)
-            layout.set_font_description(Pango.FontDescription("Sans 12px"))
-            layout.set_text(label or "Transcribing...", -1)
-            layout.set_width(160 * Pango.SCALE)
-            layout.set_ellipsize(Pango.EllipsizeMode.END)
-            layout.set_alignment(Pango.Alignment.CENTER)
-            _, text_height = layout.get_pixel_size()
-            ctx.move_to(12, (40 - text_height) / 2)
-            PangoCairo.show_layout(ctx, layout)
-        else:
-            ctx.arc(22, 20, 4, 0, math.tau)
-            ctx.set_source_rgb(0.98, 0.35, 0.45)
-            ctx.fill()
-            t = time.monotonic() - self.phase
-            for i in range(9):
-                height = 4 + 13 * (0.5 + 0.5 * math.sin(t * 4.6 + i * 0.77))
-                x = 68 + i * 7
-                rounded(ctx, x, 20 - height / 2, 4, height, 2)
-                ctx.set_source_rgb(0.99, 0.51, 0.63)
-                ctx.fill()
+                pass
+        draw_recording(ctx, self.mode, time.monotonic() - self.phase, label)
         return False
 
 

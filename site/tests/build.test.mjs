@@ -92,3 +92,24 @@ test('every documented release has complete notes, a canonical page, and sitemap
   assert.ok(!index.includes('[Unreleased]:'));
   assert.ok(sitemap.includes(new URL('/walkthrough/', base).href));
 });
+
+test('tutorial popup exports match the live renderer and include every native state', async () => {
+  const { createHash } = await import('node:crypto');
+  const manifest = JSON.parse(readFileSync(new URL('../public/assets/app-overlays/manifest.json', import.meta.url), 'utf8'));
+  const hash = value => createHash('sha256').update(value).digest('hex');
+  for (const [path, expected] of Object.entries(manifest.sources)) {
+    assert.equal(hash(readFileSync(new URL(`../../${path}`, import.meta.url))), expected,
+      `${path} changed: run /usr/bin/python3 scripts/export_website_overlays.py`);
+  }
+  const sprite = readFileSync(new URL('assets/app-overlays/sprite.svg', dist), 'utf8');
+  assert.equal(hash(sprite), manifest.spriteSha256);
+  for (let frame = 0; frame < manifest.frames; frame++) assert.ok(sprite.includes(`id="recording-${frame}"`));
+  for (const state of ['transcribing', 'review', 'sent', 'cancelled', 'typed']) assert.ok(sprite.includes(`id="${state}"`));
+  for (const dimensions of Object.values(manifest.dimensions)) {
+    assert.deepEqual(dimensions.viewBox.split(' ').slice(0, 2), ['0', '0'], 'Browser viewport must not apply the native crop twice');
+  }
+  const ids = [...sprite.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
+  assert.equal(new Set(ids).size, ids.length, 'Cairo glyph IDs must not collide between exported states');
+  assert.ok(!sprite.includes('<script'));
+  assert.ok(readFileSync(new URL('walkthrough/index.html', dist), 'utf8').includes('/assets/app-overlays/sprite.svg#recording-0'));
+});

@@ -83,3 +83,22 @@ routes.
 
 Website CI and production deployment also run when `CHANGELOG.md` changes, so
 release commits publish the new notes without a separate website edit.
+
+### Native app popups in the walkthrough
+
+The recording animation and popup cards are exported from
+`backend/src/overlay_render.py`, the same Cairo/Pango functions the Gamescope
+app uses. The site replays 28 samples of the native nine-bar sine animation and
+uses native transcribing, review, Sent, Cancelled, and Typed into chat graphics.
+SVG glyph outlines preserve the native typography without web font dependencies.
+These assets work offline; the browser never loads GTK or accesses a microphone.
+
+Regenerate after renderer/export-script changes:
+
+```sh
+/usr/bin/python3 scripts/export_website_overlays.py
+```
+
+This requires system PyCairo, PyGObject, and Pango. Commit the SVG sprite and
+manifest under `public/assets/app-overlays/`. Normal website builds need only
+Node; source and asset hashes in the build tests prevent stale exports.

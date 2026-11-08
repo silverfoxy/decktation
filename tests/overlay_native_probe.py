@@ -29,5 +29,11 @@ with tempfile.TemporaryDirectory(prefix='decktation-overlay-check-') as folder:
         status = json.loads((state.parent / 'ack' / 'status').read_text())
         assert status['focus_app'] == app and status['ready'] is True and status['id'] == 'draft', status
         assert not (state.parent / 'ack' / 'status.new').exists()
+    for mode in ('compact', 'transcribing'):
+        window.mode = mode
+        surface = module.cairo.ImageSurface(module.cairo.FORMAT_ARGB32, 1280, 800)
+        window.draw_indicator(None, module.cairo.Context(surface))
+        surface.flush()
+        assert any(surface.get_data()), f'{mode} overlay must paint visible pixels'
     window.close_focus_connection()
     print('Real GTK/X11 check passed: focus IDs decode correctly and acknowledgments publish atomically.')

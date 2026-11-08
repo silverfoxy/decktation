@@ -119,3 +119,37 @@ def draw_result(ctx, width, height, message):
     label.set_alignment(Pango.Alignment.CENTER)
     paint_text(ctx, label, 24, 25)
     ctx.restore()
+
+
+def draw_recording(ctx, mode="compact", phase=0, label="Transcribing..."):
+    """Draw the native 184 × 40 pill, shared with website animation exports.
+
+    The Gamescope caller scales this by 2, producing the 368 × 80 indicator.
+    Phase is elapsed time in seconds; nine bars follow the live sine waveform.
+    """
+    rounded(ctx, 0.5, 0.5, 183, 39, 20)
+    ctx.set_source_rgba(0.12, 0.13, 0.16, 0.78)
+    ctx.fill_preserve()
+    ctx.set_line_width(1)
+    ctx.set_source_rgba(1, 1, 1, 0.17)
+    ctx.stroke()
+    if mode == "transcribing":
+        ctx.set_source_rgb(0.96, 0.96, 0.97)
+        layout = PangoCairo.create_layout(ctx)
+        layout.set_font_description(Pango.FontDescription("Sans 12px"))
+        layout.set_text(label or "Transcribing...", -1)
+        layout.set_width(160 * Pango.SCALE)
+        layout.set_ellipsize(Pango.EllipsizeMode.END)
+        layout.set_alignment(Pango.Alignment.CENTER)
+        _, text_height = layout.get_pixel_size()
+        ctx.move_to(12, (40 - text_height) / 2)
+        PangoCairo.show_layout(ctx, layout)
+    else:
+        ctx.arc(22, 20, 4, 0, math.tau)
+        ctx.set_source_rgb(0.98, 0.35, 0.45)
+        ctx.fill()
+        for i in range(9):
+            height = 4 + 13 * (0.5 + 0.5 * math.sin(phase * 4.6 + i * 0.77))
+            rounded(ctx, 68 + i * 7, 20 - height / 2, 4, height, 2)
+            ctx.set_source_rgb(0.99, 0.51, 0.63)
+            ctx.fill()

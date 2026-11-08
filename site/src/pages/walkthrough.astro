@@ -1,19 +1,21 @@
 ---
 import Guide from '../layouts/Guide.astro';
 import { tutorials } from '../data/tutorials';
+import overlays from '../../public/assets/app-overlays/manifest.json';
 ---
 <Guide title="Walkthrough" description="Learn Decktation with interactive examples of push-to-talk, channel prefixes, game commands, punctuation, and transcript review." path="/walkthrough/">
   <section class="guide-hero"><div class="wrap"><p class="section-label">THE DECKTATION PLAYBOOK</p><h1>Less typing.<br />More playing.</h1><p class="lead">A few words are all it takes. Try the examples below, then bring them into your next session.</p><div class="guide-pills"><span>On-device transcription</span><span>Controller push-to-talk</span><span>No cloud account</span></div></div></section>
   <section class="tutorial-section"><div class="wrap">
-    <div class="tutorial-heading"><div><p class="section-label">WATCH IT WORK</p><h2>From your voice to game chat.</h2></div><p>Illustrative demos. No microphone access or audio recording.</p></div>
+    <div class="tutorial-heading"><div><p class="section-label">WATCH IT WORK</p><h2>From your voice to game chat.</h2></div><p>Illustrative demos. Popups use the app’s actual renderer. Choose Overlay under Recording cue to see the recording pill in-app.</p></div>
     <div class="tutorial-picker" role="group" aria-label="Choose a tutorial">{tutorials.map((demo, i) => <button class="tutorial-choice" data-tutorial={demo.id} aria-pressed={i === 0 ? 'true' : 'false'} aria-controls={`lesson-${demo.id}`}><span>0{i + 1}</span>{demo.label}</button>)}</div>
-    {tutorials.map((demo, i) => <article class="tutorial-lesson" id={`lesson-${demo.id}`} data-review={demo.review ? 'true' : 'false'} hidden={i !== 0}>
+    {tutorials.map((demo, i) => <article class="tutorial-lesson" id={`lesson-${demo.id}`} data-review={demo.review ? 'true' : 'false'} data-result={demo.id === 'spoken-punctuation' ? 'typed' : 'sent'} hidden={i !== 0}>
       <div class="tutorial-copy"><p class="section-label">{demo.category}</p><h2>{demo.title}</h2><p>{demo.description}</p><ol>{demo.steps.map(step => <li>{step}</li>)}</ol><p class="tutorial-note">{demo.note}</p></div>
       <div class="tutorial-player" data-phase="ready">
         <div class="tutorial-player-top"><span class="tutorial-live-dot" aria-hidden="true"></span><span>{demo.target}</span><span class="tutorial-simulation">DEMO</span></div>
         <div class="tutorial-game"><div class="tutorial-horizon" aria-hidden="true"></div><div class="tutorial-binding"><kbd>L1</kbd><span>+</span><kbd>R1</kbd><span class="tutorial-binding-label">Hold to speak</span></div>
-          <div class="tutorial-speech"><span class="tutorial-small-label">YOU SAY</span><p>“{demo.spoken}”</p><div class="tutorial-wave" aria-hidden="true">{Array.from({length: 17}, (_, n) => <i style={`--i:${n}`} />)}</div></div>
-          <div class="tutorial-chat"><span class="tutorial-small-label">{demo.review ? 'TRANSCRIPT TO REVIEW' : 'DECKTATION ENTERS'}</span><code data-output={demo.output}>{demo.output}</code><span class="tutorial-review-badge" hidden={!demo.review}>Waiting for your approval</span></div>
+          <div class="tutorial-speech"><span class="tutorial-small-label">YOU SAY</span><p>“{demo.spoken}”</p></div>
+          <div class="tutorial-chat"><span class="tutorial-small-label">{demo.review ? 'GAME CHAT AFTER APPROVAL' : 'DECKTATION ENTERS'}</span><code data-output={demo.output}>{demo.output}</code></div>
+          <svg class="tutorial-native-overlay" data-native-overlay role="img" aria-label="Native Decktation recording overlay" viewBox={overlays.dimensions.recording.viewBox} hidden><use href="/assets/app-overlays/sprite.svg#recording-0" /></svg>
         </div>
         <div class="tutorial-timeline" aria-hidden="true"><span>Record</span><span>Transcribe</span><span>{demo.review ? 'Review' : 'Insert'}</span></div>
         <div class="tutorial-player-bottom"><p class="tutorial-status" role="status" aria-live="polite">Ready when you are.</p><button class="btn primary tutorial-play" type="button">Play example</button><button class="btn tutorial-reset" type="button">Reset</button></div>
