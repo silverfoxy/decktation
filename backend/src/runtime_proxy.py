@@ -20,7 +20,7 @@ RPC_METHODS = (
     'set_text_insertion_mode', 'set_remember_last_channel',
     'set_spoken_punctuation', 'set_transcription_options', 'set_model_size',
     'cancel_model_download', 'get_presets', 'get_active_preset', 'set_active_preset',
-    'get_profile_editor', 'save_profile_editor', 'start_recording',
+    'get_profile_editor', 'save_profile_editor', 'create_profile', 'start_recording',
     'stop_recording', 'is_recording', 'update_context', 'get_plugin_update',
     'prepare_plugin_update', 'get_status', 'load_model', 'get_last_transcription',
 )
