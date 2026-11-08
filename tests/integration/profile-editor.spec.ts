@@ -212,3 +212,44 @@ test('keyboard leaves an unobstructed text field in place', async ({ page }) => 
   await expect(page.locator('.details')).not.toHaveAttribute('data-editor-editing');
   await expect.poll(() => field.evaluate(input => input.getBoundingClientRect().y)).toBe(before!.y);
 });
+
+
+test('physical arrows cross prefix panes and preserve text caret movement', async ({ page }) => {
+  await openEditor(page);
+  const prefixes = page.locator('.channel-row button');
+  for (let index = 0; index < await prefixes.count(); index++) {
+    await prefixes.nth(index).focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByLabel('Chat command')).toBeFocused();
+  }
+  const field = page.getByLabel('Chat command');
+  await field.fill('/party');
+  await page.keyboard.press('ArrowLeft');
+  await expect(field).toBeFocused();
+  await page.getByRole('button', { name: /^party/i }).click();
+  await page.getByRole('button', { name: /Use as default channel/ }).focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.locator('.channel-row.selected button')).toBeFocused();
+});
+
+test('native Steam direction events use virtual focus even when DOM focus differs', async ({ page }) => {
+  await openEditor(page);
+  await page.getByRole('button', { name: /Channels/ }).focus();
+  await page.locator('.channel-row button').last().evaluate(button => {
+    button.dispatchEvent(new CustomEvent('vgp_ondirection', { bubbles: true, cancelable: true, detail: { button: 12 } }));
+  });
+  await expect(page.getByLabel('Chat command')).toBeFocused();
+});
+
+test('Steam keyboard visibility reveals covered input even without keyboard DOM', async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 600 });
+  await openEditor(page);
+  const field = page.getByLabel('New spoken trigger');
+  await field.fill('group');
+  const before = await field.boundingBox();
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('fixture-keyboard-status', { detail: true })));
+  await expect.poll(() => field.evaluate(input => input.getBoundingClientRect().bottom)).toBeLessThan(330);
+  await expect(page.locator('.details')).toHaveAttribute('data-editor-editing', 'true');
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('fixture-keyboard-status', { detail: false })));
+  await expect.poll(() => field.evaluate(input => input.getBoundingClientRect().y)).toBe(before!.y);
+});

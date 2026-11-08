@@ -45,4 +45,16 @@ export function gamepad(kind: string, button: number) {
   return { consumed: event.defaultPrevented, activeTag: document.activeElement?.tagName };
 }
 
-export const findModuleChild = (find: any) => find({ Keyboard: "fixture-virtual-keyboard", VirtualKeyboardContainer: "fixture-keyboard-container" });
+const fixtureKeyboardManager = {
+  IsShowingVirtualKeyboard: {
+    Value: false,
+    Subscribe(callback: (shown: boolean) => void) {
+      const listener = (event: any) => { this.Value = event.detail; callback(event.detail); };
+      window.addEventListener('fixture-keyboard-status', listener);
+      return { Unsubscribe: () => window.removeEventListener('fixture-keyboard-status', listener) };
+    },
+  },
+};
+const fixtureWindow = { VirtualKeyboardManager: fixtureKeyboardManager };
+function useFixtureKeyboardManager() { return fixtureWindow?.VirtualKeyboardManager; }
+export const findModuleChild = (find: any) => find({ Keyboard: "fixture-virtual-keyboard", VirtualKeyboardContainer: "fixture-keyboard-container" }) || find({ useFixtureKeyboardManager });

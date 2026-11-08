@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { DialogButton, Dropdown, Focusable, Navigation, TextField, TextFieldProps, findModuleChild } from "decky-frontend-lib";
 import { callable } from "@decky/api";
 import { t } from "./i18n";
-import { moveEditorFocus } from "./profileEditorNavigation";
+import { moveEditorFocus, moveEditorKeyFocus } from "./profileEditorNavigation";
 
 export const PROFILE_EDITOR_ROUTE = "/decktation/profiles";
 let initialGame = "wow";
@@ -33,6 +33,11 @@ function EditorTextField({ label, description, ...props }: TextFieldProps) {
 // Resolve Steam's keyboard styles rather than relying on version-specific hashes.
 const keyboardStyles: Record<string, string> = findModuleChild((module: any) =>
     module?.VirtualKeyboardContainer && module?.Keyboard ? module : undefined) || {};
+const useSteamKeyboardManager: (() => any) | undefined = findModuleChild((module: any) => {
+    if (!module || typeof module !== 'object') return undefined;
+    return Object.values(module).find(value => typeof value === 'function' &&
+        value.toString().length < 180 && value.toString().includes('?.VirtualKeyboardManager'));
+});
 const styles = `
 .decktation-editor { position:fixed; inset:0; z-index:1; box-sizing:border-box; height:100vh; padding:44px 20px 16px; background:#101923; color:#ecf1f6; display:flex; flex-direction:column; gap:10px; font-size:14px; line-height:1.35; overflow:hidden; }
 .decktation-editor * { box-sizing:border-box; }
@@ -97,6 +102,7 @@ export function ProfileEditor() {
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
     const [pendingAction, setPendingAction] = useState<{ game?: string } | null>(null);
+    const keyboardManager = useSteamKeyboardManager?.();
     const details = useRef<HTMLDivElement>(null);
     const editor = useRef<HTMLDivElement>(null);
     useEffect(() => {
@@ -104,6 +110,7 @@ export function ProfileEditor() {
         if (!root) return;
         let frame = 0;
         let input: HTMLElement | null = null;
+        let keyboardVisible = !!keyboardManager?.IsShowingVirtualKeyboard?.Value;
         const initialViewportHeight = window.visualViewport?.height ?? window.innerHeight;
         let adjustedPane: HTMLElement | null = null;
         let originalScroll = 0;
@@ -121,14 +128,20 @@ export function ProfileEditor() {
                 const pane = input.closest<HTMLElement>('.details, .keywords');
                 if (!pane) { restore(); return; }
                 let visibleBottom = window.innerHeight;
+                let measuredKeyboard = false;
                 for (const className of [keyboardStyles.Keyboard]) {
                     if (!className) continue;
                     for (const keyboard of Array.from(document.getElementsByClassName(className))) {
                         const bounds = keyboard.getBoundingClientRect();
                         if (bounds.height > 0 && bounds.width > 0 && bounds.bottom > 0 && bounds.top < window.innerHeight &&
-                            getComputedStyle(keyboard).visibility !== 'hidden') visibleBottom = Math.min(visibleBottom, Math.max(0, bounds.top));
+                            getComputedStyle(keyboard).visibility !== 'hidden') {
+                            visibleBottom = Math.min(visibleBottom, Math.max(0, bounds.top)); measuredKeyboard = true;
+                        }
                     }
                 }
+                // Steam may render the keyboard in another window. Only reserve
+                // fallback space when its own manager confirms it is open.
+                if (keyboardVisible && !measuredKeyboard) visibleBottom = Math.min(visibleBottom, window.innerHeight * 0.55);
                 // Use a viewport reduction only after mount; Steam's initial
                 // visual viewport can describe an unrelated overlay.
                 const viewport = window.visualViewport;
@@ -147,6 +160,10 @@ export function ProfileEditor() {
                 pane.scrollTop += bottom - limit;
             });
         };
+        const keyboardSubscription = keyboardManager?.IsShowingVirtualKeyboard?.Subscribe((visible: boolean) => {
+            keyboardVisible = visible;
+            revealInput();
+        });
         const resize = revealInput;
         const observer = new MutationObserver(revealInput);
         observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'] });
@@ -156,20 +173,33 @@ export function ProfileEditor() {
             input = target.matches('input, textarea') ? target : null;
             revealInput();
         };
+        const onDirection = (event: Event) => {
+            if (moveEditorFocus(root, (event as CustomEvent).detail.button, event.target)) {
+                event.preventDefault(); event.stopPropagation();
+            }
+        };
+        const onKey = (event: KeyboardEvent) => {
+            if (moveEditorKeyFocus(root, event)) { event.preventDefault(); event.stopPropagation(); }
+        };
+        root.addEventListener('vgp_ondirection', onDirection, true);
+        root.addEventListener('keydown', onKey, true);
         root.addEventListener('focusin', onFocus);
         window.addEventListener('resize', resize);
         window.visualViewport?.addEventListener('resize', resize);
         window.visualViewport?.addEventListener('scroll', resize);
         return () => {
+            keyboardSubscription?.Unsubscribe?.();
             observer.disconnect();
             cancelAnimationFrame(frame);
             restore();
+            root.removeEventListener('vgp_ondirection', onDirection, true);
+            root.removeEventListener('keydown', onKey, true);
             root.removeEventListener('focusin', onFocus);
             window.removeEventListener('resize', resize);
             window.visualViewport?.removeEventListener('resize', resize);
             window.visualViewport?.removeEventListener('scroll', resize);
         };
-    }, []);
+    }, [keyboardManager]);
     const mounted = useRef(true);
     useEffect(() => {
         mounted.current = true;
@@ -217,7 +247,7 @@ export function ProfileEditor() {
         `${title(channel)} ${profile.channels[channel]} ${Object.entries(profile.channel_triggers).filter(([, value]) => value === channel).map(([key]) => key).join(" ")}`.toLowerCase().includes(search.toLowerCase())) : [];
     const aliases = profile ? Object.entries(profile.channel_triggers).filter(([, channel]) => channel === selected).map(([phrase]) => phrase) : [];
     const navigate = (event: any) => {
-        if (!busy && editor.current && moveEditorFocus(editor.current, event.detail.button)) {
+        if (!busy && editor.current && moveEditorFocus(editor.current, event.detail.button, event.target)) {
             event.preventDefault(); event.stopPropagation();
         }
     };

@@ -1,4 +1,4 @@
-import { GamepadButton } from "decky-frontend-lib";
+import { GamepadButton, getGamepadNavigationTrees } from "decky-frontend-lib";
 
 const controls = 'button, input, select, textarea, [role="button"]';
 function available(root: Element): HTMLElement[] {
@@ -7,14 +7,25 @@ function available(root: Element): HTMLElement[] {
 }
 function focus(element?: HTMLElement) {
     if (!element) return false;
+    // Steam tracks virtual controller focus separately from DOM focus.
+    let nativeNode: any;
+    const visit = (node: any) => {
+        if (!node?.Element?.contains(element)) return;
+        nativeNode = node;
+        for (const child of node.GetChildren?.()[0] || []) visit(child);
+    };
+    try {
+        for (const tree of getGamepadNavigationTrees() || []) visit(tree.Root);
+        nativeNode?.BTakeFocus?.(0);
+    } catch { /* DOM-only environments do not have a Steam navigation tree. */ }
     element.focus({ preventScroll: true });
     element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     return true;
 }
 
 // Steam's default column traversal does not follow these full-screen rows.
-export function moveEditorFocus(root: HTMLElement, direction: number): boolean {
-    const active = document.activeElement as HTMLElement | null;
+export function moveEditorFocus(root: HTMLElement, direction: number, source?: EventTarget | null): boolean {
+    const active = (source instanceof HTMLElement && root.contains(source) ? source : document.activeElement) as HTMLElement | null;
     if (!active || !root.contains(active)) return false;
     const horizontal = direction === GamepadButton.DIR_LEFT || direction === GamepadButton.DIR_RIGHT;
     const vertical = direction === GamepadButton.DIR_UP || direction === GamepadButton.DIR_DOWN;
@@ -47,4 +58,15 @@ export function moveEditorFocus(root: HTMLElement, direction: number): boolean {
             return { element, advance, score: advance + cross * 3 };
         }).filter(candidate => candidate.advance > 2).sort((a, b) => a.score - b.score);
     return focus(candidates[0]?.element);
+}
+
+
+export function moveEditorKeyFocus(root: HTMLElement, event: KeyboardEvent): boolean {
+    const directions: Record<string, number> = { ArrowLeft: GamepadButton.DIR_LEFT, ArrowRight: GamepadButton.DIR_RIGHT, ArrowUp: GamepadButton.DIR_UP, ArrowDown: GamepadButton.DIR_DOWN };
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || !(event.key in directions)) return false;
+    const target = event.target as HTMLElement;
+    // Keep caret movement while editing text. Escape/Tab or the controller can
+    // leave the field; physical arrows navigate when a button has focus.
+    if (target.matches('input, textarea, select, [contenteditable="true"]')) return false;
+    return moveEditorFocus(root, directions[event.key], target);
 }
