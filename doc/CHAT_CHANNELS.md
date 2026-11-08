@@ -48,6 +48,23 @@ A spoken channel prefix selects that message’s destination; without a prefix, 
 | **officer** | `/o` | "officer" | Officer chat |
 | **yell** | `/y` | "yell" | Yell (larger area) |
 | **instance** | `/i` | "instance" | Instance chat |
+| **channel 1–5** | `/1`–`/5` | "channel one"–"channel five" (or "channel 1"–"channel 5") | Numbered chat channels currently joined in WoW |
+
+Named English prefixes are also available. These are configurable starting mappings, not detected channel identities:
+
+| Spoken prefix | Profile channel | Starting command |
+|---------------|-----------------|------------------|
+| **general chat** | `general_chat` | `/1 ` |
+| **trade chat** | `trade_chat` | `/2 ` |
+| **local defense chat**, **local defence chat** | `local_defense_chat` | `/3 ` |
+| **services chat**, **trade services chat** | `services_chat` | `/4 ` |
+| **looking for group chat**, **lfg chat** | `looking_for_group_chat` | `/5 ` |
+
+For example, **“trade chat selling potions”** sends `/2 selling potions` with the starting configuration. Bare **“trade me a potion”** remains an ordinary message.
+
+Verify your joined channels in-game with `/chatlist` before using the named routes. Numbers vary by character, joined channels, and game version. Services is a Retail channel; Classic players may have LookingForGroup in slot 4 instead. Change the named channel's command to match your setup (for example, `looking_for_group_chat` to `/4 `). The explicit **“channel four”** route always follows `/4 ` independently. A named route does not join a channel or detect whether it is available in your current zone.
+
+Party, raid, guild, officer, instance, say, yell, whisper, reply, and raid-warning routes remain available through their existing prefixes.
 
 ## Examples
 

@@ -38,7 +38,8 @@ concurrency:
 jobs:
   browser-backend:
     name: Chromium and real Python RPC integration
-    runs-on: ubuntu-latest
+    # Playwright 1.58 supports Ubuntu 24.04, but not the new ubuntu-latest image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       CI: 'true'
