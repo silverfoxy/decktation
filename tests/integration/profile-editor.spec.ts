@@ -96,6 +96,10 @@ for (const viewport of [{ width: 1280, height: 800, rows: 10 }, { width: 800, he
     expect(layout.listParentScroll).toBe(false);
     expect(layout.detailsScroll).toBe(false);
     await expect(page.getByRole('button', { name: 'Save changes', exact: true })).toBeInViewport();
+    for (const name of ['Back', 'Save changes']) {
+      const bounds = await page.getByRole('button', { name, exact: true }).boundingBox();
+      expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(viewport.height - 48);
+    }
     await page.screenshot({ path: `/tmp/decktation-profile-editor-compact-${viewport.width}.png` });
   });
 }

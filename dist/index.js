@@ -3396,7 +3396,7 @@
             value.toString().length < 180 && value.toString().includes('?.VirtualKeyboardManager'));
     });
     const styles = `
-.decktation-editor { position:fixed; inset:0; z-index:1; box-sizing:border-box; height:100vh; padding:44px 20px 16px; background:#101923; color:#ecf1f6; display:flex; flex-direction:column; gap:10px; font-size:14px; line-height:1.35; overflow:hidden; }
+.decktation-editor { position:fixed; inset:0; z-index:1; box-sizing:border-box; height:100vh; padding:44px 20px calc(56px + env(safe-area-inset-bottom,0px)); background:#101923; color:#ecf1f6; display:flex; flex-direction:column; gap:10px; font-size:14px; line-height:1.35; overflow:hidden; }
 .decktation-editor * { box-sizing:border-box; }
 .decktation-editor h1 { font-size:20px; line-height:1.2; margin:0; white-space:nowrap; }
 .decktation-editor h2 { font-size:17px; line-height:1.25; margin:0; text-transform:capitalize; }
@@ -3440,7 +3440,7 @@
 .decktation-editor .keywords { flex:1; min-height:0; overflow-y:auto; background:#1b2836; padding:16px; border-radius:6px; display:flex; flex-direction:column; gap:12px; }
 .decktation-editor .notice { padding:10px; background:#354557; border-radius:6px; flex-shrink:0; }
 .decktation-editor .error { color:#ffb7b7; font-size:12px; }
-@media (max-width:850px) { .decktation-editor { padding:36px 12px 12px; gap:8px; } .decktation-editor h1 { font-size:18px; } .decktation-editor .profile-picker > span { display:none; } .decktation-editor .profile-picker > :last-child { width:190px; } .decktation-editor .tabs .editor-button { width:88px; } .decktation-editor .channel-list,.decktation-editor .details { padding:10px; } }
+@media (max-width:850px) { .decktation-editor { padding:36px 12px calc(56px + env(safe-area-inset-bottom,0px)); gap:8px; } .decktation-editor h1 { font-size:18px; } .decktation-editor .profile-picker > span { display:none; } .decktation-editor .profile-picker > :last-child { width:190px; } .decktation-editor .tabs .editor-button { width:88px; } .decktation-editor .channel-list,.decktation-editor .details { padding:10px; } }
 `;
     function ProfileEditor() {
         const [game, setGame] = React.useState(initialGame);
