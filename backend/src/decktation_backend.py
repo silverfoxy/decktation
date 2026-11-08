@@ -37,6 +37,7 @@ for dependency_path in dependency_paths:
 
 from audio_runtime import ensure_audio_environment, setup_audio_environment
 from haptic_feedback import HapticFeedback
+from recording_volume import RecordingVolume
 from recording_overlay_manager import RecordingOverlay
 from binding_capture import read_json, write_json
 from controller_debug_report import collect_runtime_metadata
@@ -175,6 +176,7 @@ DEFAULT_BUTTON_CONFIG = {
     "buttons": ["L1", "R1"],
     "showNotifications": True,
     "hapticFeedback": False,
+    "recordingVolume": "off",
     "recordingIndicator": "toast",
     "enabled": False,
     "game": "wow",
@@ -382,6 +384,7 @@ class Plugin:
     active_preset = "wow"
     dictation_transaction = None
     haptic_feedback = None
+    recording_volume = None
     recording_overlay = None
     review_qam_visible = False
     review_context_known = False
@@ -837,6 +840,7 @@ class Plugin:
             # Initialize the voice service with lazy model loading
             context_file = f"{plugin_path}/wow_context.json"
 
+            Plugin.recording_volume = RecordingVolume(saved_config.get("recordingVolume", "off"), logger)
             Plugin.voice_service = WoWVoiceChat(
                 context_file=context_file,
                 lazy_load=True,
@@ -867,7 +871,7 @@ class Plugin:
                     if telemetry_is_enabled() else None
                 ),
                 metric_reporter=report_telemetry_metric,
-                recording_state_callback=Plugin.haptic_feedback.emit,
+                recording_state_callback=Plugin._recording_transition,
             )
             logger.info("Voice service initialized (model will load on first use)")
             if telemetry_is_enabled():
@@ -942,6 +946,8 @@ class Plugin:
             await self._shutdown_voice_service()
 
     async def _shutdown_voice_service(self):
+        if Plugin.recording_volume:
+            await asyncio.to_thread(Plugin.recording_volume.transition, "shutdown")
         service = Plugin.voice_service
         if service is None:
             return
@@ -1032,6 +1038,26 @@ class Plugin:
         except Exception as e:
             logger.error(f"Error saving diagnostics preference: {e}")
             return {"success": False, "error": str(e)}
+
+    @staticmethod
+    def _recording_transition(state):
+        if Plugin.recording_volume:
+            Plugin.recording_volume.transition(state)
+        if Plugin.haptic_feedback and state in ("started", "stopped"):
+            Plugin.haptic_feedback.emit(state)
+
+    async def set_recording_volume(self, mode: str):
+        if mode not in ("off", "quiet", "mute"):
+            return {"success": False, "error": "Unsupported recording volume"}
+        try:
+            config = _read_button_config()
+            config["recordingVolume"] = mode
+            _write_button_config(config)
+            if Plugin.recording_volume:
+                await asyncio.to_thread(Plugin.recording_volume.set_mode, mode)
+            return {"success": True}
+        except Exception as error:
+            return {"success": False, "error": str(error)}
 
     async def set_haptic_feedback(self, enabled: bool):
         """Persist the optional recording cues without restarting input."""

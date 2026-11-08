@@ -10,7 +10,7 @@ import signal
 from pathlib import Path
 
 RPC_METHODS = (
-    'set_enabled', 'get_button_config', 'set_share_diagnostics', 'set_haptic_feedback',
+    'set_enabled', 'get_button_config', 'set_share_diagnostics', 'set_haptic_feedback', 'set_recording_volume',
     'start_controller_debug', 'resume_controller_debug', 'get_controller_debug',
     'stop_controller_debug', 'upload_controller_debug', 'start_binding_capture',
     'cancel_binding_capture', 'get_binding_capture', 'set_button_config', 'set_controller_backend',

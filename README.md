@@ -17,6 +17,8 @@ Speak naturally and Decktation transcribes your words locally, then types them i
 - Enable **Spoken punctuation** in Advanced settings to turn English commands such as “comma” and “question mark” into symbols.
 - The optional WoW context addon can provide saved game context, but its updates are not reliably live; see [upstream issue #13](https://github.com/silverfoxy/decktation/issues/13).
 
+In **Advanced settings → Feedback → Output volume while recording**, choose **Unchanged** (default), **20% of current volume**, or **Mute**. Decktation restores the original output volume when recording ends or is cancelled, before transcription. Volume control uses the desktop PulseAudio/PipeWire session through `pactl`.
+
 ## Install Decktation
 
 Decktation requires Decky Loader. If you haven’t installed it yet, follow the [official Decky Loader installation instructions](https://github.com/SteamDeckHomebrew/decky-loader#installation) and get the installer from [decky.xyz](https://decky.xyz/), then return here.

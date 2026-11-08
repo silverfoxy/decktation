@@ -89,6 +89,7 @@ const setTextInsertionModeRpc = callable<[mode: string], RpcResponse>("set_text_
 const setRememberLastChannelRpc = callable<[enabled: boolean], RpcResponse>("set_remember_last_channel");
 const setShareDiagnosticsRpc = callable<[enabled: boolean], RpcResponse>("set_share_diagnostics");
 const setRecordingIndicatorRpc = callable<[mode: string], RpcResponse>("set_recording_indicator");
+const setRecordingVolumeRpc = callable<[mode: string], RpcResponse>("set_recording_volume");
 const setHapticFeedbackRpc = callable<[enabled: boolean], RpcResponse>("set_haptic_feedback");
 const setActivePresetRpc = callable<[game: string], RpcResponse>("set_active_preset");
 const setModelSizeRpc = callable<[modelSize: string], RpcResponse>("set_model_size");
@@ -393,6 +394,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [controllerComboSupported, setControllerComboSupported] = useState<boolean>(true);
 	const [buttons, setButtons] = useState<string[]>(["L1", "R1"]);
 	const [recordingIndicator, setRecordingIndicator] = useState<string>("toast");
+	const [recordingVolume, setRecordingVolume] = useState<string>("off");
 	const [hapticFeedback, setHapticFeedback] = useState<boolean>(false);
 	const [activePreset, setActivePreset] = useState<string>("wow");
 	const [presets, setPresets] = useState<DropdownOption[]>([]);
@@ -581,6 +583,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					}
 					const indicator = config.recordingIndicator || (config.showNotifications === false ? "none" : "toast");
 					setRecordingIndicator(indicator);
+                    setRecordingVolume(config.recordingVolume || "off");
 					logic.recordingIndicator = indicator;
 					if (config.hapticFeedback !== undefined) {
 						setHapticFeedback(config.hapticFeedback);
@@ -1135,6 +1138,16 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 							}} /></PanelSectionRow>
 					</PanelSection>
 					<PanelSection title={t("Feedback")}>
+                        <PanelSectionRow><DropdownItem label={t("Output volume while recording")} menuLabel={t("Output volume while recording")}
+                            rgOptions={[{data: "off", label: t("Unchanged")}, {data: "quiet", label: t("20% of current volume")}, {data: "mute", label: t("Mute")}]}
+                            selectedOption={recordingVolume} onChange={async (option: { data: string | number }) => {
+                                try {
+                                    const mode = option.data as string;
+                                    const result = await setRecordingVolumeRpc(mode);
+                                    if (result.success) setRecordingVolume(mode);
+                                    else setRpcError(result.error || t("Could not update recording volume"));
+                                } catch (error) { setRpcError(String(error)); }
+                            }} /></PanelSectionRow>
 						<PanelSectionRow><DropdownItem label={t("Recording cue")} menuLabel={t("Recording cue")} rgOptions={[{data:"toast",label:t("Toast")},{data:"overlay",label:t("Overlay")},{data:"none",label:t("None")}]} selectedOption={recordingIndicator} onChange={async (option) => { const mode = option.data as string; setRecordingIndicator(mode); logic.recordingIndicator = mode; const result = await setRecordingIndicatorRpc(mode); if (!result.success) setRpcError(result.error || t("Could not update recording cue")); }} /></PanelSectionRow>
 						<PanelSectionRow><ToggleField label={t("Haptic feedback")} description={t("Cues on the controller when recording starts and stops")}
 							checked={hapticFeedback} onChange={async (next) => {
