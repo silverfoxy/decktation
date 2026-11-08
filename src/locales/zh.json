@@ -250,5 +250,9 @@
   "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "键入需要英语（美国）键盘布局和 ASCII 文本。其他字符不会输入或发送。",
   "Paste": "粘贴（默认）",
   "Edit game profile": "编辑游戏配置",
-  "Use a space after channel names or spoken triggers.": "在频道名称或语音触发词后添加空格。"
+  "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "请在聊天命令后加一个空格，例如 \"/p \"。留空则直接输入，不使用频道命令。",
+  "New profile": "新建配置",
+  "New profile name": "新配置名称",
+  "Create profile": "创建配置",
+  "Save or discard your changes before creating a profile.": "创建配置前，请保存或放弃更改。"
 }

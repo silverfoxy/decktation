@@ -250,5 +250,9 @@
   "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Escribir requiere un teclado inglés (EE. UU.) y texto ASCII. Los demás caracteres no se introducen ni se envían.",
   "Paste": "Pegar (predeterminado)",
   "Edit game profile": "Editar perfil del juego",
-  "Use a space after channel names or spoken triggers.": "Usa un espacio después de los nombres de canal o activadores hablados."
+  "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "Incluye un espacio después del comando de chat, por ejemplo \"/p \". Déjalo vacío para escribir sin un comando de canal.",
+  "New profile": "Nuevo perfil",
+  "New profile name": "Nombre del nuevo perfil",
+  "Create profile": "Crear perfil",
+  "Save or discard your changes before creating a profile.": "Guarda o descarta los cambios antes de crear un perfil."
 }

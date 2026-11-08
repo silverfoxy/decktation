@@ -871,7 +871,11 @@
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Escribir requiere un teclado inglés (EE. UU.) y texto ASCII. Los demás caracteres no se introducen ni se envían.",
       Paste: Paste$8,
       "Edit game profile": "Editar perfil del juego",
-      "Use a space after channel names or spoken triggers.": "Usa un espacio después de los nombres de canal o activadores hablados."
+      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "Incluye un espacio después del comando de chat, por ejemplo \"/p \". Déjalo vacío para escribir sin un comando de canal.",
+      "New profile": "Nuevo perfil",
+      "New profile name": "Nombre del nuevo perfil",
+      "Create profile": "Crear perfil",
+      "Save or discard your changes before creating a profile.": "Guarda o descarta los cambios antes de crear un perfil."
     };
 
     var Back$7 = "Назад";
@@ -1164,7 +1168,11 @@
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Для ввода нужны английская раскладка (США) и текст ASCII. Другие символы не будут введены или отправлены.",
       Paste: Paste$7,
       "Edit game profile": "Изменить профиль игры",
-      "Use a space after channel names or spoken triggers.": "Добавляйте пробел после названий каналов или голосовых команд."
+      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "Добавьте пробел после команды чата, например \"/p \". Оставьте поле пустым, чтобы вводить текст без команды канала.",
+      "New profile": "Новый профиль",
+      "New profile name": "Название нового профиля",
+      "Create profile": "Создать профиль",
+      "Save or discard your changes before creating a profile.": "Сохраните или отмените изменения перед созданием профиля."
     };
 
     var Back$6 = "Voltar";
@@ -1457,7 +1465,11 @@
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Digitar requer layout de teclado inglês (EUA) e texto ASCII. Outros caracteres não serão digitados nem enviados.",
       Paste: Paste$6,
       "Edit game profile": "Editar perfil do jogo",
-      "Use a space after channel names or spoken triggers.": "Use um espaço após os nomes dos canais ou gatilhos de voz."
+      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "Inclua um espaço após o comando de chat, por exemplo \"/p \". Deixe vazio para digitar sem um comando de canal.",
+      "New profile": "Novo perfil",
+      "New profile name": "Nome do novo perfil",
+      "Create profile": "Criar perfil",
+      "Save or discard your changes before creating a profile.": "Salve ou descarte suas alterações antes de criar um perfil."
     };
 
     var Back$5 = "Wstecz";
@@ -1750,7 +1762,11 @@
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Wpisywanie wymaga angielskiego (US) układu klawiatury i tekstu ASCII. Inny tekst nie zostanie wpisany ani wysłany.",
       Paste: Paste$5,
       "Edit game profile": "Edytuj profil gry",
-      "Use a space after channel names or spoken triggers.": "Użyj spacji po nazwach kanałów lub wyzwalaczach głosowych."
+      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "Dodaj spację po poleceniu czatu, na przykład \"/p \". Pozostaw puste, aby pisać bez polecenia kanału.",
+      "New profile": "Nowy profil",
+      "New profile name": "Nazwa nowego profilu",
+      "Create profile": "Utwórz profil",
+      "Save or discard your changes before creating a profile.": "Zapisz lub odrzuć zmiany przed utworzeniem profilu."
     };
 
     var Back$4 = "뒤로";
@@ -2043,7 +2059,11 @@
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "입력에는 영어(미국) 키보드 배열과 ASCII 텍스트가 필요합니다. 다른 문자는 입력하거나 전송하지 않습니다.",
       Paste: Paste$4,
       "Edit game profile": "게임 프로필 편집",
-      "Use a space after channel names or spoken triggers.": "채널 이름이나 음성 트리거 뒤에 공백을 넣으세요."
+      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "채팅 명령 뒤에 공백을 넣으세요. 예: \"/p \". 채널 명령 없이 입력하려면 비워 두세요.",
+      "New profile": "새 프로필",
+      "New profile name": "새 프로필 이름",
+      "Create profile": "프로필 만들기",
+      "Save or discard your changes before creating a profile.": "프로필을 만들기 전에 변경 사항을 저장하거나 취소하세요."
     };
 
     var Back$3 = "戻る";
@@ -2336,7 +2356,11 @@
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "入力には英語（米国）キーボード配列とASCII文字が必要です。それ以外の文字は入力・送信されません。",
       Paste: Paste$3,
       "Edit game profile": "ゲームプロファイルを編集",
-      "Use a space after channel names or spoken triggers.": "チャンネル名や音声トリガーの後にスペースを入れてください。"
+      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "チャットコマンドの後にスペースを入れてください（例：\"/p \"）。チャンネルコマンドなしで入力する場合は空欄にします。",
+      "New profile": "新しいプロフィール",
+      "New profile name": "新しいプロフィール名",
+      "Create profile": "プロフィールを作成",
+      "Save or discard your changes before creating a profile.": "プロフィールを作成する前に変更を保存または破棄してください。"
     };
 
     var Back$2 = "Zurück";
@@ -2629,7 +2653,11 @@
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Tippen erfordert eine englische US-Tastaturbelegung und ASCII-Text. Anderer Text wird weder eingegeben noch gesendet.",
       Paste: Paste$2,
       "Edit game profile": "Spielprofil bearbeiten",
-      "Use a space after channel names or spoken triggers.": "Verwende ein Leerzeichen nach Kanalnamen oder gesprochenen Auslösern."
+      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "Füge nach dem Chatbefehl ein Leerzeichen ein, zum Beispiel \"/p \". Leer lassen, um ohne Kanalbefehl zu schreiben.",
+      "New profile": "Neues Profil",
+      "New profile name": "Name des neuen Profils",
+      "Create profile": "Profil erstellen",
+      "Save or discard your changes before creating a profile.": "Speichere oder verwirf deine Änderungen, bevor du ein Profil erstellst."
     };
 
     var Back$1 = "Retour";
@@ -2922,7 +2950,11 @@
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "La saisie nécessite un clavier anglais (US) et du texte ASCII. Les autres caractères ne sont ni saisis ni envoyés.",
       Paste: Paste$1,
       "Edit game profile": "Modifier le profil du jeu",
-      "Use a space after channel names or spoken triggers.": "Ajoutez une espace après les noms de canal ou les déclencheurs vocaux."
+      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "Ajoutez un espace après la commande de discussion, par exemple \"/p \". Laissez vide pour écrire sans commande de canal.",
+      "New profile": "Nouveau profil",
+      "New profile name": "Nom du nouveau profil",
+      "Create profile": "Créer un profil",
+      "Save or discard your changes before creating a profile.": "Enregistrez ou abandonnez vos modifications avant de créer un profil."
     };
 
     var Back = "返回";
@@ -3215,7 +3247,11 @@
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "键入需要英语（美国）键盘布局和 ASCII 文本。其他字符不会输入或发送。",
       Paste: Paste,
       "Edit game profile": "编辑游戏配置",
-      "Use a space after channel names or spoken triggers.": "在频道名称或语音触发词后添加空格。"
+      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "请在聊天命令后加一个空格，例如 \"/p \"。留空则直接输入，不使用频道命令。",
+      "New profile": "新建配置",
+      "New profile name": "新配置名称",
+      "Create profile": "创建配置",
+      "Save or discard your changes before creating a profile.": "创建配置前，请保存或放弃更改。"
     };
 
     const catalogs = { en: en$1, es, ru, pt, pl, ko, ja, de, fr, zh };
