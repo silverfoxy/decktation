@@ -1,0 +1,8 @@
+{
+  "plugin": "Decktation",
+  "channel": "branch",
+  "ref": "feat/recording-volume-ducking",
+  "commit": "2ce0f07e2503162b45df8486cfea9bcd29b13a52",
+  "zip_url": "https://decktation.com/branches/feat-recording-volume-ducking/Decktation.zip",
+  "generated_at": "2026-11-08T19:46:39Z"
+}
