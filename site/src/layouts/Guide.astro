@@ -1,4 +1,5 @@
 ---
+import DiscordLink from '../components/DiscordLink.astro';
 interface Props { title: string; description: string; path: string }
 const { title, description, path } = Astro.props;
 const canonical = new URL(path, Astro.site!);
@@ -19,6 +20,7 @@ const canonical = new URL(path, Astro.site!);
   <a class="skip" href="#main">Skip to content</a>
   <header><div class="wrap"><nav class="guide-nav" aria-label="Main navigation">
     <a class="brand" href="/">Decktation<span class="guide-brand-dot" aria-hidden="true"></span></a>
+    <DiscordLink />
     <a href="/walkthrough/" aria-current={path === '/walkthrough/' ? 'page' : undefined}>Walkthrough</a>
     <a href="/changelog/" aria-current={path.startsWith('/changelog/') ? 'page' : undefined}>Changelog</a>
     <a class="btn primary" href="/#install">Get Decktation</a>

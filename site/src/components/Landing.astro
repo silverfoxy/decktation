@@ -1,4 +1,5 @@
 ---
+import DiscordLink from './DiscordLink.astro';
 import { dictionaries, locales, localeNames, type Locale } from '../i18n';
 interface Props { locale: Locale }
 const { locale } = Astro.props;
@@ -15,7 +16,7 @@ const t = (key: keyof typeof dictionaries.en) => dictionaries[locale][key];
         <a href="#install" data-i18n="nav.install">{t("nav.install")}</a>
         <label class="language-control"><i class="fa-solid fa-language" aria-hidden="true"></i><span class="sr-only" data-i18n="language">{t("language")}</span><select id="language-select" aria-label={t("a11y.language")}>{locales.map((lang) => <option value={lang} data-url={lang === "en" ? "/" : `/${lang}/`} selected={lang === locale}>{localeNames[lang]}</option>)}</select></label>
       </div>
-      <div class="actions"><a class="github-link" href="https://github.com/silverfoxy/decktation" aria-label="GitHub"><i class="fa-brands fa-github icon" aria-hidden="true"></i></a>
+      <div class="actions"><DiscordLink /><a class="github-link" href="https://github.com/silverfoxy/decktation" aria-label="GitHub"><i class="fa-brands fa-github icon" aria-hidden="true"></i></a>
 
         <a class="btn primary secondary-header" href="#install" data-i18n="cta.install">{t("cta.install")}</a>
         <button class="btn mobile-menu" aria-label={t("a11y.menu")} aria-expanded="false" aria-controls="navigation"><i class="fa-solid fa-bars icon" aria-hidden="true"></i></button>
