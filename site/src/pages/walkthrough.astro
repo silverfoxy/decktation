@@ -1,0 +1,36 @@
+---
+import Guide from '../layouts/Guide.astro';
+import { tutorials } from '../data/tutorials';
+---
+<Guide title="Walkthrough" description="Learn Decktation with interactive examples of push-to-talk, channel prefixes, game commands, punctuation, and transcript review." path="/walkthrough/">
+  <section class="guide-hero"><div class="wrap"><p class="section-label">THE DECKTATION PLAYBOOK</p><h1>Less typing.<br />More playing.</h1><p class="lead">A few words are all it takes. Try the examples below, then bring them into your next session.</p><div class="guide-pills"><span>On-device transcription</span><span>Controller push-to-talk</span><span>No cloud account</span></div></div></section>
+  <section class="tutorial-section"><div class="wrap">
+    <div class="tutorial-heading"><div><p class="section-label">WATCH IT WORK</p><h2>From your voice to game chat.</h2></div><p>Illustrative demos. No microphone access or audio recording.</p></div>
+    <div class="tutorial-picker" role="group" aria-label="Choose a tutorial">{tutorials.map((demo, i) => <button class="tutorial-choice" data-tutorial={demo.id} aria-pressed={i === 0 ? 'true' : 'false'} aria-controls={`lesson-${demo.id}`}><span>0{i + 1}</span>{demo.label}</button>)}</div>
+    {tutorials.map((demo, i) => <article class="tutorial-lesson" id={`lesson-${demo.id}`} data-review={demo.review ? 'true' : 'false'} hidden={i !== 0}>
+      <div class="tutorial-copy"><p class="section-label">{demo.category}</p><h2>{demo.title}</h2><p>{demo.description}</p><ol>{demo.steps.map(step => <li>{step}</li>)}</ol><p class="tutorial-note">{demo.note}</p></div>
+      <div class="tutorial-player" data-phase="ready">
+        <div class="tutorial-player-top"><span class="tutorial-live-dot" aria-hidden="true"></span><span>{demo.target}</span><span class="tutorial-simulation">DEMO</span></div>
+        <div class="tutorial-game"><div class="tutorial-horizon" aria-hidden="true"></div><div class="tutorial-binding"><kbd>L1</kbd><span>+</span><kbd>R1</kbd><span class="tutorial-binding-label">Hold to speak</span></div>
+          <div class="tutorial-speech"><span class="tutorial-small-label">YOU SAY</span><p>“{demo.spoken}”</p><div class="tutorial-wave" aria-hidden="true">{Array.from({length: 17}, (_, n) => <i style={`--i:${n}`} />)}</div></div>
+          <div class="tutorial-chat"><span class="tutorial-small-label">{demo.review ? 'TRANSCRIPT TO REVIEW' : 'DECKTATION ENTERS'}</span><code data-output={demo.output}>{demo.output}</code><span class="tutorial-review-badge" hidden={!demo.review}>Waiting for your approval</span></div>
+        </div>
+        <div class="tutorial-timeline" aria-hidden="true"><span>Record</span><span>Transcribe</span><span>{demo.review ? 'Review' : 'Insert'}</span></div>
+        <div class="tutorial-player-bottom"><p class="tutorial-status" role="status" aria-live="polite">Ready when you are.</p><button class="btn primary tutorial-play" type="button">Play example</button><button class="btn tutorial-reset" type="button">Reset</button></div>
+        {demo.review && <div class="tutorial-review-actions" hidden><button class="btn primary tutorial-send">Send transcript</button><button class="btn tutorial-cancel">Cancel transcript</button></div>}
+      </div>
+    </article>)}
+    <noscript><style is:global>.tutorial-lesson[hidden]{display:grid;margin-top:48px}.tutorial-chat code{visibility:visible}.tutorial-picker,.tutorial-player-bottom,.tutorial-review-actions{display:none}</style><p>The examples above show the words you say and the text Decktation enters. Enable JavaScript for playback and the other lessons.</p></noscript>
+  </div></section>
+  <section class="alt"><div class="wrap"><p class="section-label">PICK YOUR DESTINATION</p><h2>A prefix is a shortcut to a channel.</h2><p class="lead">Say it at the start, then carry on with your message. These examples use the bundled English triggers.</p>
+    <div class="prefix-table-scroll"><table class="prefix-table"><thead><tr><th>Profile</th><th>You say</th><th>Decktation enters</th></tr></thead><tbody>
+      <tr><td>WoW / GW2</td><td>Party ready when you are</td><td><code>/p ready when you are</code></td></tr>
+      <tr><td>WoW / GW2</td><td>Guild hello everyone</td><td><code>/g hello everyone</code></td></tr>
+      <tr><td>WoW</td><td>Reply thanks</td><td><code>/r thanks</code></td></tr>
+      <tr><td>GW2</td><td>Map anyone for the event</td><td><code>/m anyone for the event</code></td></tr>
+      <tr><td>WoW / GW2</td><td>Type hello everyone</td><td><code>hello everyone</code> (no chat open or send)</td></tr>
+    </tbody></table></div><p class="tutorial-note">Channel availability depends on your game, group membership, and chat permissions. Set your transcription language for the language you speak. Generic mode inserts text directly and does not use game chat channels.</p>
+  </div></section>
+  <section><div class="wrap guide-next"><div><p class="section-label">MAKE IT YOURS</p><h2>One binding. Your setup.</h2><p>Pick WoW, GW2, or Generic under Mode. Choose your model and transcription language, change your recording binding, and adjust sending behavior in Advanced settings.</p><p>Newer test builds also offer a game profile editor for custom triggers, channel commands, and recognition keywords. Check the changelog for release availability.</p></div><div class="guide-link-cards"><a href="/#install"><strong>Get Decktation <span aria-hidden="true">↗</span></strong><span>Install it on your Deck.</span></a><a href="/changelog/"><strong>What’s new <span aria-hidden="true">→</span></strong><span>Release notes, version by version.</span></a><a href="https://github.com/silverfoxy/decktation/blob/master/doc/ADVANCED_CONFIGURATION.md"><strong>Advanced configuration <span aria-hidden="true">↗</span></strong><span>Profiles, channels, and sending options.</span></a></div></div></section>
+</Guide>
+<script src="../scripts/tutorial.ts"></script>

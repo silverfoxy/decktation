@@ -60,3 +60,26 @@ Font Awesome Free 6.7.2 is vendored locally with its
 [license](public/vendor/fontawesome/LICENSE.txt). No CDN or analytics are used.
 `public/assets/og-image.png` is the contributed English social-preview capture.
 Regenerate it when the hero's appearance changes materially.
+
+## Walkthrough and release notes
+
+`/walkthrough/` provides five interactive, illustrative tutorials: push-to-talk,
+channel prefixes, game slash commands, spoken punctuation, and transcript review.
+The examples are in `src/data/tutorials.ts`; playback is in
+`src/scripts/tutorial.ts`. Playback starts only on request, supports pause/reset,
+stops when hidden or offscreen, and shows the result immediately for reduced
+motion. The demos do not request microphone access or send messages.
+
+`/changelog/` and `/changelog/<version>/` are generated from the root
+`CHANGELOG.md` at build time. Update that file during releases; do not duplicate
+release notes in the website. Unreleased changes are explicitly distinguished
+from stable releases. Both the walkthrough and release notes are initially in
+English, linked with language labels from every localized landing page. Their
+layout does not run the landing page's language redirect script.
+
+The sitemap includes all guide and release routes. The Cloudflare Worker's asset
+routing covers these paths in production; release downloads retain their existing
+routes.
+
+Website CI and production deployment also run when `CHANGELOG.md` changes, so
+release commits publish the new notes without a separate website edit.

@@ -162,6 +162,7 @@ export default {
     const localeRoute = /^\/([^/]+)(?:\/|\/index\.html)?$/.exec(url.pathname);
     if (["/", "/index.html", "/styles.css", "/app.js", "/robots.txt", "/sitemap.xml"].includes(url.pathname)
       || (localeRoute && LANDING_LOCALES.has(localeRoute[1]))
+      || /^\/(?:walkthrough|changelog)(?:\/|$)/.test(url.pathname)
       || url.pathname.startsWith("/_astro/") || url.pathname.startsWith("/assets/") || url.pathname.startsWith("/vendor/")) {
       return env.ASSETS.fetch(request);
     }

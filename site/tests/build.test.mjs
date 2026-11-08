@@ -49,3 +49,46 @@ test('canonical URLs, sitemap, and robots use the deployed site origin', () => {
   const sitemap = readFileSync(new URL('sitemap.xml', dist), 'utf8');
   for (const locale of locales) assert.ok(sitemap.includes(`${base}${locale === 'en' ? '/' : `/${locale}/`}`));
 });
+
+test('walkthrough is discoverable and ships interactive, accessible examples', () => {
+  const walkthrough = readFileSync(new URL('walkthrough/index.html', dist), 'utf8');
+  for (const lesson of ['first-message', 'channel-prefixes', 'slash-commands', 'spoken-punctuation', 'review']) {
+    assert.ok(walkthrough.includes(`id="lesson-${lesson}"`));
+    assert.ok(walkthrough.includes(`aria-controls="lesson-${lesson}"`));
+  }
+  assert.ok(walkthrough.includes('/p ready when you are'));
+  assert.ok(walkthrough.includes('Send transcript'));
+  assert.ok(walkthrough.includes('Cancel transcript'));
+  assert.ok(walkthrough.includes('aria-live="polite"'));
+  assert.ok(walkthrough.includes('Illustrative demos.'));
+  const scripts = [...walkthrough.matchAll(/src="(\/_astro\/[^" ]+\.js)"/g)];
+  assert.ok(scripts.length > 0 || (walkthrough.includes('<script type="module">') && walkthrough.includes('prefers-reduced-motion')), 'Tutorial must ship its playback controller');
+  for (const [, path] of scripts) assert.ok(existsSync(new URL(path.slice(1), dist)));
+  assert.ok(!walkthrough.includes('src="/app.js'), 'Landing-only scripts must not run on guide pages');
+  for (const locale of locales) {
+    const page = readFileSync(new URL(locale === 'en' ? 'index.html' : `${locale}/index.html`, dist), 'utf8');
+    assert.ok(page.includes('href="/walkthrough/"'));
+    assert.ok(page.includes('href="/changelog/"'));
+  }
+});
+
+test('every documented release has complete notes, a canonical page, and sitemap entry', () => {
+  const changelog = readFileSync(new URL('../../CHANGELOG.md', import.meta.url), 'utf8');
+  const versions = [...changelog.matchAll(/^## \[([^\]]+)\]/gm)].map(match => match[1]);
+  const index = readFileSync(new URL('changelog/index.html', dist), 'utf8');
+  const sitemap = readFileSync(new URL('sitemap.xml', dist), 'utf8');
+  const base = process.env.SITE_BASE_URL || 'https://decktation.com';
+  for (const version of versions) {
+    const path = `/changelog/${version.toLowerCase()}/`;
+    const page = readFileSync(new URL(`${path.slice(1)}index.html`, dist), 'utf8');
+    assert.ok(index.includes(`href="${path}"`));
+    assert.ok(sitemap.includes(new URL(path, base).href));
+    assert.ok(page.includes(`rel="canonical" href="${new URL(path, base)}"`));
+    if (version === 'Unreleased') assert.ok(page.includes('Not released yet'));
+    else assert.ok(page.includes(`https://github.com/silverfoxy/decktation/releases/tag/v${version}`));
+  }
+  assert.ok(index.includes('Initial packaged release'));
+  assert.ok(index.includes('Legion Go S controller support'));
+  assert.ok(!index.includes('[Unreleased]:'));
+  assert.ok(sitemap.includes(new URL('/walkthrough/', base).href));
+});

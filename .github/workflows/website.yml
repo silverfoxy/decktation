@@ -4,12 +4,14 @@ on:
   push:
     branches: [master]
     paths:
+      - 'CHANGELOG.md'
       - 'site/**'
       - 'cloudflare/**'
       - '.github/workflows/website.yml'
   pull_request:
     branches: [master]
     paths:
+      - 'CHANGELOG.md'
       - 'site/**'
       - 'cloudflare/**'
       - '.github/workflows/website.yml'

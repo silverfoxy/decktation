@@ -161,5 +161,7 @@
   "theme.dark": "다크",
   "faq.updates.q": "업데이트는 어떻게 하나요?",
   "faq.updates.a": "Decktation은 새 안정 릴리스를 확인하고 업데이트가 있으면 표시합니다. Decktation의 Updates(업데이트) 페이지를 열고 Decky에서 설치를 승인하세요. 사용자 승인 없이 업데이트가 설치되는 일은 없습니다.",
-  "routing.note": "채널 이름은 영어(party, guild, reply, say)로 말한 뒤, 메시지는 원하는 언어로 말하세요. 프랑스어 채널 이름도 지원합니다."
+  "routing.note": "채널 이름은 영어(party, guild, reply, say)로 말한 뒤, 메시지는 원하는 언어로 말하세요. 프랑스어 채널 이름도 지원합니다.",
+  "nav.walkthrough": "사용 가이드 (영어)",
+  "nav.changelog": "변경 내역 (영어)"
 }

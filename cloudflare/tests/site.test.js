@@ -165,3 +165,17 @@ test("stable aliases and versioned ZIPs download from GitHub Releases", async (t
   }
   assert.equal(fetch.mock.callCount(), 0);
 });
+
+test("walkthrough and release pages use static assets for GET and HEAD", async (t) => {
+  const fetch = t.mock.method(globalThis, "fetch", () => { throw new Error("Unexpected origin fetch"); });
+  const env = { ASSETS: { fetch: async req => new Response(null, {
+    headers: { "X-Asset-Path": new URL(req.url).pathname },
+  }) } };
+  for (const path of ["/walkthrough", "/walkthrough/", "/walkthrough/index.html", "/changelog", "/changelog/", "/changelog/0.3.21/", "/changelog/unreleased/", "/changelog/missing/"]) {
+    for (const method of ["GET", "HEAD"]) {
+      const response = await worker.fetch(request(`${path}?test=1`, method), env);
+      assert.equal(response.headers.get("X-Asset-Path"), path);
+    }
+  }
+  assert.equal(fetch.mock.callCount(), 0);
+});

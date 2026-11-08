@@ -161,5 +161,7 @@
   "theme.dark": "深色",
   "faq.updates.q": "如何更新？",
   "faq.updates.a": "Decktation 会检查新的稳定版本，并在有更新时显示提示。打开 Decktation 的 Updates（更新）页面，通过 Decky 确认安装。未经你的同意，绝不会安装更新。",
-  "routing.note": "先用英语说出频道名称（party、guild、reply 或 say），再用你的语言说出消息。也支持法语频道名称。"
+  "routing.note": "先用英语说出频道名称（party、guild、reply 或 say），再用你的语言说出消息。也支持法语频道名称。",
+  "nav.walkthrough": "使用指南（英语）",
+  "nav.changelog": "更新日志（英语）"
 }

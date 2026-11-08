@@ -1,0 +1,12 @@
+---
+import type { Release } from '../data/releases';
+interface Props { release: Release; latest?: boolean; standalone?: boolean }
+const { release, latest = false, standalone = false } = Astro.props;
+---
+<article class="release-entry" id={`v${release.slug}`}>
+  <div class="release-meta"><span class="release-badge">{release.released ? latest ? 'Latest documented release' : 'Release' : 'Not released yet'}</span>{release.date && <time datetime={release.date}>{release.date}</time>}</div>
+  {!standalone && <h2><a href={`/changelog/${release.slug}/`}>{release.released ? `v${release.version}` : 'Unreleased'}</a></h2>}
+  {!release.released && <p>These changes are in development. They may appear in test builds before the next stable release.</p>}
+  <div class="release-body" set:html={release.html} />
+  <div class="release-links">{!standalone && <a href={`/changelog/${release.slug}/`}>Read full notes <span aria-hidden="true">→</span></a>}{release.github && <a href={release.github}>View on GitHub <span aria-hidden="true">↗</span></a>}</div>
+</article>

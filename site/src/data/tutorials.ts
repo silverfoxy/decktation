@@ -1,0 +1,42 @@
+export const tutorials = [
+  {
+    id: 'first-message', label: 'Your first message', category: 'START HERE',
+    title: 'Hold. Speak. Release.',
+    description: 'With WoW selected, hold L1 + R1 and say your message. Release both buttons to transcribe and send it to the default Say channel.',
+    spoken: 'Hello everyone', output: '/s hello everyone', target: 'World of Warcraft · Say',
+    steps: ['Focus the game and enable Decktation. Choose WoW under Mode.', 'Hold L1 + R1 (the default binding) while you speak.', 'Release both buttons. Decktation opens chat and sends the transcript.'],
+    note: 'You can change the binding in the plugin. Use Generic mode to dictate into an already focused text field without opening or sending game chat.',
+  },
+  {
+    id: 'channel-prefixes', label: 'Channel prefixes', category: 'SPEAK TO YOUR GROUP',
+    title: 'Say the destination first.',
+    description: 'Start a message with “party”, “guild”, or another supported channel trigger. Decktation removes the spoken trigger and adds the game’s chat command.',
+    spoken: 'Party ready when you are', output: '/p ready when you are', target: 'World of Warcraft · Party',
+    steps: ['Select a game profile so its channel commands are available.', 'Hold the recording binding and say “party ready when you are”.', 'Release. The word “party” becomes /p; only your message appears in chat.'],
+    note: 'Triggers belong at the beginning of the message. Channel commands depend on the selected game profile; they are not the same in every game.',
+  },
+  {
+    id: 'slash-commands', label: 'Slash commands', category: 'LESS TYPING',
+    title: 'A command, in a few words.',
+    description: 'Say “command” first to enter a game slash command. This bypasses channel prefixes and still follows your sending preference.',
+    spoken: 'Command ready', output: '/ready', target: 'Guild Wars 2 · Game command',
+    steps: ['Choose the GW2 profile and focus the game.', 'Hold the binding and say “command ready”.', 'Release to enter /ready. The command must be supported by your game.'],
+    note: 'Another example is “command gg” → /gg. These are game chat commands; dictated text is never executed as a shell command.',
+  },
+  {
+    id: 'spoken-punctuation', label: 'Spoken punctuation', category: 'MAKE YOURSELF CLEAR',
+    title: 'Put a little shape in your words.',
+    description: 'Turn on Spoken punctuation in Advanced settings to replace English punctuation phrases with symbols. This example uses Generic mode in a focused text field.',
+    spoken: 'Ready comma let’s go exclamation mark', output: 'Ready, let’s go!', target: 'Generic · Focused text field',
+    steps: ['Enable Spoken punctuation in Advanced settings.', 'Choose Generic, focus a text field, and dictate the example.', 'Release to insert text. Generic mode does not press Enter to send it.'],
+    note: 'Punctuation commands are English-only. “Comma”, “period”, “question mark”, and “exclamation mark” are supported examples. Capitalization can vary with transcription and the game profile.',
+  },
+  {
+    id: 'review', label: 'Review before sending', category: 'TAKE A SECOND LOOK',
+    title: 'Read it before the group does.',
+    description: 'Choose Review before sending under Advanced settings → Sending → Transcription sending. Your transcript waits for approval.',
+    spoken: 'Party ready when you are', output: '/p ready when you are', target: 'World of Warcraft · Pending party message', review: true,
+    steps: ['Record and release the binding as usual.', 'Read the transcript in the review overlay or Quick Access Menu.', 'Tap your recording binding to send, or hold it to cancel. QAM also has Send and Cancel buttons.'],
+    note: 'Immediate sending and a countdown are also available. Opening QAM pauses a countdown for explicit review.',
+  },
+];
