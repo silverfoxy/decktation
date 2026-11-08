@@ -1481,12 +1481,44 @@ class Plugin:
         except Exception as error:
             return {"success": False, "error": str(error)}
 
+    async def delete_profile(self, game: str):
+        """Delete a user-created profile, preserving built-ins and the active game."""
+        try:
+            with open(PRESETS_FILE) as source:
+                builtins = json.load(source)
+            if not isinstance(game, str) or game in builtins:
+                raise ValueError("Built-in profiles cannot be deleted.")
+            active_game = _read_button_config().get("game", "wow")
+            if game == active_game:
+                raise ValueError("Switch to another active profile in Mode before deleting this profile.")
+            existing = {}
+            for filename in ("profiles.json", "custom_presets.json", "game_presets.json"):
+                path = os.path.join(CONFIG_DIR, filename)
+                if os.path.exists(path):
+                    with open(path) as source:
+                        existing = json.load(source)
+                    break
+            if not isinstance(existing, dict) or game not in existing:
+                raise ValueError("Unknown user profile")
+            del existing[game]
+            path = os.path.join(CONFIG_DIR, "profiles.json")
+            with open(path + ".tmp", "w") as target:
+                json.dump(existing, target, ensure_ascii=False, indent=2)
+            os.replace(path + ".tmp", path)
+            global _game_presets
+            _game_presets = _load_game_presets()
+            return {"success": True, "active_game": active_game}
+        except Exception as error:
+            return {"success": False, "error": str(error)}
+
     async def get_profile_editor(self, game: str):
         presets = _load_game_presets()
         if game not in presets:
             return {"success": False, "error": "Unknown game profile"}
         profile = presets[game]
-        return {"success": True, "profile": {
+        with open(PRESETS_FILE) as source:
+            builtin_profiles = json.load(source)
+        return {"success": True, "can_delete": game not in builtin_profiles, "profile": {
             "hotwords": profile.get("hotwords", []),
             "channels": profile.get("channels", {}),
             "channel_triggers": profile.get("channel_triggers", {}),

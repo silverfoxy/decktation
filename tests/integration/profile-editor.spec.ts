@@ -304,3 +304,27 @@ test('editor opens the active game and can create and save a new profile', async
   await openEditor(page);
   await expect(page.getByLabel('Game profile')).toHaveValue('my_game');
 });
+
+
+test('user profile deletion requires confirmation and protects the active profile', async ({ page, harness }) => {
+  expect((await harness.rpc('create_profile', ['Disposable Game'])).success).toBe(true);
+  await openEditor(page);
+  await expect(page.getByRole('button', { name: 'Delete profile', exact: true })).toHaveCount(0);
+  await page.getByLabel('Game profile').selectOption('disposable_game');
+  await page.getByLabel('Chat command').fill('/test');
+  await page.getByRole('button', { name: 'Delete profile', exact: true }).click();
+  const confirmation = page.getByRole('alertdialog', { name: 'Delete profile', exact: true });
+  await expect(confirmation).toContainText('Disposable Game');
+  await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByLabel('Chat command')).toHaveValue('/test');
+  await page.getByRole('button', { name: 'Delete profile', exact: true }).click();
+  await confirmation.getByRole('button', { name: 'Delete profile', exact: true }).click();
+  await expect(page.getByLabel('Game profile')).toHaveValue('wow');
+  expect((await harness.rpc('get_profile_editor', ['disposable_game'])).success).toBe(false);
+  expect((await harness.rpc('create_profile', ['Active Game'])).success).toBe(true);
+  expect((await harness.rpc('set_active_preset', ['active_game'])).success).toBe(true);
+  await openEditor(page);
+  await page.getByRole('button', { name: 'Delete profile', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Switch to another active profile');
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
+});

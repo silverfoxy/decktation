@@ -254,5 +254,8 @@
   "New profile": "Neues Profil",
   "New profile name": "Name des neuen Profils",
   "Create profile": "Profil erstellen",
-  "Save or discard your changes before creating a profile.": "Speichere oder verwirf deine Änderungen, bevor du ein Profil erstellst."
+  "Save or discard your changes before creating a profile.": "Speichere oder verwirf deine Änderungen, bevor du ein Profil erstellst.",
+  "Delete profile": "Profil löschen",
+  "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "Profil „{name}“ und alle Einstellungen löschen? Ungespeicherte Änderungen gehen ebenfalls verloren.",
+  "Switch to another active profile in Mode before deleting this profile.": "Aktiviere unter Modus ein anderes Profil, bevor du dieses Profil löschst."
 }

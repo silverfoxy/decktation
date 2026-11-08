@@ -375,7 +375,10 @@
       "New profile": "New profile",
       "New profile name": "New profile name",
       "Create profile": "Create profile",
-      "Save or discard your changes before creating a profile.": "Save or discard your changes before creating a profile."
+      "Save or discard your changes before creating a profile.": "Save or discard your changes before creating a profile.",
+      "Delete profile": "Delete profile",
+      "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.",
+      "Switch to another active profile in Mode before deleting this profile.": "Switch to another active profile in Mode before deleting this profile."
     };
 
     var af = "Afrikaans";
@@ -875,7 +878,10 @@
       "New profile": "Nuevo perfil",
       "New profile name": "Nombre del nuevo perfil",
       "Create profile": "Crear perfil",
-      "Save or discard your changes before creating a profile.": "Guarda o descarta los cambios antes de crear un perfil."
+      "Save or discard your changes before creating a profile.": "Guarda o descarta los cambios antes de crear un perfil.",
+      "Delete profile": "Eliminar perfil",
+      "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "¿Eliminar el perfil \"{name}\" y todos sus ajustes? También se perderán los cambios sin guardar.",
+      "Switch to another active profile in Mode before deleting this profile.": "Activa otro perfil en Modo antes de eliminar este perfil."
     };
 
     var Back$7 = "Назад";
@@ -1172,7 +1178,10 @@
       "New profile": "Новый профиль",
       "New profile name": "Название нового профиля",
       "Create profile": "Создать профиль",
-      "Save or discard your changes before creating a profile.": "Сохраните или отмените изменения перед созданием профиля."
+      "Save or discard your changes before creating a profile.": "Сохраните или отмените изменения перед созданием профиля.",
+      "Delete profile": "Удалить профиль",
+      "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "Удалить профиль «{name}» и все его настройки? Несохранённые изменения также будут потеряны.",
+      "Switch to another active profile in Mode before deleting this profile.": "Перед удалением этого профиля активируйте другой профиль в меню «Режим»."
     };
 
     var Back$6 = "Voltar";
@@ -1469,7 +1478,10 @@
       "New profile": "Novo perfil",
       "New profile name": "Nome do novo perfil",
       "Create profile": "Criar perfil",
-      "Save or discard your changes before creating a profile.": "Salve ou descarte suas alterações antes de criar um perfil."
+      "Save or discard your changes before creating a profile.": "Salve ou descarte suas alterações antes de criar um perfil.",
+      "Delete profile": "Excluir perfil",
+      "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "Excluir o perfil \"{name}\" e todas as suas configurações? As alterações não salvas também serão perdidas.",
+      "Switch to another active profile in Mode before deleting this profile.": "Ative outro perfil em Modo antes de excluir este perfil."
     };
 
     var Back$5 = "Wstecz";
@@ -1766,7 +1778,10 @@
       "New profile": "Nowy profil",
       "New profile name": "Nazwa nowego profilu",
       "Create profile": "Utwórz profil",
-      "Save or discard your changes before creating a profile.": "Zapisz lub odrzuć zmiany przed utworzeniem profilu."
+      "Save or discard your changes before creating a profile.": "Zapisz lub odrzuć zmiany przed utworzeniem profilu.",
+      "Delete profile": "Usuń profil",
+      "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "Usunąć profil „{name}” i wszystkie jego ustawienia? Niezapisane zmiany również zostaną utracone.",
+      "Switch to another active profile in Mode before deleting this profile.": "Aktywuj inny profil w menu Tryb przed usunięciem tego profilu."
     };
 
     var Back$4 = "뒤로";
@@ -2063,7 +2078,10 @@
       "New profile": "새 프로필",
       "New profile name": "새 프로필 이름",
       "Create profile": "프로필 만들기",
-      "Save or discard your changes before creating a profile.": "프로필을 만들기 전에 변경 사항을 저장하거나 취소하세요."
+      "Save or discard your changes before creating a profile.": "프로필을 만들기 전에 변경 사항을 저장하거나 취소하세요.",
+      "Delete profile": "프로필 삭제",
+      "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "프로필 \"{name}\" 및 모든 설정을 삭제할까요? 저장하지 않은 변경 사항도 사라집니다.",
+      "Switch to another active profile in Mode before deleting this profile.": "이 프로필을 삭제하기 전에 모드에서 다른 프로필을 활성화하세요."
     };
 
     var Back$3 = "戻る";
@@ -2360,7 +2378,10 @@
       "New profile": "新しいプロフィール",
       "New profile name": "新しいプロフィール名",
       "Create profile": "プロフィールを作成",
-      "Save or discard your changes before creating a profile.": "プロフィールを作成する前に変更を保存または破棄してください。"
+      "Save or discard your changes before creating a profile.": "プロフィールを作成する前に変更を保存または破棄してください。",
+      "Delete profile": "プロフィールを削除",
+      "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "プロフィール「{name}」とすべての設定を削除しますか？未保存の変更も失われます。",
+      "Switch to another active profile in Mode before deleting this profile.": "このプロフィールを削除する前に、モードで別のプロフィールを有効にしてください。"
     };
 
     var Back$2 = "Zurück";
@@ -2657,7 +2678,10 @@
       "New profile": "Neues Profil",
       "New profile name": "Name des neuen Profils",
       "Create profile": "Profil erstellen",
-      "Save or discard your changes before creating a profile.": "Speichere oder verwirf deine Änderungen, bevor du ein Profil erstellst."
+      "Save or discard your changes before creating a profile.": "Speichere oder verwirf deine Änderungen, bevor du ein Profil erstellst.",
+      "Delete profile": "Profil löschen",
+      "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "Profil „{name}“ und alle Einstellungen löschen? Ungespeicherte Änderungen gehen ebenfalls verloren.",
+      "Switch to another active profile in Mode before deleting this profile.": "Aktiviere unter Modus ein anderes Profil, bevor du dieses Profil löschst."
     };
 
     var Back$1 = "Retour";
@@ -2954,7 +2978,10 @@
       "New profile": "Nouveau profil",
       "New profile name": "Nom du nouveau profil",
       "Create profile": "Créer un profil",
-      "Save or discard your changes before creating a profile.": "Enregistrez ou abandonnez vos modifications avant de créer un profil."
+      "Save or discard your changes before creating a profile.": "Enregistrez ou abandonnez vos modifications avant de créer un profil.",
+      "Delete profile": "Supprimer le profil",
+      "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "Supprimer le profil « {name} » et tous ses paramètres ? Les modifications non enregistrées seront également perdues.",
+      "Switch to another active profile in Mode before deleting this profile.": "Activez un autre profil dans Mode avant de supprimer ce profil."
     };
 
     var Back = "返回";
@@ -3251,7 +3278,10 @@
       "New profile": "新建配置",
       "New profile name": "新配置名称",
       "Create profile": "创建配置",
-      "Save or discard your changes before creating a profile.": "创建配置前，请保存或放弃更改。"
+      "Save or discard your changes before creating a profile.": "创建配置前，请保存或放弃更改。",
+      "Delete profile": "删除配置",
+      "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "删除配置“{name}”及其所有设置？未保存的更改也将丢失。",
+      "Switch to another active profile in Mode before deleting this profile.": "删除此配置前，请在模式菜单中激活其他配置。"
     };
 
     const catalogs = { en: en$1, es, ru, pt, pl, ko, ja, de, fr, zh };
@@ -3426,6 +3456,7 @@
     const getPresets$1 = callable("get_presets");
     const getActivePreset = callable("get_active_preset");
     const createProfile = callable("create_profile");
+    const deleteProfile = callable("delete_profile");
     const title = (channel) => channel.replace(/_/g, " ");
     // Use raw full-screen controls, rather than Steam's tall quick-access form rows.
     function EditorTextField({ label, description, ...props }) {
@@ -3495,6 +3526,9 @@
         const [profile, setProfile] = React.useState(null);
         const [selected, setSelected] = React.useState("");
         const [tab, setTab] = React.useState("channels");
+        const [canDelete, setCanDelete] = React.useState(false);
+        const [confirmDelete, setConfirmDelete] = React.useState(false);
+        const [activeGame, setActiveGame] = React.useState("");
         const [creatingProfile, setCreatingProfile] = React.useState(false);
         const [profileName, setProfileName] = React.useState("");
         const [search, setSearch] = React.useState("");
@@ -3643,6 +3677,7 @@
                 }
                 setPresets(result.presets);
                 setGame(active.game);
+                setActiveGame(active.game);
             }).catch(error => { if (mounted.current)
                 setError(String(error)); });
             return () => { mounted.current = false; };
@@ -3651,6 +3686,7 @@
             if (!game)
                 return;
             let active = true;
+            setCanDelete(false);
             setProfile(null);
             setError("");
             setMessage("");
@@ -3667,6 +3703,7 @@
                     setError(result.error);
                     return;
                 }
+                setCanDelete(!!result.can_delete);
                 const loaded = result.profile;
                 setProfile({ ...loaded, hotwords: Array.isArray(loaded.hotwords) ? loaded.hotwords : loaded.hotwords ? [loaded.hotwords] : [] });
                 setSelected(loaded.default_channel);
@@ -3717,7 +3754,7 @@
             }
         }
         const pending = pendingAction !== null;
-        const disabled = busy || pending || creatingProfile;
+        const disabled = busy || pending || creatingProfile || confirmDelete;
         const filtered = profile ? Object.keys(profile.channels).filter(channel => `${title(channel)} ${profile.channels[channel]} ${Object.entries(profile.channel_triggers).filter(([, value]) => value === channel).map(([key]) => key).join(" ")}`.toLowerCase().includes(search.toLowerCase())) : [];
         const aliases = profile ? Object.entries(profile.channel_triggers).filter(([, channel]) => channel === selected).map(([phrase]) => phrase) : [];
         const navigate = (event) => {
@@ -3726,7 +3763,10 @@
                 event.stopPropagation();
             }
         };
-        return React__default["default"].createElement(deckyFrontendLib.Focusable, { ref: editor, className: "decktation-editor", "flow-children": "column", onGamepadDirection: navigate, onCancel: (event) => { event.stopPropagation(); event.preventDefault(); if (pending)
+        return React__default["default"].createElement(deckyFrontendLib.Focusable, { ref: editor, className: "decktation-editor", "flow-children": "column", onGamepadDirection: navigate, onCancel: (event) => { event.stopPropagation(); event.preventDefault(); if (busy)
+                return; if (confirmDelete)
+                setConfirmDelete(false);
+            else if (pending)
                 setPendingAction(null);
             else if (creatingProfile)
                 setCreatingProfile(false);
@@ -3746,6 +3786,31 @@
                     React__default["default"].createElement("span", null, t("Game profile")),
                     React__default["default"].createElement(deckyFrontendLib.Dropdown, { menuLabel: t("Game profile"), rgOptions: presets.map(preset => ({ data: preset.id, label: t(preset.name) })), selectedOption: game, disabled: disabled, onChange: option => { if (String(option.data) !== game)
                             leave(String(option.data)); } }))),
+            confirmDelete && React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "notice", role: "alertdialog", "aria-label": t("Delete profile") },
+                React__default["default"].createElement("div", null, t('Delete profile "{name}" and all its settings? Unsaved changes will also be lost.', { name: presets.find(preset => preset.id === game)?.name || game })),
+                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "inline", "flow-children": "row", "data-nav-row": true },
+                    React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", autoFocus: true, disabled: busy, onClick: () => setConfirmDelete(false) }, t("Cancel")),
+                    React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: busy, onClick: async () => {
+                            setBusy(true);
+                            setError("");
+                            try {
+                                const result = await deleteProfile(game);
+                                if (!result.success) {
+                                    setError(t(result.error));
+                                    return;
+                                }
+                                setPresets(current => current.filter(preset => preset.id !== game));
+                                setGame(result.active_game);
+                                setActiveGame(result.active_game);
+                                setConfirmDelete(false);
+                            }
+                            catch (error) {
+                                setError(String(error));
+                            }
+                            finally {
+                                setBusy(false);
+                            }
+                        } }, t("Delete profile")))),
             creatingProfile && React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "notice", "flow-children": "column" },
                 React__default["default"].createElement(EditorTextField, { label: t("New profile name"), autoFocus: true, value: profileName, disabled: busy, onChange: event => setProfileName(event.target.value) }),
                 React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "inline", "flow-children": "row", "data-nav-row": true },
@@ -3879,7 +3944,15 @@
                         setCreatingProfile(true);
                         setError("");
                     } }, t("New profile")),
-                React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: busy, onClick: () => leave() }, t("Back")),
+                canDelete && React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled, onClick: () => {
+                        if (game === activeGame) {
+                            setError(t("Switch to another active profile in Mode before deleting this profile."));
+                            return;
+                        }
+                        setConfirmDelete(true);
+                        setError("");
+                    } }, t("Delete profile")),
+                React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: busy || confirmDelete, onClick: () => leave() }, t("Back")),
                 React__default["default"].createElement("div", { role: error ? "alert" : "status", className: error ? "error" : "hint" }, error || (dirty ? t("Unsaved changes") : message)),
                 React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled || !profile || !dirty, onClick: save }, busy ? t("Saving...") : t("Save changes"))));
     }

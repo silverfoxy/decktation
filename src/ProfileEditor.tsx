@@ -21,6 +21,7 @@ const saveProfile = callable<[game: string, profile: Profile], any>("save_profil
 const getPresets = callable<[], any>("get_presets");
 const getActivePreset = callable<[], any>("get_active_preset");
 const createProfile = callable<[name: string], any>("create_profile");
+const deleteProfile = callable<[game: string], any>("delete_profile");
 const title = (channel: string) => channel.replace(/_/g, " ");
 // Use raw full-screen controls, rather than Steam's tall quick-access form rows.
 function EditorTextField({ label, description, ...props }: TextFieldProps) {
@@ -92,6 +93,9 @@ export function ProfileEditor() {
     const [profile, setProfile] = useState<Profile | null>(null);
     const [selected, setSelected] = useState("");
     const [tab, setTab] = useState<"channels" | "keywords">("channels");
+    const [canDelete, setCanDelete] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [activeGame, setActiveGame] = useState("");
     const [creatingProfile, setCreatingProfile] = useState(false);
     const [profileName, setProfileName] = useState("");
     const [search, setSearch] = useState("");
@@ -211,18 +215,20 @@ export function ProfileEditor() {
             if (!mounted.current) return;
             if (!result.success || !active.success) { setError(result.error || active.error); return; }
             setPresets(result.presets);
-            setGame(active.game);
+            setGame(active.game); setActiveGame(active.game);
         }).catch(error => { if (mounted.current) setError(String(error)); });
         return () => { mounted.current = false; };
     }, []);
     useEffect(() => {
         if (!game) return;
         let active = true;
+        setCanDelete(false);
         setProfile(null); setError(""); setMessage(""); setDirty(false); setSearch("");
         setTrigger(""); setKeyword(""); setNewChannel(""); setAddingChannel(false);
         loadProfile(game).then(result => {
             if (!active) return;
             if (!result.success) { setError(result.error); return; }
+            setCanDelete(!!result.can_delete);
             const loaded = result.profile;
             setProfile({ ...loaded, hotwords: Array.isArray(loaded.hotwords) ? loaded.hotwords : loaded.hotwords ? [loaded.hotwords] : [] });
             setSelected(loaded.default_channel);
@@ -249,7 +255,7 @@ export function ProfileEditor() {
         finally { if (mounted.current) setBusy(false); }
     }
     const pending = pendingAction !== null;
-    const disabled = busy || pending || creatingProfile;
+    const disabled = busy || pending || creatingProfile || confirmDelete;
     const filtered = profile ? Object.keys(profile.channels).filter(channel =>
         `${title(channel)} ${profile.channels[channel]} ${Object.entries(profile.channel_triggers).filter(([, value]) => value === channel).map(([key]) => key).join(" ")}`.toLowerCase().includes(search.toLowerCase())) : [];
     const aliases = profile ? Object.entries(profile.channel_triggers).filter(([, channel]) => channel === selected).map(([phrase]) => phrase) : [];
@@ -258,13 +264,28 @@ export function ProfileEditor() {
             event.preventDefault(); event.stopPropagation();
         }
     };
-    return <Focusable ref={editor} className="decktation-editor" flow-children="column" onGamepadDirection={navigate} onCancel={(event: any) => { event.stopPropagation(); event.preventDefault(); if (pending) setPendingAction(null); else if (creatingProfile) setCreatingProfile(false); else leave(); }} onCancelActionDescription={t("Back")}>
+    return <Focusable ref={editor} className="decktation-editor" flow-children="column" onGamepadDirection={navigate} onCancel={(event: any) => { event.stopPropagation(); event.preventDefault(); if (busy) return; if (confirmDelete) setConfirmDelete(false); else if (pending) setPendingAction(null); else if (creatingProfile) setCreatingProfile(false); else leave(); }} onCancelActionDescription={t("Back")}>
         <style>{styles}</style>
         <Focusable className="editor-header" role="banner" flow-children="row" data-nav-row><h1>{t("Game profiles")}</h1>
             <Focusable className="tabs" flow-children="row" data-nav-row><DialogButton className="editor-button" disabled={disabled} onClick={() => setTab("channels")}>{tab === "channels" ? "● " : ""}{t("Channels")}</DialogButton>
                 <DialogButton className="editor-button" disabled={disabled} onClick={() => setTab("keywords")}>{tab === "keywords" ? "● " : ""}{t("Keywords")}</DialogButton></Focusable>
             <div className="profile-picker"><span>{t("Game profile")}</span><Dropdown menuLabel={t("Game profile")} rgOptions={presets.map(preset => ({ data:preset.id, label:t(preset.name) }))} selectedOption={game} disabled={disabled}
                 onChange={option => { if (String(option.data) !== game) leave(String(option.data)); }} /></div></Focusable>
+        {confirmDelete && <Focusable className="notice" role="alertdialog" aria-label={t("Delete profile")}>
+            <div>{t('Delete profile "{name}" and all its settings? Unsaved changes will also be lost.', { name: presets.find(preset => preset.id === game)?.name || game })}</div>
+            <Focusable className="inline" flow-children="row" data-nav-row>
+                <DialogButton className="editor-button" autoFocus disabled={busy} onClick={() => setConfirmDelete(false)}>{t("Cancel")}</DialogButton>
+                <DialogButton className="editor-button" disabled={busy} onClick={async () => {
+                    setBusy(true); setError("");
+                    try {
+                        const result = await deleteProfile(game);
+                        if (!result.success) { setError(t(result.error)); return; }
+                        setPresets(current => current.filter(preset => preset.id !== game));
+                        setGame(result.active_game); setActiveGame(result.active_game); setConfirmDelete(false);
+                    } catch (error) { setError(String(error)); } finally { setBusy(false); }
+                }}>{t("Delete profile")}</DialogButton>
+            </Focusable>
+        </Focusable>}
         {creatingProfile && <Focusable className="notice" flow-children="column">
             <EditorTextField label={t("New profile name")} autoFocus value={profileName} disabled={busy} onChange={event => setProfileName(event.target.value)} />
             <Focusable className="inline" flow-children="row" data-nav-row>
@@ -342,7 +363,12 @@ export function ProfileEditor() {
         <Focusable className="editor-footer" role="contentinfo" flow-children="row" data-nav-row><DialogButton className="editor-button" disabled={disabled || !profile} onClick={() => {
             if (dirty) { setError(t("Save or discard your changes before creating a profile.")); return; }
             setCreatingProfile(true); setError("");
-        }}>{t("New profile")}</DialogButton><DialogButton className="editor-button" disabled={busy} onClick={() => leave()}>{t("Back")}</DialogButton>
+        }}>{t("New profile")}</DialogButton>
+            {canDelete && <DialogButton className="editor-button" disabled={disabled} onClick={() => {
+                if (game === activeGame) { setError(t("Switch to another active profile in Mode before deleting this profile.")); return; }
+                setConfirmDelete(true); setError("");
+            }}>{t("Delete profile")}</DialogButton>}
+            <DialogButton className="editor-button" disabled={busy || confirmDelete} onClick={() => leave()}>{t("Back")}</DialogButton>
             <div role={error ? "alert" : "status"} className={error ? "error" : "hint"}>{error || (dirty ? t("Unsaved changes") : message)}</div>
             <DialogButton className="editor-button" disabled={disabled || !profile || !dirty} onClick={save}>{busy ? t("Saving...") : t("Save changes")}</DialogButton></Focusable>
     </Focusable>;

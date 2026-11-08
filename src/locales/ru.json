@@ -254,5 +254,8 @@
   "New profile": "Новый профиль",
   "New profile name": "Название нового профиля",
   "Create profile": "Создать профиль",
-  "Save or discard your changes before creating a profile.": "Сохраните или отмените изменения перед созданием профиля."
+  "Save or discard your changes before creating a profile.": "Сохраните или отмените изменения перед созданием профиля.",
+  "Delete profile": "Удалить профиль",
+  "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "Удалить профиль «{name}» и все его настройки? Несохранённые изменения также будут потеряны.",
+  "Switch to another active profile in Mode before deleting this profile.": "Перед удалением этого профиля активируйте другой профиль в меню «Режим»."
 }

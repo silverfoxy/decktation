@@ -80,3 +80,25 @@ def test_create_profile_preserves_overrides_and_can_be_edited_and_activated(edit
 def test_create_rejects_invalid_or_existing_names(editor, tmp_path, name):
     assert not asyncio.run(editor.create_profile(name))["success"]
     assert not (tmp_path / "profiles.json").exists()
+
+
+def test_delete_user_profile_preserves_builtins_and_other_overrides(editor, tmp_path):
+    (tmp_path / "custom_presets.json").write_text(json.dumps({
+        "wow": {"casual_case": False}, "old_game": {"name": "Old Game", "channels": {"type": ""}}}))
+    assert not asyncio.run(editor.get_profile_editor("wow"))["can_delete"]
+    assert asyncio.run(editor.get_profile_editor("old_game"))["can_delete"]
+    assert not asyncio.run(editor.delete_profile("wow"))["success"]
+    assert asyncio.run(editor.delete_profile("old_game"))["success"]
+    assert "old_game" not in backend._load_game_presets()
+    assert backend._load_game_presets()["wow"]["casual_case"] is False
+    assert not asyncio.run(editor.delete_profile("old_game"))["success"]
+
+
+def test_delete_active_profile_is_rejected_without_writing(editor, tmp_path):
+    assert asyncio.run(editor.create_profile("Active Game"))["success"]
+    assert asyncio.run(editor.set_active_preset("active_game"))["success"]
+    before = (tmp_path / "profiles.json").read_text()
+    result = asyncio.run(editor.delete_profile("active_game"))
+    assert not result["success"]
+    assert "Switch to another" in result["error"]
+    assert (tmp_path / "profiles.json").read_text() == before
