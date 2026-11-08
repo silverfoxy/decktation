@@ -1,6 +1,7 @@
 import json
 import subprocess
 from unittest.mock import Mock
+from types import SimpleNamespace
 
 from recording_volume import RecordingVolume
 
@@ -78,7 +79,11 @@ def test_voice_restores_before_transcription_and_after_stream_failure(monkeypatc
     voice = WoWVoiceChat(lazy_load=True, recording_state_callback=control.transition)
     stream = Mock()
     monkeypatch.setattr(voice, "_open_input_stream", lambda: stream)
-    monkeypatch.setattr(wow_voice_chat.np, "concatenate", lambda *a, **kw: [1])
+    # Keep NumPy stubs local: Python 3.11 mock teardown can delete attributes
+    # that an earlier test patched on the shared MagicMock.
+    monkeypatch.setattr(wow_voice_chat, "np", SimpleNamespace(
+        concatenate=lambda *a, **kw: [1],
+    ))
 
     def transcribe(_):
         assert control._original is None
