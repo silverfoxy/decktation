@@ -4,6 +4,9 @@
 
 # Decktation — Push-to-Talk Dictation for Steam Deck
 
+[![Build and tests](https://github.com/silverfoxy/decktation/actions/workflows/build.yml/badge.svg?branch=master&event=push)](https://github.com/silverfoxy/decktation/actions/workflows/build.yml?query=branch%3Amaster)
+[![Integration tests](https://github.com/silverfoxy/decktation/actions/workflows/integration.yml/badge.svg?branch=master&event=push)](https://github.com/silverfoxy/decktation/actions/workflows/integration.yml?query=branch%3Amaster)
+
 Speak naturally and Decktation transcribes your words locally, then types them into the active game or app. Use it for game chat, messages, searches, and other text fields.
 
 - Hold a configurable controller button combination to record; **L1 + R1** is the default.
