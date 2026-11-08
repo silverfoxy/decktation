@@ -1,0 +1,10 @@
+{
+  "channel": "pull_request",
+  "number": 96,
+  "run_id": 42441897167,
+  "run_attempt": 1,
+  "commit": "09047907edca74f40034552f315a3348d584492b",
+  "head_repository": "silverfoxy/decktation",
+  "zip_url": "https://decktation.com/pulls/96/42441897167/1/Decktation.zip",
+  "sha256": "d8230489e09a7d6eed5b5b338b6fdacba2368df0556360b950e856fbae19d934"
+}
