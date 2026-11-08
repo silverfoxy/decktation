@@ -155,7 +155,7 @@ test('trigger remains visible above an overlay keyboard and in a reduced viewpor
   await trigger.press('End');
   await trigger.pressSequentially(' chat');
   await expect(trigger).toHaveValue('group chat');
-  await expect(page.getByText('Use a space after channel names or spoken triggers.')).toBeAttached();
+  await expect(page.getByText('Include a space after the chat command, for example', { exact: false })).toBeAttached();
 });
 
 

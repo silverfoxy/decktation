@@ -371,7 +371,7 @@
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.",
       Paste: Paste$9,
       "Edit game profile": "Edit game profile",
-      "Use a space after channel names or spoken triggers.": "Use a space after channel names or spoken triggers."
+      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command."
     };
 
     var af = "Afrikaans";
@@ -3751,7 +3751,7 @@
                     React__default["default"].createElement(deckyFrontendLib.Focusable, { ref: details, className: "details-body", "flow-children": "column" },
                         React__default["default"].createElement("h2", null, title(selected)),
                         React__default["default"].createElement("div", { className: "field" },
-                            React__default["default"].createElement(EditorTextField, { label: t("Chat command"), value: profile.channels[selected] || "", disabled: disabled, description: t("For example /p. Leave empty to type without a channel command."), onChange: event => update({ ...profile, channels: { ...profile.channels, [selected]: event.target.value } }) })),
+                            React__default["default"].createElement(EditorTextField, { label: t("Chat command"), value: profile.channels[selected] || "", disabled: disabled, description: t('Include a space after the chat command, for example "/p ". Leave empty to type without a channel command.'), onChange: event => update({ ...profile, channels: { ...profile.channels, [selected]: event.target.value } }) })),
                         React__default["default"].createElement("div", { className: "field" },
                             React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled || profile.default_channel === selected, onClick: () => update({ ...profile, default_channel: selected }) },
                                 profile.default_channel === selected ? "★ " : "☆ ",
@@ -3768,20 +3768,6 @@
                                 ": ",
                                 phrase,
                                 " \u00D7"))),
-                            React__default["default"].createElement("p", { className: "hint" },
-                                t("Use a space after channel names or spoken triggers."),
-                                React__default["default"].createElement("br", null),
-                                t("Example"),
-                                ": ",
-                                React__default["default"].createElement("strong", null,
-                                    aliases[0] || title(selected),
-                                    " ",
-                                    t("hello everyone")),
-                                " \u2192 ",
-                                React__default["default"].createElement("code", null,
-                                    profile.channels[selected].trim(),
-                                    " ",
-                                    t("hello everyone"))),
                             React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "inline", "flow-children": "row", "data-nav-row": true },
                                 React__default["default"].createElement(EditorTextField, { label: t("New spoken trigger"), value: trigger, disabled: disabled, onChange: event => setTrigger(event.target.value) }),
                                 React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled || !trigger.trim(), onClick: () => {

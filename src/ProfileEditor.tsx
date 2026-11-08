@@ -292,7 +292,7 @@ export function ProfileEditor() {
             </Focusable>
             <Focusable className="details" flow-children="column" onGamepadDirection={navigate}><Focusable ref={details} className="details-body" flow-children="column"><h2>{title(selected)}</h2>
                 <div className="field"><EditorTextField label={t("Chat command")} value={profile.channels[selected] || ""} disabled={disabled}
-                    description={t("For example /p. Leave empty to type without a channel command.")}
+                    description={t('Include a space after the chat command, for example "/p ". Leave empty to type without a channel command.')}
                     onChange={event => update({ ...profile, channels:{ ...profile.channels, [selected]:event.target.value } })} /></div>
                 <div className="field"><DialogButton className="editor-button" disabled={disabled || profile.default_channel === selected}
                     onClick={() => update({ ...profile, default_channel:selected })}>{profile.default_channel === selected ? "★ " : "☆ "}{t("Use as default channel")}</DialogButton></div>
@@ -301,7 +301,6 @@ export function ProfileEditor() {
                 <Focusable className="chips" flow-children="row" data-nav-row>{aliases.map(phrase => <DialogButton className="editor-button" key={phrase} disabled={disabled} onClick={() => {
                     const next = { ...profile.channel_triggers }; delete next[phrase]; update({ ...profile, channel_triggers:next });
                 }}>{t("Remove trigger")}: {phrase} ×</DialogButton>)}</Focusable>
-                <p className="hint">{t("Use a space after channel names or spoken triggers.")}<br />{t("Example")}: <strong>{aliases[0] || title(selected)} {t("hello everyone")}</strong> → <code>{profile.channels[selected].trim()} {t("hello everyone")}</code></p>
                 <Focusable className="inline" flow-children="row" data-nav-row><EditorTextField label={t("New spoken trigger")} value={trigger} disabled={disabled} onChange={event => setTrigger(event.target.value)} />
                 <DialogButton className="editor-button" disabled={disabled || !trigger.trim()} onClick={() => {
                     const phrase = trigger.trim().toLowerCase();
