@@ -1,0 +1,8 @@
+{
+  "plugin": "Decktation",
+  "channel": "branch",
+  "ref": "docs/community-discord",
+  "commit": "14195c444d54b4734d870e66a0a62405ead4afc9",
+  "zip_url": "https://decktation.com/branches/docs-community-discord/Decktation.zip",
+  "generated_at": "2026-11-08T19:23:16Z"
+}
