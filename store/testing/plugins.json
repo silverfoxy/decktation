@@ -16,6 +16,11 @@
     "image_url": "https://raw.githubusercontent.com/silverfoxy/decktation/master/store-card.png",
     "versions": [
       {
+        "name": "0.3.22-dev.487b0fd",
+        "hash": "7f61416cd46652b84b1c72f4ef143ee68efdcb4374ba753a8e1fa4b7e28f9916",
+        "artifact": "https://decktation.com/branches/master/Decktation.zip"
+      },
+      {
         "name": "0.3.22-dev.pr-94.7e9823d",
         "hash": "342bfa3a42bf9ee43db59dd5fe4be4fbbf89be327baf2f39a00d1a4936f3c93e",
         "artifact": "https://decktation.com/pulls/94/42394017559/2/Decktation.zip"
