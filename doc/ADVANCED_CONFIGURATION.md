@@ -56,6 +56,20 @@ transcription recognized; it does not validate which commands the game supports.
 
 For numbered WoW channels, use the explicit **“channel one”** through **“channel five”** prefixes; these route to `/1` through `/5`. Digit forms such as **“channel 1”** are accepted too. Bare words like **“trade”** are intentionally not prefixes, so ordinary messages beginning with them remain intact. Number assignments are controlled by WoW and may vary with your joined channels; verify them with `/chatlist`.
 
+Named WoW routes also accept **“general chat”**, **“trade chat”**, **“local defense chat”** (or **“local defence chat”**), **“services chat”** (or **“trade services chat”**), and **“looking for group chat”** (or **“lfg chat”**). Their starting commands are `/1 `, `/2 `, `/3 `, `/4 `, and `/5 ` respectively. These are starting mappings, not automatic channel detection; verify them with `/chatlist`. Classic may use `/4` for LookingForGroup and does not have Retail's Services channel. Adjust the named profile channels independently of the numeric ones.
+
+For example, this user override in `profiles.json` maps LFG to slot 4 while retaining the other WoW channels:
+
+```json
+{
+  "wow": {
+    "channels": {
+      "looking_for_group_chat": "/4 "
+    }
+  }
+}
+```
+
 The numbered channel aliases are already included in Decktation’s WoW preset and English language configuration. For a custom channel, add the game command to the preset’s `channels` map in `defaults/game_presets.json`, then add its spoken alias under the same channel key in `defaults/channel_languages.json` for each language you want to support. For example:
 
 ```json

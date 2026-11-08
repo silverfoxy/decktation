@@ -5,6 +5,9 @@ This is the most critical logic in the voice service: if parsing is wrong,
 messages silently land in the wrong chat channel in-game.
 """
 
+import json
+from pathlib import Path
+
 import pytest
 from wow_voice_chat import WoWVoiceChat
 
@@ -233,3 +236,53 @@ class TestCasualCase:
         channel, text = generic_svc.parse_channel_and_text("Hello World. I am here.")
         assert channel == "type"
         assert text == "Hello World. I am here."
+
+
+class TestNamedWoWChannels:
+    @pytest.fixture
+    def named_svc(self):
+        path = Path(__file__).resolve().parents[1] / "defaults/game_presets.json"
+        preset = json.loads(path.read_text())["wow"]
+        return WoWVoiceChat(preset=preset, lazy_load=True)
+
+    @pytest.mark.parametrize("phrase, channel, command", [
+        ("general chat", "general_chat", "/1 "),
+        ("trade chat", "trade_chat", "/2 "),
+        ("local defense chat", "local_defense_chat", "/3 "),
+        ("local defence chat", "local_defense_chat", "/3 "),
+        ("services chat", "services_chat", "/4 "),
+        ("trade services chat", "services_chat", "/4 "),
+        ("looking for group chat", "looking_for_group_chat", "/5 "),
+        ("lfg chat", "looking_for_group_chat", "/5 "),
+    ])
+    @pytest.mark.parametrize("separator", [" ", ": ", ", ", ". "])
+    def test_named_prefixes_use_shipped_presets(self, named_svc, phrase, channel, command, separator):
+        destination, text = named_svc.parse_channel_and_text(phrase.upper() + separator + "hello")
+        assert (destination, text) == (channel, "hello")
+        assert named_svc.channel_commands[destination] == command
+
+    @pytest.mark.parametrize("message", [
+        "trade me a potion", "general advice is welcome", "local defense needs help",
+        "services are available", "looking for group tonight", "lfg tonight",
+        "trade chatter is busy", "general chat", "trade chat",
+    ])
+    def test_ordinary_messages_and_trigger_without_message_stay_intact(self, named_svc, message):
+        assert named_svc.parse_channel_and_text(message) == ("say", message)
+
+    def test_named_channels_can_be_remapped_without_changing_numbered_routes(self, named_svc):
+        preset = {**named_svc.preset, "channels": {**named_svc.channel_commands,
+                  "services_chat": "/7 ", "looking_for_group_chat": "/4 "}}
+        named_svc.set_preset(preset)
+        for phrase, command in [("services chat", "/7 "), ("lfg chat", "/4 "), ("channel four", "/4 ")]:
+            channel, text = named_svc.parse_channel_and_text(phrase + " hello")
+            assert text == "hello"
+            assert named_svc.channel_commands[channel] == command
+
+    def test_wow_named_triggers_do_not_route_generic_or_guildwars2_messages(self, named_svc):
+        path = Path(__file__).resolve().parents[1] / "defaults/game_presets.json"
+        presets = json.loads(path.read_text())
+        for game in ("generic", "guildwars2"):
+            named_svc.set_preset(presets[game])
+            channel, text = named_svc.parse_channel_and_text("trade chat hello")
+            assert channel == presets[game]["default_channel"]
+            assert text == "trade chat hello"
