@@ -7,10 +7,23 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.3.22] - 2026-11-08
+
 ### Added
 
 - Full-screen game profile editor with searchable channels, editable chat
   prefixes, custom spoken triggers, and recognition keywords for each game.
+- Numbered WoW chat prefixes (channel one through channel five), plus configurable
+  named routes for general, trade, local defense, services, and looking-for-group
+  chat. Verify named route numbers against your joined channels in-game.
+- Model download and loading status in the plugin, with dictation paused until
+  the selected model is ready.
+- Opt-in testing store for current master and open PR builds, with immutable
+  package URLs and checksums tied to the published build.
+- Website walkthrough with five interactive tutorials using the app's native
+  recording animation, transcription review card, and result popups.
+- Website changelog index and individual release-note pages generated from this
+  file, plus Discord links in the website header.
 
 ### Changed
 
@@ -18,8 +31,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Fixed
 
+- Wait for every recording button to be released before typing the transcript.
 - Filter recognized non-speech cues such as `[blank_audio]` before typing or
   creating a transcription draft.
+- Prevent stale testing-store catalog entries and ensure published test downloads
+  refer to the matching build and commit.
 
 ## [0.3.21] - 2026-10-21
 
@@ -328,7 +344,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 - Initial packaged release of Decktation for Decky Loader.
 
-[Unreleased]: https://github.com/silverfoxy/decktation/compare/v0.3.18...HEAD
+[Unreleased]: https://github.com/silverfoxy/decktation/compare/v0.3.22...HEAD
+[0.3.22]: https://github.com/silverfoxy/decktation/compare/v0.3.21...v0.3.22
 [0.3.18]: https://github.com/silverfoxy/decktation/compare/v0.3.17...v0.3.18
 [0.3.8]: https://github.com/silverfoxy/decktation/compare/v0.3.7...v0.3.8
 [0.3.7]: https://github.com/silverfoxy/decktation/compare/v0.3.6...v0.3.7
