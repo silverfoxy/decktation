@@ -82,6 +82,13 @@ jobs:
       - name: Name the public release download
         if: steps.source-ref.outputs.current == 'true' && steps.source-ref.outputs.ref_type == 'tag'
         run: cp build-output/decktation.zip build-output/Decktation.zip
+      - name: Preserve the existing Discord announcement marker
+        if: steps.source-ref.outputs.current == 'true' && steps.source-ref.outputs.ref_type == 'tag'
+        id: discord-state
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.workflow_run.head_branch }}
+        run: python3 scripts/announce-discord-release.py capture
       - name: Upload release archive
         if: steps.source-ref.outputs.current == 'true' && steps.source-ref.outputs.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
@@ -97,6 +104,14 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
+      - name: Announce the published release on Discord
+        if: steps.source-ref.outputs.current == 'true' && steps.source-ref.outputs.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.workflow_run.head_branch }}
+          DISCORD_RELEASE_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK_URL }}
+          PREVIOUS_DISCORD_MESSAGE_ID: ${{ steps.discord-state.outputs.message_id }}
+        run: python3 scripts/announce-discord-release.py
 
   publish-pr:
     if: >-

@@ -1,0 +1,40 @@
+name: Announce release on Discord
+
+# The automatic publisher invokes the same script directly: release events made
+# with GITHUB_TOKEN do not trigger additional workflows. This also supports
+# releases published by a maintainer and announcing an older release manually.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Published stable release tag (for example v0.3.22)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: discord-release-${{ inputs.tag || github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  announce:
+    if: >-
+      github.repository == 'silverfoxy/decktation' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (!github.event.release.draft && !github.event.release.prerelease))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          persist-credentials: false
+      - name: Announce the published release on Discord
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+          DISCORD_RELEASE_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK_URL }}
+        run: python3 scripts/announce-discord-release.py

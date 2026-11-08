@@ -33,6 +33,12 @@ When preparing a release, update `CHANGELOG.md` as part of the release commit. R
   script, run `/usr/bin/python3 scripts/export_website_overlays.py` and commit
   both `site/public/assets/app-overlays/sprite.svg` and `manifest.json`. Requires
   system PyCairo, PyGObject, and Pango. Website tests reject stale exports.
+- Stable releases are announced by the trusted publisher using the tagged
+  changelog notes and the `DISCORD_RELEASE_WEBHOOK_URL` repository secret. Verify
+  the announcement after publishing; use the **Announce release on Discord**
+  workflow to retry or announce a release that already exists. Preserve the
+  hidden Discord message marker in release bodies to prevent duplicate posts.
+  See `doc/DISCORD_RELEASES.md` for setup and recovery.
 - Keep the tutorial's native recording, transcribing, review, and result visuals
   in sync with the app; regenerate them rather than drawing a separate imitation.
 
