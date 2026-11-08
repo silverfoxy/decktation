@@ -160,3 +160,26 @@ test('Steam overlay visual viewport metrics cannot collapse the editor', async (
   await page.evaluate(() => window.visualViewport!.dispatchEvent(new Event('resize')));
   await expect.poll(() => page.locator('.decktation-editor').evaluate(root => root.getBoundingClientRect().height)).toBe(600);
 });
+
+test('every prefix can move directly into the text pane without traversing the list', async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 600 });
+  await openEditor(page);
+  const direction = (button: number) => page.evaluate(button => (window as any).fixture.gamepad('onGamepadDirection', button), button);
+  // These focus containers are required by Steam's native traversal, which the
+  // browser adapter does not implement.
+  await expect(page.locator('.workspace')).toHaveAttribute('flow-children', 'row');
+  await expect(page.locator('.channel-rows')).toHaveAttribute('flow-children', 'column');
+  await expect(page.locator('.details-body')).toHaveAttribute('flow-children', 'column');
+  const rows = page.locator('.channel-row button');
+  for (let index = 0; index < await rows.count(); index++) {
+    await rows.nth(index).focus();
+    await direction(12);
+    await expect(page.getByLabel('Chat command')).toBeFocused();
+  }
+  await page.getByLabel('New spoken trigger').focus();
+  await direction(11);
+  await expect(page.locator('.channel-row.selected button')).toBeFocused();
+  await page.getByLabel('Game profile').focus();
+  await direction(10);
+  await expect(page.getByLabel('Chat command')).toBeFocused();
+});

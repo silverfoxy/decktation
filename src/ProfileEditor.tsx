@@ -178,9 +178,12 @@ export function ProfileEditor() {
     const filtered = profile ? Object.keys(profile.channels).filter(channel =>
         `${title(channel)} ${profile.channels[channel]} ${Object.entries(profile.channel_triggers).filter(([, value]) => value === channel).map(([key]) => key).join(" ")}`.toLowerCase().includes(search.toLowerCase())) : [];
     const aliases = profile ? Object.entries(profile.channel_triggers).filter(([, channel]) => channel === selected).map(([phrase]) => phrase) : [];
-    return <Focusable ref={editor} className="decktation-editor" onGamepadDirection={event => {
-        if (!busy && editor.current && moveEditorFocus(editor.current, event.detail.button)) { event.preventDefault(); event.stopPropagation(); }
-    }} onCancel={(event: any) => { event.stopPropagation(); event.preventDefault(); if (pending) setPendingAction(null); else leave(); }} onCancelActionDescription={t("Back")}>
+    const navigate = (event: any) => {
+        if (!busy && editor.current && moveEditorFocus(editor.current, event.detail.button)) {
+            event.preventDefault(); event.stopPropagation();
+        }
+    };
+    return <Focusable ref={editor} className="decktation-editor" flow-children="column" onGamepadDirection={navigate} onCancel={(event: any) => { event.stopPropagation(); event.preventDefault(); if (pending) setPendingAction(null); else leave(); }} onCancelActionDescription={t("Back")}>
         <style>{styles}</style>
         <Focusable className="editor-header" role="banner" flow-children="row" data-nav-row><h1>{t("Game profiles")}</h1>
             <Focusable className="tabs" flow-children="row" data-nav-row><DialogButton className="editor-button" disabled={disabled} onClick={() => setTab("channels")}>{tab === "channels" ? "● " : ""}{t("Channels")}</DialogButton>
@@ -193,9 +196,9 @@ export function ProfileEditor() {
                 <DialogButton className="editor-button" onClick={() => { const next = pendingAction?.game; setPendingAction(null); if (next) setGame(next); else Navigation.NavigateBack(); }}>{t("Discard changes")}</DialogButton>
             </Focusable></Focusable>}
         {!profile && <div role="status">{error || t("Loading...")}</div>}
-        {profile && tab === "channels" && <div className="workspace">
-            <Focusable className="channel-list" flow-children="column"><EditorTextField label={t("Search channels")} value={search} disabled={disabled} onChange={event => setSearch(event.target.value)} />
-                <Focusable flow-children="column" className="channel-rows" aria-label={t("Channel list")}>
+        {profile && tab === "channels" && <Focusable className="workspace" flow-children="row">
+            <Focusable className="channel-list" flow-children="column" onGamepadDirection={navigate}><EditorTextField label={t("Search channels")} value={search} disabled={disabled} onChange={event => setSearch(event.target.value)} />
+                <Focusable flow-children="column" onGamepadDirection={navigate} className="channel-rows" aria-label={t("Channel list")}>
                     {filtered.map(channel => <div key={channel} className={`channel-row ${selected === channel ? "selected" : ""}`}>
                         <DialogButton className="editor-button" disabled={disabled} onClick={() => {
                             if (trigger.trim()) { setError(t("Add or clear the spoken trigger before selecting another channel.")); return; }
@@ -217,7 +220,7 @@ export function ProfileEditor() {
                 <div className="hint">{t("Use lowercase letters, numbers, or underscores. Start with a letter.")}</div>
                 <DialogButton className="editor-button" disabled={disabled} onClick={() => { setAddingChannel(false); setNewChannel(""); }}>{t("Cancel")}</DialogButton></>}
             </Focusable>
-            <Focusable className="details" flow-children="column"><div ref={details} className="details-body"><h2>{title(selected)}</h2>
+            <Focusable className="details" flow-children="column" onGamepadDirection={navigate}><Focusable ref={details} className="details-body" flow-children="column"><h2>{title(selected)}</h2>
                 <div className="field"><EditorTextField label={t("Chat command")} value={profile.channels[selected] || ""} disabled={disabled}
                     description={t("For example /p. Leave empty to type without a channel command.")}
                     onChange={event => update({ ...profile, channels:{ ...profile.channels, [selected]:event.target.value } })} /></div>
@@ -235,8 +238,8 @@ export function ProfileEditor() {
                     update({ ...profile, channel_triggers:{ ...profile.channel_triggers, [phrase]:selected } }); setTrigger("");
                 }}>{t("Add trigger")}</DialogButton></Focusable></div>
                 <p className="hint">{t("Use a space after channel names or spoken triggers.")}<br />{t("Example")}: <strong>{aliases[0] || title(selected)} {t("hello everyone")}</strong> → <code>{profile.channels[selected].trim()} {t("hello everyone")}</code></p>
-            </div></Focusable>
-        </div>}
+            </Focusable></Focusable>
+        </Focusable>}
         {profile && tab === "keywords" && <Focusable className="keywords" flow-children="column"><h2>{t("Recognition keywords")}</h2>
             <p className="hint">{t("Names and game terms that help Whisper recognize speech. These hints apply to every channel in this game profile.")}</p>
             <Focusable className="inline" flow-children="row" data-nav-row><EditorTextField label={t("New keyword")} value={keyword} disabled={disabled} onChange={event => setKeyword(event.target.value)} />

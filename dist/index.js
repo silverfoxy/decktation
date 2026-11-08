@@ -3550,12 +3550,13 @@
         const disabled = busy || pending;
         const filtered = profile ? Object.keys(profile.channels).filter(channel => `${title(channel)} ${profile.channels[channel]} ${Object.entries(profile.channel_triggers).filter(([, value]) => value === channel).map(([key]) => key).join(" ")}`.toLowerCase().includes(search.toLowerCase())) : [];
         const aliases = profile ? Object.entries(profile.channel_triggers).filter(([, channel]) => channel === selected).map(([phrase]) => phrase) : [];
-        return React__default["default"].createElement(deckyFrontendLib.Focusable, { ref: editor, className: "decktation-editor", onGamepadDirection: event => {
-                if (!busy && editor.current && moveEditorFocus(editor.current, event.detail.button)) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                }
-            }, onCancel: (event) => { event.stopPropagation(); event.preventDefault(); if (pending)
+        const navigate = (event) => {
+            if (!busy && editor.current && moveEditorFocus(editor.current, event.detail.button)) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+        };
+        return React__default["default"].createElement(deckyFrontendLib.Focusable, { ref: editor, className: "decktation-editor", "flow-children": "column", onGamepadDirection: navigate, onCancel: (event) => { event.stopPropagation(); event.preventDefault(); if (pending)
                 setPendingAction(null);
             else
                 leave(); }, onCancelActionDescription: t("Back") },
@@ -3582,10 +3583,10 @@
                         else
                             deckyFrontendLib.Navigation.NavigateBack(); } }, t("Discard changes")))),
             !profile && React__default["default"].createElement("div", { role: "status" }, error || t("Loading...")),
-            profile && tab === "channels" && React__default["default"].createElement("div", { className: "workspace" },
-                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "channel-list", "flow-children": "column" },
+            profile && tab === "channels" && React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "workspace", "flow-children": "row" },
+                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "channel-list", "flow-children": "column", onGamepadDirection: navigate },
                     React__default["default"].createElement(EditorTextField, { label: t("Search channels"), value: search, disabled: disabled, onChange: event => setSearch(event.target.value) }),
-                    React__default["default"].createElement(deckyFrontendLib.Focusable, { "flow-children": "column", className: "channel-rows", "aria-label": t("Channel list") },
+                    React__default["default"].createElement(deckyFrontendLib.Focusable, { "flow-children": "column", onGamepadDirection: navigate, className: "channel-rows", "aria-label": t("Channel list") },
                         filtered.map(channel => React__default["default"].createElement("div", { key: channel, className: `channel-row ${selected === channel ? "selected" : ""}` },
                             React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled, onClick: () => {
                                     if (trigger.trim()) {
@@ -3622,8 +3623,8 @@
                             } }, t("Add channel")),
                         React__default["default"].createElement("div", { className: "hint" }, t("Use lowercase letters, numbers, or underscores. Start with a letter.")),
                         React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled, onClick: () => { setAddingChannel(false); setNewChannel(""); } }, t("Cancel")))),
-                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "details", "flow-children": "column" },
-                    React__default["default"].createElement("div", { ref: details, className: "details-body" },
+                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "details", "flow-children": "column", onGamepadDirection: navigate },
+                    React__default["default"].createElement(deckyFrontendLib.Focusable, { ref: details, className: "details-body", "flow-children": "column" },
                         React__default["default"].createElement("h2", null, title(selected)),
                         React__default["default"].createElement("div", { className: "field" },
                             React__default["default"].createElement(EditorTextField, { label: t("Chat command"), value: profile.channels[selected] || "", disabled: disabled, description: t("For example /p. Leave empty to type without a channel command."), onChange: event => update({ ...profile, channels: { ...profile.channels, [selected]: event.target.value } }) })),
