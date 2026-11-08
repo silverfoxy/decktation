@@ -60,3 +60,45 @@ Font Awesome Free 6.7.2 is vendored locally with its
 [license](public/vendor/fontawesome/LICENSE.txt). No CDN or analytics are used.
 `public/assets/og-image.png` is the contributed English social-preview capture.
 Regenerate it when the hero's appearance changes materially.
+
+## Walkthrough and release notes
+
+`/walkthrough/` provides five interactive, illustrative tutorials: push-to-talk,
+channel prefixes, game slash commands, spoken punctuation, and transcript review.
+The examples are in `src/data/tutorials.ts`; playback is in
+`src/scripts/tutorial.ts`. Playback starts only on request, supports pause/reset,
+stops when hidden or offscreen, and shows the result immediately for reduced
+motion. The demos do not request microphone access or send messages.
+
+`/changelog/` and `/changelog/<version>/` are generated from the root
+`CHANGELOG.md` at build time. Update that file during releases; do not duplicate
+release notes in the website. Unreleased changes are explicitly distinguished
+from stable releases. Both the walkthrough and release notes are initially in
+English, linked with language labels from every localized landing page. Their
+layout does not run the landing page's language redirect script.
+
+The sitemap includes all guide and release routes. The Cloudflare Worker's asset
+routing covers these paths in production; release downloads retain their existing
+routes.
+
+Website CI and production deployment also run when `CHANGELOG.md` changes, so
+release commits publish the new notes without a separate website edit.
+
+### Native app popups in the walkthrough
+
+The recording animation and popup cards are exported from
+`backend/src/overlay_render.py`, the same Cairo/Pango functions the Gamescope
+app uses. The site replays 28 samples of the native nine-bar sine animation and
+uses native transcribing, review, Sent, Cancelled, and Typed into chat graphics.
+SVG glyph outlines preserve the native typography without web font dependencies.
+These assets work offline; the browser never loads GTK or accesses a microphone.
+
+Regenerate after renderer/export-script changes:
+
+```sh
+/usr/bin/python3 scripts/export_website_overlays.py
+```
+
+This requires system PyCairo, PyGObject, and Pango. Commit the SVG sprite and
+manifest under `public/assets/app-overlays/`. Normal website builds need only
+Node; source and asset hashes in the build tests prevent stale exports.

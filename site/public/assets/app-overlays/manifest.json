@@ -1,0 +1,41 @@
+{
+  "frames": 28,
+  "periodMs": 1365.9098493868667,
+  "dimensions": {
+    "recording": {
+      "viewBox": "0 0 184 40",
+      "width": 184,
+      "height": 40
+    },
+    "transcribing": {
+      "viewBox": "0 0 184 40",
+      "width": 184,
+      "height": 40
+    },
+    "review": {
+      "viewBox": "0 0 632 171",
+      "width": 632,
+      "height": 171
+    },
+    "sent": {
+      "viewBox": "0 0 400 84",
+      "width": 400,
+      "height": 84
+    },
+    "cancelled": {
+      "viewBox": "0 0 400 84",
+      "width": 400,
+      "height": 84
+    },
+    "typed": {
+      "viewBox": "0 0 400 84",
+      "width": 400,
+      "height": 84
+    }
+  },
+  "sources": {
+    "backend/src/overlay_render.py": "9d6f19d267ef40e6907dde3be2a5ff876f68a92efb8dd926e4d423ad927fd89e",
+    "scripts/export_website_overlays.py": "ce2fb791e95f1c51a397d976599cc373ff586b90856e85e6e980c9e0bdd749b8"
+  },
+  "spriteSha256": "88b0438060cb3b0110ec3d977ffb6d12959fd7d92b90065ede53ed6a317750c1"
+}

@@ -161,5 +161,7 @@
   "theme.dark": "Dunkel",
   "faq.updates.q": "Wie funktionieren Updates?",
   "faq.updates.a": "Decktation sucht nach neuen stabilen Versionen und zeigt an, wenn ein Update verfügbar ist. Öffne die Seite Updates in Decktation und bestätige die Installation über Decky. Updates werden niemals ohne deine Zustimmung installiert.",
-  "routing.note": "Sag den Kanalnamen auf Englisch (party, guild, reply oder say) und danach deine Nachricht in deiner Sprache. Französische Kanalnamen werden ebenfalls unterstützt."
+  "routing.note": "Sag den Kanalnamen auf Englisch (party, guild, reply oder say) und danach deine Nachricht in deiner Sprache. Französische Kanalnamen werden ebenfalls unterstützt.",
+  "nav.walkthrough": "Anleitung (Englisch)",
+  "nav.changelog": "Änderungen (Englisch)"
 }

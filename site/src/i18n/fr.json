@@ -161,5 +161,7 @@
   "theme.dark": "Sombre",
   "faq.updates.q": "Comment fonctionnent les mises à jour ?",
   "faq.updates.a": "Decktation recherche les nouvelles versions stables et affiche un indicateur lorsqu’une mise à jour est disponible. Ouvre la page Updates de Decktation et confirme l’installation via Decky. Aucune mise à jour n’est installée sans ton accord.",
-  "routing.note": "Dis le nom du canal en français ou en anglais (party, guild, reply ou say), puis ton message dans ta langue."
+  "routing.note": "Dis le nom du canal en français ou en anglais (party, guild, reply ou say), puis ton message dans ta langue.",
+  "nav.walkthrough": "Guide (anglais)",
+  "nav.changelog": "Nouveautés (anglais)"
 }

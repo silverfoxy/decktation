@@ -1,0 +1,31 @@
+---
+import DiscordLink from '../components/DiscordLink.astro';
+interface Props { title: string; description: string; path: string }
+const { title, description, path } = Astro.props;
+const canonical = new URL(path, Astro.site!);
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width" />
+  <title>{title} · Decktation</title><meta name="description" content={description} />
+  <link rel="canonical" href={canonical} />
+  <meta property="og:title" content={`${title} · Decktation`} /><meta property="og:description" content={description} />
+  <meta property="og:type" content="website" /><meta property="og:url" content={canonical} />
+  <meta property="og:image" content={new URL('/assets/og-image.png', Astro.site!)} />
+  <link rel="icon" href="/assets/decktation-logo.png" /><link rel="stylesheet" href="/styles.css" />
+  <script is:inline>(function(){let t='auto';try{t=localStorage.getItem('decktation-theme')||'auto';}catch{}document.documentElement.dataset.theme=t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme:dark)').matches)?'dark':'light';})();</script>
+</head>
+<body class="guide-page">
+  <a class="skip" href="#main">Skip to content</a>
+  <header><div class="wrap"><nav class="guide-nav" aria-label="Main navigation">
+    <a class="brand" href="/">Decktation<span class="guide-brand-dot" aria-hidden="true"></span></a>
+    <DiscordLink />
+    <a href="/walkthrough/" aria-current={path === '/walkthrough/' ? 'page' : undefined}>Walkthrough</a>
+    <a href="/changelog/" aria-current={path.startsWith('/changelog/') ? 'page' : undefined}>Changelog</a>
+    <a class="btn primary" href="/#install">Get Decktation</a>
+  </nav></div></header>
+  <main id="main"><slot /></main>
+  <footer><div class="wrap guide-footer"><p>Decktation · Your voice, in the game.</p><div><a href="/">Home</a><a href="/walkthrough/">Walkthrough</a><a href="/changelog/">Changelog</a><a href="https://github.com/silverfoxy/decktation">GitHub</a></div></div></footer>
+</body>
+</html>

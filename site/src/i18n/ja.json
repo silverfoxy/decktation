@@ -161,5 +161,7 @@
   "theme.dark": "ダーク",
   "faq.updates.q": "更新はどのように行いますか？",
   "faq.updates.a": "Decktationは新しい安定版リリースを確認し、更新があると通知マークを表示します。DecktationのUpdates（更新）ページを開き、Deckyでインストールを承認してください。承認なしに更新がインストールされることはありません。",
-  "routing.note": "チャンネル名は英語で（party、guild、reply、say）、続けてメッセージを自分の言語で話してください。フランス語のチャンネル名にも対応しています。"
+  "routing.note": "チャンネル名は英語で（party、guild、reply、say）、続けてメッセージを自分の言語で話してください。フランス語のチャンネル名にも対応しています。",
+  "nav.walkthrough": "使い方（英語）",
+  "nav.changelog": "更新履歴（英語）"
 }

@@ -1,4 +1,5 @@
 ---
+import DiscordLink from './DiscordLink.astro';
 import { dictionaries, locales, localeNames, type Locale } from '../i18n';
 interface Props { locale: Locale }
 const { locale } = Astro.props;
@@ -10,14 +11,12 @@ const t = (key: keyof typeof dictionaries.en) => dictionaries[locale][key];
     <nav>
       <a class="brand" href="/"><span class="brand-art"><img class="brand-logo" src="/assets/decktation-logo.png" width="979" height="418" alt="Decktation"/><span class="brand-wave-cover" aria-hidden="true"></span><img class="brand-wave" src="/assets/decktation-logo.png" width="979" height="418" alt="" aria-hidden="true"/></span></a>
       <div class="navlinks" id="navigation">
-        <a href="#how" data-i18n="nav.how">{t("nav.how")}</a>
-        <a href="#wow" data-i18n="nav.wow">{t("nav.wow")}</a>
-        <a href="#features" data-i18n="nav.features">{t("nav.features")}</a>
+        <a href="/walkthrough/" data-i18n="nav.walkthrough">{t("nav.walkthrough")}</a>
+        <a href="/changelog/" data-i18n="nav.changelog">{t("nav.changelog")}</a>
         <a href="#install" data-i18n="nav.install">{t("nav.install")}</a>
-        <a href="#faq" data-i18n="nav.faq">{t("nav.faq")}</a>
         <label class="language-control"><i class="fa-solid fa-language" aria-hidden="true"></i><span class="sr-only" data-i18n="language">{t("language")}</span><select id="language-select" aria-label={t("a11y.language")}>{locales.map((lang) => <option value={lang} data-url={lang === "en" ? "/" : `/${lang}/`} selected={lang === locale}>{localeNames[lang]}</option>)}</select></label>
       </div>
-      <div class="actions"><a class="github-link" href="https://github.com/silverfoxy/decktation" aria-label="GitHub"><i class="fa-brands fa-github icon" aria-hidden="true"></i></a>
+      <div class="actions"><DiscordLink /><a class="github-link" href="https://github.com/silverfoxy/decktation" aria-label="GitHub"><i class="fa-brands fa-github icon" aria-hidden="true"></i></a>
 
         <a class="btn primary secondary-header" href="#install" data-i18n="cta.install">{t("cta.install")}</a>
         <button class="btn mobile-menu" aria-label={t("a11y.menu")} aria-expanded="false" aria-controls="navigation"><i class="fa-solid fa-bars icon" aria-hidden="true"></i></button>
@@ -35,7 +34,7 @@ const t = (key: keyof typeof dictionaries.en) => dictionaries[locale][key];
         <p class="lead" data-i18n="hero.body">{t("hero.body")}</p>
         <div class="cta-row">
           <a class="btn primary" href="#install" data-i18n="cta.install">{t("cta.install")}</a>
-          <a class="btn" href="#how" data-i18n="cta.how">{t("cta.how")}</a>
+          <a class="btn" href="/walkthrough/" data-i18n="cta.how">{t("cta.how")}</a>
         </div>
         <div class="meta" data-i18n="hero.meta">{t("hero.meta")}</div>
       </div>
@@ -170,7 +169,7 @@ const t = (key: keyof typeof dictionaries.en) => dictionaries[locale][key];
   <div class="wrap">
     <div class="footer-grid">
       <div><div class="brand"><span class="brand-art"><img class="brand-logo" src="/assets/decktation-logo.png" width="979" height="418" alt="Decktation"/><span class="brand-wave-cover" aria-hidden="true"></span><img class="brand-wave" src="/assets/decktation-logo.png" width="979" height="418" alt="" aria-hidden="true"/></span></div><p data-i18n="footer.body">{t("footer.body")}</p></div>
-      <div><h4 data-i18n="footer.project">{t("footer.project")}</h4><a href="https://github.com/silverfoxy/decktation" data-i18n="footer.github">{t("footer.github")}</a><a href="https://github.com/silverfoxy/decktation/releases" data-i18n="footer.releases">{t("footer.releases")}</a></div>
+      <div><h4 data-i18n="footer.project">{t("footer.project")}</h4><a href="#how" data-i18n="nav.how">{t("nav.how")}</a><a href="#wow" data-i18n="nav.wow">{t("nav.wow")}</a><a href="#features" data-i18n="nav.features">{t("nav.features")}</a><a href="#faq" data-i18n="nav.faq">{t("nav.faq")}</a><a href="https://github.com/silverfoxy/decktation" data-i18n="footer.github">{t("footer.github")}</a><a href="/changelog/" data-i18n="footer.releases">{t("footer.releases")}</a></div>
       <div><h4 data-i18n="footer.docs">{t("footer.docs")}</h4><a href="https://github.com/silverfoxy/decktation#install-decktation" data-i18n="footer.installation">{t("footer.installation")}</a><a href="https://github.com/silverfoxy/decktation/blob/master/doc/ADVANCED_CONFIGURATION.md" data-i18n="docs.advanced">{t("docs.advanced")}</a><a href="https://github.com/silverfoxy/decktation/blob/master/doc/TROUBLESHOOTING.md" data-i18n="docs.trouble">{t("docs.trouble")}</a><a href="https://github.com/silverfoxy/decktation/blob/master/doc/PRIVACY_AND_PERMISSIONS.md" data-i18n="docs.privacy">{t("docs.privacy")}</a><a href="/downloads/" data-i18n="docs.downloads">{t("docs.downloads")}</a></div>
       <div><h4 data-i18n="footer.community">{t("footer.community")}</h4><a href="https://github.com/silverfoxy/decktation/issues" data-i18n="footer.issues">{t("footer.issues")}</a></div>
     </div>

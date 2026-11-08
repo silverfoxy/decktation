@@ -161,5 +161,7 @@
   "theme.dark": "Dark",
   "faq.updates.q": "How do updates work?",
   "faq.updates.a": "Decktation checks for new stable releases and shows an indicator when an update is available. Open Decktation’s Updates page and confirm the installation through Decky. Updates are never installed without your approval.",
-  "routing.note": "Say the channel name in English (party, guild, reply or say), followed by your message in your language. French channel names are also supported."
+  "routing.note": "Say the channel name in English (party, guild, reply or say), followed by your message in your language. French channel names are also supported.",
+  "nav.walkthrough": "Walkthrough",
+  "nav.changelog": "Changelog"
 }

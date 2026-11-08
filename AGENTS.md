@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file gives Claude Code and other contributors current repository guidance.
+This file gives coding agents and other contributors current repository guidance.
 
 ## Project overview
 
@@ -11,6 +11,30 @@ The optional WoW addon is in `WowAddon/DecktationContext/`. It writes game conte
 ## Release changelog
 
 When preparing a release, update `CHANGELOG.md` as part of the release commit. Record all user-facing changes since the previous release under the new version and date, and keep the `Unreleased` section for changes intended for a later release. Check the commits since the previous release so user-facing changes are not missed.
+
+## Website release notes and tutorials
+
+- The website reads release notes directly from the root `CHANGELOG.md`. Do not
+  maintain a separate copy under `site/`. Every documented version generates
+  `/changelog/<version>/`; `Unreleased` generates `/changelog/unreleased/`.
+- For each release, move the shipped changes into a new version/date section in
+  `CHANGELOG.md` as part of the release commit. Include all user-facing changes
+  since the previous tag, and leave future work under `Unreleased`.
+- Review `site/src/data/tutorials.ts` and `site/src/pages/walkthrough.astro` for
+  examples or availability notes affected by the release. Update the walkthrough
+  when a feature ships or its controls/settings change; distinguish stable
+  features from test-build features.
+- Run `npm --prefix site run build`, `npm --prefix site test`, and
+  `npm --prefix cloudflare test`. Check the new release's generated page and
+  sitemap entry. Website deployment is triggered by `CHANGELOG.md` changes on
+  `master`; verify that workflow and the published release-note URL after merge.
+- Website popups are exported from the app's shared Cairo/Pango renderer in
+  `backend/src/overlay_render.py`. After changing that renderer or the export
+  script, run `/usr/bin/python3 scripts/export_website_overlays.py` and commit
+  both `site/public/assets/app-overlays/sprite.svg` and `manifest.json`. Requires
+  system PyCairo, PyGObject, and Pango. Website tests reject stale exports.
+- Keep the tutorial's native recording, transcribing, review, and result visuals
+  in sync with the app; regenerate them rather than drawing a separate imitation.
 
 ## Build and test
 

@@ -4,12 +4,18 @@ on:
   push:
     branches: [master]
     paths:
+      - 'CHANGELOG.md'
+      - 'backend/src/overlay_render.py'
+      - 'scripts/export_website_overlays.py'
       - 'site/**'
       - 'cloudflare/**'
       - '.github/workflows/website.yml'
   pull_request:
     branches: [master]
     paths:
+      - 'CHANGELOG.md'
+      - 'backend/src/overlay_render.py'
+      - 'scripts/export_website_overlays.py'
       - 'site/**'
       - 'cloudflare/**'
       - '.github/workflows/website.yml'

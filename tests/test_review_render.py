@@ -54,3 +54,21 @@ def test_blocked_confirmation_explains_reason_without_advertising_tap(monkeypatc
     })  # Readability remains true so clearing the focus block can enable sending.
     assert 'Close Steam menus and return to your game' in texts
     assert not any(text.startswith('Tap ') for text in texts)
+
+
+def test_recording_wave_moves_but_transcribing_pill_is_static():
+    from overlay_render import draw_recording
+
+    def pixels(mode, phase):
+        surface, ctx = canvas(184, 40)
+        draw_recording(ctx, mode, phase)
+        surface.flush()
+        return bytes(surface.get_data())
+
+    recording = pixels('compact', 0)
+    assert recording != pixels('compact', 0.4)
+    assert pixels('transcribing', 0) == pixels('transcribing', 0.4)
+    assert recording != pixels('transcribing', 0)
+    # Rounded corners stay transparent while the pill interior is painted.
+    assert recording[3] == 0
+    assert recording[(20 * 184 + 22) * 4 + 3] > 0

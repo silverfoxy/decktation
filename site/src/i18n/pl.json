@@ -161,5 +161,7 @@
   "theme.dark": "Ciemny",
   "faq.updates.q": "Jak działają aktualizacje?",
   "faq.updates.a": "Decktation sprawdza dostępność nowych stabilnych wydań i pokazuje wskaźnik, gdy aktualizacja jest dostępna. Otwórz stronę Updates (aktualizacje) w Decktation i potwierdź instalację przez Decky. Aktualizacje nigdy nie są instalowane bez twojej zgody.",
-  "routing.note": "Powiedz nazwę kanału po angielsku (party, guild, reply lub say), a potem wiadomość w swoim języku. Obsługiwane są też francuskie nazwy kanałów."
+  "routing.note": "Powiedz nazwę kanału po angielsku (party, guild, reply lub say), a potem wiadomość w swoim języku. Obsługiwane są też francuskie nazwy kanałów.",
+  "nav.walkthrough": "Poradnik (angielski)",
+  "nav.changelog": "Zmiany (angielski)"
 }

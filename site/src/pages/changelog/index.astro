@@ -1,0 +1,10 @@
+---
+import Guide from '../../layouts/Guide.astro';
+import Release from '../../components/Release.astro';
+import { releases } from '../../data/releases';
+const latest = releases.find(release => release.released);
+---
+<Guide title="Changelog" description="Decktation release notes: new features, improvements, and fixes for every documented version." path="/changelog/">
+  <section class="guide-hero"><div class="wrap"><p class="section-label">BETTER WITH EVERY RELEASE</p><h1>What’s new<br />in Decktation.</h1><p class="lead">Features, refinements, and fixes. Browse every documented release, or see what’s taking shape next.</p><a class="btn" href="/walkthrough/">Explore the walkthrough <span aria-hidden="true">↗</span></a></div></section>
+  <section><div class="wrap release-layout"><aside class="release-nav" aria-label="Release navigation"><h2>Jump to a version</h2><ul>{releases.map(release => <li><a href={`#v${release.slug}`}><span>{release.released ? `v${release.version}` : 'Unreleased'}</span>{release.date && <time datetime={release.date}>{release.date}</time>}</a></li>)}</ul><p class="tutorial-note">Release notes are maintained in English and updated from the project changelog.</p></aside><div>{releases.map(release => <Release release={release} latest={release === latest} />)}</div></div></section>
+</Guide>

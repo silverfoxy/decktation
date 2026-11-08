@@ -1,0 +1,14 @@
+---
+import Guide from '../../layouts/Guide.astro';
+import Release from '../../components/Release.astro';
+import { releases } from '../../data/releases';
+export function getStaticPaths() {
+  return releases.map(release => ({ params: { version: release.slug }, props: { release } }));
+}
+const { release } = Astro.props;
+const title = release.released ? `Decktation v${release.version}` : 'Unreleased changes';
+---
+<Guide title={title} description={`Features, improvements, and fixes in ${title}.`} path={`/changelog/${release.slug}/`}>
+  <section class="guide-hero"><div class="wrap"><a class="release-back" href="/changelog/">← All release notes</a><p class="section-label">RELEASE NOTES</p><h1>{title}</h1></div></section>
+  <section><div class="wrap release-single"><Release release={release} standalone /><div class="cta-row"><a class="btn primary" href="/#install">Get Decktation</a><a class="btn" href="/walkthrough/">Learn the features</a></div></div></section>
+</Guide>
