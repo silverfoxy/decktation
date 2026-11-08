@@ -3361,6 +3361,8 @@
             React__default["default"].createElement(deckyFrontendLib.TextField, { ...props, "aria-label": String(label), style: { height: 32, minHeight: 32, padding: "5px 8px", fontSize: 14, lineHeight: "20px", margin: 0 } }),
             description && React__default["default"].createElement("div", { className: "hint" }, description));
     }
+    // Resolve Steam's keyboard styles rather than relying on version-specific hashes.
+    const keyboardStyles = deckyFrontendLib.findModuleChild((module) => module?.VirtualKeyboardContainer && module?.Keyboard ? module : undefined) || {};
     const styles = `
 .decktation-editor { position:fixed; inset:0; z-index:1; box-sizing:border-box; height:100vh; padding:44px 20px 16px; background:#101923; color:#ecf1f6; display:flex; flex-direction:column; gap:10px; font-size:14px; line-height:1.35; overflow:hidden; }
 .decktation-editor * { box-sizing:border-box; }
@@ -3388,7 +3390,7 @@
 .decktation-editor code { color:#9cc7e3; text-transform:none; font-size:13px; }
 .decktation-editor .details { overflow-y:auto; }
 .decktation-editor .details,.decktation-editor .keywords { scrollbar-gutter:stable; }
-.decktation-editor .details[data-editor-editing="true"],.decktation-editor .keywords[data-editor-editing="true"] { padding-bottom:min(45vh,320px); scroll-padding-top:10px; }
+.decktation-editor .details[data-editor-editing="true"],.decktation-editor .keywords[data-editor-editing="true"] { padding-bottom:var(--editor-keyboard-padding,0px); scroll-padding-top:10px; }
 .decktation-editor .details::-webkit-scrollbar,.decktation-editor .keywords::-webkit-scrollbar { width:8px; }
 .decktation-editor .details::-webkit-scrollbar-thumb,.decktation-editor .keywords::-webkit-scrollbar-thumb { background:#60788a; border-radius:4px; }
 .decktation-editor .details-body { display:flex; flex-direction:column; gap:12px; }
@@ -3432,24 +3434,73 @@
                 return;
             let frame = 0;
             let input = null;
+            const initialViewportHeight = window.visualViewport?.height ?? window.innerHeight;
+            let adjustedPane = null;
+            let originalScroll = 0;
+            const restore = () => {
+                if (!adjustedPane)
+                    return;
+                adjustedPane.removeAttribute('data-editor-editing');
+                adjustedPane.style.removeProperty('--editor-keyboard-padding');
+                adjustedPane.scrollTop = originalScroll;
+                adjustedPane = null;
+            };
             const revealInput = () => {
                 cancelAnimationFrame(frame);
                 frame = requestAnimationFrame(() => {
-                    if (!input || !root.contains(input))
+                    if (!input || !root.contains(input)) {
+                        restore();
                         return;
+                    }
                     const pane = input.closest('.details, .keywords');
-                    if (!pane)
+                    if (!pane) {
+                        restore();
                         return;
-                    pane.setAttribute('data-editor-editing', 'true');
-                    pane.scrollTop += input.getBoundingClientRect().top - pane.getBoundingClientRect().top - 10;
+                    }
+                    let visibleBottom = window.innerHeight;
+                    for (const className of [keyboardStyles.Keyboard]) {
+                        if (!className)
+                            continue;
+                        for (const keyboard of Array.from(document.getElementsByClassName(className))) {
+                            const bounds = keyboard.getBoundingClientRect();
+                            if (bounds.height > 0 && bounds.width > 0 && bounds.bottom > 0 && bounds.top < window.innerHeight &&
+                                getComputedStyle(keyboard).visibility !== 'hidden')
+                                visibleBottom = Math.min(visibleBottom, Math.max(0, bounds.top));
+                        }
+                    }
+                    // Use a viewport reduction only after mount; Steam's initial
+                    // visual viewport can describe an unrelated overlay.
+                    const viewport = window.visualViewport;
+                    const viewportReduced = !!viewport && initialViewportHeight - viewport.height > 100;
+                    if (viewportReduced && viewport)
+                        visibleBottom = Math.min(visibleBottom, viewport.offsetTop + viewport.height);
+                    if (visibleBottom >= window.innerHeight && !viewportReduced) {
+                        restore();
+                        return;
+                    }
+                    const bottom = input.getBoundingClientRect().bottom;
+                    const limit = Math.min(visibleBottom, pane.getBoundingClientRect().bottom) - 12;
+                    if (bottom <= limit)
+                        return;
+                    if (adjustedPane !== pane) {
+                        restore();
+                        adjustedPane = pane;
+                        originalScroll = pane.scrollTop;
+                    }
+                    const padding = `${Math.ceil(window.innerHeight - visibleBottom + input.offsetHeight + 24)}px`;
+                    if (pane.style.getPropertyValue('--editor-keyboard-padding') !== padding)
+                        pane.style.setProperty('--editor-keyboard-padding', padding);
+                    if (!pane.hasAttribute('data-editor-editing'))
+                        pane.setAttribute('data-editor-editing', 'true');
+                    pane.scrollTop += bottom - limit;
                 });
             };
-            const resize = () => {
-                revealInput();
-            };
+            const resize = revealInput;
+            const observer = new MutationObserver(revealInput);
+            observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'] });
             const onFocus = (event) => {
                 const target = event.target;
-                root.querySelectorAll('[data-editor-editing]').forEach(pane => pane.removeAttribute('data-editor-editing'));
+                restore();
                 input = target.matches('input, textarea') ? target : null;
                 revealInput();
             };
@@ -3458,7 +3509,9 @@
             window.visualViewport?.addEventListener('resize', resize);
             window.visualViewport?.addEventListener('scroll', resize);
             return () => {
+                observer.disconnect();
                 cancelAnimationFrame(frame);
+                restore();
                 root.removeEventListener('focusin', onFocus);
                 window.removeEventListener('resize', resize);
                 window.visualViewport?.removeEventListener('resize', resize);

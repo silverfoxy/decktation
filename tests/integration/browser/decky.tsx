@@ -44,3 +44,5 @@ export function gamepad(kind: string, button: number) {
   }
   return { consumed: event.defaultPrevented, activeTag: document.activeElement?.tagName };
 }
+
+export const findModuleChild = (find: any) => find({ Keyboard: "fixture-virtual-keyboard", VirtualKeyboardContainer: "fixture-keyboard-container" });

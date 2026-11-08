@@ -131,9 +131,21 @@ test('trigger remains visible above an overlay keyboard and in a reduced viewpor
   await page.setViewportSize({ width: 800, height: 600 });
   await openEditor(page);
   const trigger = page.getByLabel('New spoken trigger');
+  const original = await trigger.boundingBox();
   await trigger.fill('group');
+  await expect.poll(() => trigger.evaluate(input => input.getBoundingClientRect().y)).toBe(original!.y);
+  await expect(page.locator('.details')).not.toHaveAttribute('data-editor-editing');
+  await page.evaluate(() => {
+    const keyboard = document.createElement('div');
+    keyboard.className = 'fixture-virtual-keyboard';
+    keyboard.style.cssText = 'position:fixed;left:0;right:0;top:320px;bottom:0;background:#222;z-index:9999';
+    document.body.append(keyboard);
+  });
   await expect.poll(async () => trigger.evaluate(input => input.getBoundingClientRect().bottom)).toBeLessThan(320);
   await expect.poll(() => page.locator('.details').evaluate(pane => pane.scrollHeight > pane.clientHeight)).toBe(true);
+  await page.evaluate(() => document.querySelector('.fixture-virtual-keyboard')!.remove());
+  await expect(page.locator('.details')).not.toHaveAttribute('data-editor-editing');
+  await expect.poll(() => trigger.evaluate(input => input.getBoundingClientRect().y)).toBe(original!.y);
   await page.setViewportSize({ width: 800, height: 320 });
   await expect(trigger).toBeInViewport();
   await trigger.press('End');
@@ -182,4 +194,21 @@ test('every prefix can move directly into the text pane without traversing the l
   await page.getByLabel('Game profile').focus();
   await direction(10);
   await expect(page.getByLabel('Chat command')).toBeFocused();
+});
+
+
+test('keyboard leaves an unobstructed text field in place', async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 600 });
+  await openEditor(page);
+  const field = page.getByLabel('Chat command');
+  await field.focus();
+  const before = await field.boundingBox();
+  await page.evaluate(() => {
+    const keyboard = document.createElement('div');
+    keyboard.className = 'fixture-virtual-keyboard';
+    keyboard.style.cssText = 'position:fixed;left:0;right:0;top:320px;bottom:0';
+    document.body.append(keyboard);
+  });
+  await expect(page.locator('.details')).not.toHaveAttribute('data-editor-editing');
+  await expect.poll(() => field.evaluate(input => input.getBoundingClientRect().y)).toBe(before!.y);
 });
