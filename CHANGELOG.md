@@ -7,6 +7,16 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- Automatic Discord announcements after stable releases are published, using
+  the tagged changelog notes and installable download links.
+
+### Fixed
+
+- Upload a single canonical GitHub release ZIP to avoid collisions between
+  differently capitalized download names.
+
 ## [0.3.22] - 2026-11-08
 
 ### Added
