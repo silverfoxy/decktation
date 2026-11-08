@@ -88,6 +88,10 @@ If your microphone crackles or transcription is poor, see [microphone troublesho
 - [Privacy and permissions](doc/PRIVACY_AND_PERMISSIONS.md): diagnostic data, local processing, and Decky’s `_root` permission.
 - [Installation guide](doc/INSTALLATION.md): stable release links, branch builds, and development artifacts.
 
+## Community
+
+Join the [Decktation Discord community](https://discord.gg/yhcCd6rrR) to ask questions, share feedback, and discuss game profiles. Please report bugs and feature requests through [GitHub Issues](https://github.com/silverfoxy/decktation/issues) so they can be tracked.
+
 ## Privacy
 
 Audio, transcripts, and WoW context are processed locally and are not uploaded. Whisper model files are downloaded from Hugging Face on first use. Optional **Diagnostics → Share** is off by default; when enabled, Decktation sends scrubbed errors, usage counts, and performance metrics to Sentry. See [privacy and permissions](doc/PRIVACY_AND_PERMISSIONS.md) for what diagnostics include.
