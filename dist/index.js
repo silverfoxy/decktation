@@ -3299,6 +3299,11 @@
     function focus(element) {
         if (!element)
             return false;
+        // Ask Steam to transfer virtual focus, including when the editor is mounted
+        // in its separate SP window. DOM focus alone does not move the focus ring.
+        const CustomEvent = element.ownerDocument.defaultView?.CustomEvent;
+        if (CustomEvent)
+            element.dispatchEvent(new CustomEvent("vgp_requestfocus", { bubbles: true, cancelable: true, detail: { button: deckyFrontendLib.GamepadButton.INVALID } }));
         // Steam tracks virtual controller focus separately from DOM focus.
         let nativeNode;
         const visit = (node) => {
@@ -3320,7 +3325,9 @@
     }
     // Steam's default column traversal does not follow these full-screen rows.
     function moveEditorFocus(root, direction, source) {
-        const active = (source instanceof HTMLElement && root.contains(source) ? source : document.activeElement);
+        const ElementClass = root.ownerDocument.defaultView?.HTMLElement;
+        const active = (ElementClass && source instanceof ElementClass && root.contains(source)
+            ? source : root.ownerDocument.activeElement);
         if (!active || !root.contains(active))
             return false;
         const horizontal = direction === deckyFrontendLib.GamepadButton.DIR_LEFT || direction === deckyFrontendLib.GamepadButton.DIR_RIGHT;

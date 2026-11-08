@@ -257,3 +257,26 @@ test('Steam keyboard visibility reveals covered input even without keyboard DOM'
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('fixture-keyboard-status', { detail: false })));
   await expect.poll(() => field.evaluate(input => input.getBoundingClientRect().y)).toBe(before!.y);
 });
+
+
+test('pane navigation works inside a separate Steam window document', async ({ page }) => {
+  await openEditor(page);
+  const result = await page.evaluate(async () => {
+    const { moveEditorFocus } = (window as any).fixture;
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const doc = frame.contentDocument!;
+    doc.body.innerHTML = '<div id="editor"><div class="channel-list"><div class="channel-row selected"><button>party</button></div></div><div class="details"><input aria-label="command"></div></div>';
+    const root = doc.getElementById('editor')!;
+    const channel = doc.querySelector('button')!;
+    const command = doc.querySelector('input')!;
+    let requested = 0;
+    root.addEventListener('vgp_requestfocus', () => requested++);
+    channel.focus();
+    const right = moveEditorFocus(root, 12, channel) && doc.activeElement === command;
+    const left = moveEditorFocus(root, 11, command) && doc.activeElement === channel;
+    frame.remove();
+    return { right, left, requested };
+  });
+  expect(result).toEqual({ right: true, left: true, requested: 2 });
+});

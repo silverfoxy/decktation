@@ -7,6 +7,10 @@ function available(root: Element): HTMLElement[] {
 }
 function focus(element?: HTMLElement) {
     if (!element) return false;
+    // Ask Steam to transfer virtual focus, including when the editor is mounted
+    // in its separate SP window. DOM focus alone does not move the focus ring.
+    const CustomEvent = element.ownerDocument.defaultView?.CustomEvent;
+    if (CustomEvent) element.dispatchEvent(new CustomEvent("vgp_requestfocus", { bubbles: true, cancelable: true, detail: { button: GamepadButton.INVALID } }));
     // Steam tracks virtual controller focus separately from DOM focus.
     let nativeNode: any;
     const visit = (node: any) => {
@@ -25,7 +29,9 @@ function focus(element?: HTMLElement) {
 
 // Steam's default column traversal does not follow these full-screen rows.
 export function moveEditorFocus(root: HTMLElement, direction: number, source?: EventTarget | null): boolean {
-    const active = (source instanceof HTMLElement && root.contains(source) ? source : document.activeElement) as HTMLElement | null;
+    const ElementClass = root.ownerDocument.defaultView?.HTMLElement;
+    const active = (ElementClass && source instanceof ElementClass && root.contains(source)
+        ? source : root.ownerDocument.activeElement) as HTMLElement | null;
     if (!active || !root.contains(active)) return false;
     const horizontal = direction === GamepadButton.DIR_LEFT || direction === GamepadButton.DIR_RIGHT;
     const vertical = direction === GamepadButton.DIR_UP || direction === GamepadButton.DIR_DOWN;

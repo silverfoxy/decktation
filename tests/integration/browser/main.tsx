@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import pluginFactory from '../../../src/index';
 import { gamepad } from './decky';
+import { moveEditorFocus } from '../../../src/profileEditorNavigation';
 import { token, rpc, routeComponents } from './sdk';
 
 // This is the production definePlugin callback, not a copied/exported panel.
@@ -17,7 +18,7 @@ window.addEventListener('fixture-navigate', mount);
 window.addEventListener('popstate', mount);
 mount();
 (window as any).fixture = {
-  gamepad, rpc,
+  gamepad, rpc, moveEditorFocus,
   unmount: () => root.render(null),
   mount,
   control: async (command: string, extra = {}) => {
