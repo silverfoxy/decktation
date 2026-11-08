@@ -94,9 +94,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.workflow_run.head_branch }}
-          files: |
-            build-output/Decktation.zip
-            build-output/decktation.zip
+          # GitHub asset names are case-insensitive; both download spellings
+          # resolve to this asset. Uploading both aliases races the same name.
+          files: build-output/Decktation.zip
           body: |
             ## Installation
             Download **Decktation.zip** from Assets and import it with Decky's **Install Plugin from ZIP** option.

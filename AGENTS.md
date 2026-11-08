@@ -33,6 +33,9 @@ When preparing a release, update `CHANGELOG.md` as part of the release commit. R
   script, run `/usr/bin/python3 scripts/export_website_overlays.py` and commit
   both `site/public/assets/app-overlays/sprite.svg` and `manifest.json`. Requires
   system PyCairo, PyGObject, and Pango. Website tests reject stale exports.
+- Upload only the canonical `Decktation.zip` GitHub release asset. GitHub asset
+  names are case-insensitive, so uploading a second `decktation.zip` alias collides
+  with it; both URL spellings resolve to the same asset.
 - Stable releases are announced by the trusted publisher using the tagged
   changelog notes and the `DISCORD_RELEASE_WEBHOOK_URL` repository secret. Verify
   the announcement after publishing; use the **Announce release on Discord**

@@ -24,7 +24,7 @@ def test_publisher_uses_build_sha_instead_of_workflow_run_master_sha(tmp_path):
     assert 'GITHUB_SHA:' not in workflow
 
 
-def test_trusted_publisher_keeps_canonical_and_catalog_release_assets(tmp_path):
+def test_trusted_publisher_uploads_one_canonical_release_asset(tmp_path):
     workflow = (REPO / '.github/workflows/publish.yml').read_text()
     step = workflow.split('- name: Name the public release download', 1)[1].split('- name:', 1)[0]
     command = step.split('run: ', 1)[1].strip()
@@ -36,7 +36,8 @@ def test_trusted_publisher_keeps_canonical_and_catalog_release_assets(tmp_path):
     assert (output / 'decktation.zip').read_bytes() == b'installable plugin'
     upload = workflow.split('- name: Upload release archive', 1)[1].split('  publish-pr:', 1)[0]
     assert 'build-output/Decktation.zip' in upload
-    assert 'build-output/decktation.zip' in upload
+    assert 'build-output/decktation.zip' not in upload
+    assert 'files: build-output/Decktation.zip' in upload
 
 
 def test_publisher_refreshes_testing_catalog_after_branch_package_is_written():
