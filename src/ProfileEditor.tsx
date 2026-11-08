@@ -5,9 +5,7 @@ import { t } from "./i18n";
 import { moveEditorFocus, moveEditorKeyFocus } from "./profileEditorNavigation";
 
 export const PROFILE_EDITOR_ROUTE = "/decktation/profiles";
-let initialGame = "wow";
-export function openProfileEditor(game: string) {
-    initialGame = game;
+export function openProfileEditor() {
     Navigation.Navigate(PROFILE_EDITOR_ROUTE);
     Navigation.CloseSideMenus();
 }
@@ -21,6 +19,8 @@ type Preset = { id: string; name: string };
 const loadProfile = callable<[game: string], any>("get_profile_editor");
 const saveProfile = callable<[game: string, profile: Profile], any>("save_profile_editor");
 const getPresets = callable<[], any>("get_presets");
+const getActivePreset = callable<[], any>("get_active_preset");
+const createProfile = callable<[name: string], any>("create_profile");
 const title = (channel: string) => channel.replace(/_/g, " ");
 // Use raw full-screen controls, rather than Steam's tall quick-access form rows.
 function EditorTextField({ label, description, ...props }: TextFieldProps) {
@@ -87,11 +87,13 @@ const styles = `
 `;
 
 export function ProfileEditor() {
-    const [game, setGame] = useState(initialGame);
+    const [game, setGame] = useState("");
     const [presets, setPresets] = useState<Preset[]>([]);
     const [profile, setProfile] = useState<Profile | null>(null);
     const [selected, setSelected] = useState("");
     const [tab, setTab] = useState<"channels" | "keywords">("channels");
+    const [creatingProfile, setCreatingProfile] = useState(false);
+    const [profileName, setProfileName] = useState("");
     const [search, setSearch] = useState("");
     const [newChannel, setNewChannel] = useState("");
     const [addingChannel, setAddingChannel] = useState(false);
@@ -205,13 +207,16 @@ export function ProfileEditor() {
     const mounted = useRef(true);
     useEffect(() => {
         mounted.current = true;
-        getPresets().then(result => {
+        Promise.all([getPresets(), getActivePreset()]).then(([result, active]) => {
             if (!mounted.current) return;
-            if (result.success) setPresets(result.presets); else setError(result.error);
+            if (!result.success || !active.success) { setError(result.error || active.error); return; }
+            setPresets(result.presets);
+            setGame(active.game);
         }).catch(error => { if (mounted.current) setError(String(error)); });
         return () => { mounted.current = false; };
     }, []);
     useEffect(() => {
+        if (!game) return;
         let active = true;
         setProfile(null); setError(""); setMessage(""); setDirty(false); setSearch("");
         setTrigger(""); setKeyword(""); setNewChannel(""); setAddingChannel(false);
@@ -244,7 +249,7 @@ export function ProfileEditor() {
         finally { if (mounted.current) setBusy(false); }
     }
     const pending = pendingAction !== null;
-    const disabled = busy || pending;
+    const disabled = busy || pending || creatingProfile;
     const filtered = profile ? Object.keys(profile.channels).filter(channel =>
         `${title(channel)} ${profile.channels[channel]} ${Object.entries(profile.channel_triggers).filter(([, value]) => value === channel).map(([key]) => key).join(" ")}`.toLowerCase().includes(search.toLowerCase())) : [];
     const aliases = profile ? Object.entries(profile.channel_triggers).filter(([, channel]) => channel === selected).map(([phrase]) => phrase) : [];
@@ -253,13 +258,28 @@ export function ProfileEditor() {
             event.preventDefault(); event.stopPropagation();
         }
     };
-    return <Focusable ref={editor} className="decktation-editor" flow-children="column" onGamepadDirection={navigate} onCancel={(event: any) => { event.stopPropagation(); event.preventDefault(); if (pending) setPendingAction(null); else leave(); }} onCancelActionDescription={t("Back")}>
+    return <Focusable ref={editor} className="decktation-editor" flow-children="column" onGamepadDirection={navigate} onCancel={(event: any) => { event.stopPropagation(); event.preventDefault(); if (pending) setPendingAction(null); else if (creatingProfile) setCreatingProfile(false); else leave(); }} onCancelActionDescription={t("Back")}>
         <style>{styles}</style>
         <Focusable className="editor-header" role="banner" flow-children="row" data-nav-row><h1>{t("Game profiles")}</h1>
             <Focusable className="tabs" flow-children="row" data-nav-row><DialogButton className="editor-button" disabled={disabled} onClick={() => setTab("channels")}>{tab === "channels" ? "● " : ""}{t("Channels")}</DialogButton>
                 <DialogButton className="editor-button" disabled={disabled} onClick={() => setTab("keywords")}>{tab === "keywords" ? "● " : ""}{t("Keywords")}</DialogButton></Focusable>
             <div className="profile-picker"><span>{t("Game profile")}</span><Dropdown menuLabel={t("Game profile")} rgOptions={presets.map(preset => ({ data:preset.id, label:t(preset.name) }))} selectedOption={game} disabled={disabled}
                 onChange={option => { if (String(option.data) !== game) leave(String(option.data)); }} /></div></Focusable>
+        {creatingProfile && <Focusable className="notice" flow-children="column">
+            <EditorTextField label={t("New profile name")} autoFocus value={profileName} disabled={busy} onChange={event => setProfileName(event.target.value)} />
+            <Focusable className="inline" flow-children="row" data-nav-row>
+                <DialogButton className="editor-button" disabled={busy || !profileName.trim()} onClick={async () => {
+                    setBusy(true); setError("");
+                    try {
+                        const result = await createProfile(profileName.trim());
+                        if (!result.success) { setError(result.error); return; }
+                        setPresets(current => [...current, { id: result.id, name: result.name }]);
+                        setGame(result.id); setTab("channels"); setCreatingProfile(false); setProfileName("");
+                    } catch (error) { setError(String(error)); } finally { setBusy(false); }
+                }}>{t("Create profile")}</DialogButton>
+                <DialogButton className="editor-button" disabled={busy} onClick={() => setCreatingProfile(false)}>{t("Cancel")}</DialogButton>
+            </Focusable>
+        </Focusable>}
         {pending && <Focusable className="notice" role="alertdialog" aria-label={t("Unsaved changes")}>
             <div>{t("Discard unsaved changes?")}</div><Focusable className="inline" flow-children="row" data-nav-row>
                 <DialogButton className="editor-button" onClick={() => setPendingAction(null)}>{t("Keep editing")}</DialogButton>
@@ -319,7 +339,10 @@ export function ProfileEditor() {
                 onClick={() => update({ ...profile, hotwords:profile.hotwords.filter((_, position) => position !== index) })}>{t("Remove keyword")}: {word} ×</DialogButton>)}</Focusable>
             {!profile.hotwords.length && <p className="hint">{t("No custom keywords yet. Add character names, places, or unusual game terms.")}</p>}
         </Focusable>}
-        <Focusable className="editor-footer" role="contentinfo" flow-children="row" data-nav-row><DialogButton className="editor-button" disabled={busy} onClick={() => leave()}>{t("Back")}</DialogButton>
+        <Focusable className="editor-footer" role="contentinfo" flow-children="row" data-nav-row><DialogButton className="editor-button" disabled={disabled || !profile} onClick={() => {
+            if (dirty) { setError(t("Save or discard your changes before creating a profile.")); return; }
+            setCreatingProfile(true); setError("");
+        }}>{t("New profile")}</DialogButton><DialogButton className="editor-button" disabled={busy} onClick={() => leave()}>{t("Back")}</DialogButton>
             <div role={error ? "alert" : "status"} className={error ? "error" : "hint"}>{error || (dirty ? t("Unsaved changes") : message)}</div>
             <DialogButton className="editor-button" disabled={disabled || !profile || !dirty} onClick={save}>{busy ? t("Saving...") : t("Save changes")}</DialogButton></Focusable>
     </Focusable>;

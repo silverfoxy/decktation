@@ -62,3 +62,21 @@ def test_save_applies_to_running_service_and_blocks_pending_drafts(editor, monke
     voice.queue_transcription("team hello")
     assert not asyncio.run(editor.save_profile_editor("wow", profile()))["success"]
     assert voice.pending_snapshot()["text"] == "hello"
+
+
+def test_create_profile_preserves_overrides_and_can_be_edited_and_activated(editor, tmp_path):
+    (tmp_path / "custom_presets.json").write_text(json.dumps({"wow": {"casual_case": False}}))
+    created = asyncio.run(editor.create_profile("My Game"))
+    assert created == {"success": True, "id": "my_game", "name": "My Game"}
+    assert backend._load_game_presets()["wow"]["casual_case"] is False
+    assert asyncio.run(editor.get_profile_editor("my_game"))["profile"]["channels"] == {"type": ""}
+    assert asyncio.run(editor.save_profile_editor("my_game", profile()))["success"]
+    assert asyncio.run(editor.set_active_preset("my_game"))["success"]
+    assert asyncio.run(editor.get_active_preset())["game"] == "my_game"
+    assert asyncio.run(editor.get_presets())["presets"][-1] == {"id": "my_game", "name": "My Game"}
+
+
+@pytest.mark.parametrize("name", ["", "   ", "wow", "World\nGame", "a" * 61, "../"])
+def test_create_rejects_invalid_or_existing_names(editor, tmp_path, name):
+    assert not asyncio.run(editor.create_profile(name))["success"]
+    assert not (tmp_path / "profiles.json").exists()

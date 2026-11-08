@@ -1446,6 +1446,41 @@ class Plugin:
             return {"success": True, "cancelling": True}
         return {"success": False, "error": "No model download is in progress."}
 
+    async def create_profile(self, name: str):
+        """Create an empty user profile without changing the active game."""
+        try:
+            if (not isinstance(name, str) or not name.strip() or len(name) > 60
+                    or any(ord(char) < 32 or ord(char) == 127 for char in name)):
+                raise ValueError("Use a profile name of 1 to 60 characters.")
+            name = name.strip()
+            game = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+            if not game:
+                raise ValueError("Include at least one English letter or number in the profile name.")
+            presets = _load_game_presets()
+            if game in presets:
+                raise ValueError("A profile with this name already exists.")
+            existing = {}
+            for filename in ("profiles.json", "custom_presets.json", "game_presets.json"):
+                path = os.path.join(CONFIG_DIR, filename)
+                if os.path.exists(path):
+                    with open(path) as source:
+                        existing = json.load(source)
+                    break
+            if not isinstance(existing, dict):
+                raise ValueError("Existing profiles file must contain an object.")
+            existing[game] = {"name": name, "channels": {"type": ""},
+                              "default_channel": "type", "channel_triggers": {}, "hotwords": []}
+            os.makedirs(CONFIG_DIR, exist_ok=True)
+            path = os.path.join(CONFIG_DIR, "profiles.json")
+            with open(path + ".tmp", "w") as target:
+                json.dump(existing, target, ensure_ascii=False, indent=2)
+            os.replace(path + ".tmp", path)
+            global _game_presets
+            _game_presets = _load_game_presets()
+            return {"success": True, "id": game, "name": name}
+        except Exception as error:
+            return {"success": False, "error": str(error)}
+
     async def get_profile_editor(self, game: str):
         presets = _load_game_presets()
         if game not in presets:

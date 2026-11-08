@@ -371,7 +371,11 @@
       "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.",
       Paste: Paste$9,
       "Edit game profile": "Edit game profile",
-      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command."
+      "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.",
+      "New profile": "New profile",
+      "New profile name": "New profile name",
+      "Create profile": "Create profile",
+      "Save or discard your changes before creating a profile.": "Save or discard your changes before creating a profile."
     };
 
     var af = "Afrikaans";
@@ -3377,15 +3381,15 @@
     }
 
     const PROFILE_EDITOR_ROUTE = "/decktation/profiles";
-    let initialGame = "wow";
-    function openProfileEditor(game) {
-        initialGame = game;
+    function openProfileEditor() {
         deckyFrontendLib.Navigation.Navigate(PROFILE_EDITOR_ROUTE);
         deckyFrontendLib.Navigation.CloseSideMenus();
     }
     const loadProfile = callable("get_profile_editor");
     const saveProfile = callable("save_profile_editor");
     const getPresets$1 = callable("get_presets");
+    const getActivePreset = callable("get_active_preset");
+    const createProfile = callable("create_profile");
     const title = (channel) => channel.replace(/_/g, " ");
     // Use raw full-screen controls, rather than Steam's tall quick-access form rows.
     function EditorTextField({ label, description, ...props }) {
@@ -3450,11 +3454,13 @@
 @media (max-width:850px) { .decktation-editor { padding:36px 12px calc(56px + env(safe-area-inset-bottom,0px)); gap:8px; } .decktation-editor h1 { font-size:18px; } .decktation-editor .profile-picker > span { display:none; } .decktation-editor .profile-picker > :last-child { width:190px; } .decktation-editor .tabs .editor-button { width:88px; } .decktation-editor .channel-list,.decktation-editor .details { padding:10px; } }
 `;
     function ProfileEditor() {
-        const [game, setGame] = React.useState(initialGame);
+        const [game, setGame] = React.useState("");
         const [presets, setPresets] = React.useState([]);
         const [profile, setProfile] = React.useState(null);
         const [selected, setSelected] = React.useState("");
         const [tab, setTab] = React.useState("channels");
+        const [creatingProfile, setCreatingProfile] = React.useState(false);
+        const [profileName, setProfileName] = React.useState("");
         const [search, setSearch] = React.useState("");
         const [newChannel, setNewChannel] = React.useState("");
         const [addingChannel, setAddingChannel] = React.useState(false);
@@ -3592,18 +3598,22 @@
         const mounted = React.useRef(true);
         React.useEffect(() => {
             mounted.current = true;
-            getPresets$1().then(result => {
+            Promise.all([getPresets$1(), getActivePreset()]).then(([result, active]) => {
                 if (!mounted.current)
                     return;
-                if (result.success)
-                    setPresets(result.presets);
-                else
-                    setError(result.error);
+                if (!result.success || !active.success) {
+                    setError(result.error || active.error);
+                    return;
+                }
+                setPresets(result.presets);
+                setGame(active.game);
             }).catch(error => { if (mounted.current)
                 setError(String(error)); });
             return () => { mounted.current = false; };
         }, []);
         React.useEffect(() => {
+            if (!game)
+                return;
             let active = true;
             setProfile(null);
             setError("");
@@ -3671,7 +3681,7 @@
             }
         }
         const pending = pendingAction !== null;
-        const disabled = busy || pending;
+        const disabled = busy || pending || creatingProfile;
         const filtered = profile ? Object.keys(profile.channels).filter(channel => `${title(channel)} ${profile.channels[channel]} ${Object.entries(profile.channel_triggers).filter(([, value]) => value === channel).map(([key]) => key).join(" ")}`.toLowerCase().includes(search.toLowerCase())) : [];
         const aliases = profile ? Object.entries(profile.channel_triggers).filter(([, channel]) => channel === selected).map(([phrase]) => phrase) : [];
         const navigate = (event) => {
@@ -3682,6 +3692,8 @@
         };
         return React__default["default"].createElement(deckyFrontendLib.Focusable, { ref: editor, className: "decktation-editor", "flow-children": "column", onGamepadDirection: navigate, onCancel: (event) => { event.stopPropagation(); event.preventDefault(); if (pending)
                 setPendingAction(null);
+            else if (creatingProfile)
+                setCreatingProfile(false);
             else
                 leave(); }, onCancelActionDescription: t("Back") },
             React__default["default"].createElement("style", null, styles),
@@ -3698,6 +3710,32 @@
                     React__default["default"].createElement("span", null, t("Game profile")),
                     React__default["default"].createElement(deckyFrontendLib.Dropdown, { menuLabel: t("Game profile"), rgOptions: presets.map(preset => ({ data: preset.id, label: t(preset.name) })), selectedOption: game, disabled: disabled, onChange: option => { if (String(option.data) !== game)
                             leave(String(option.data)); } }))),
+            creatingProfile && React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "notice", "flow-children": "column" },
+                React__default["default"].createElement(EditorTextField, { label: t("New profile name"), autoFocus: true, value: profileName, disabled: busy, onChange: event => setProfileName(event.target.value) }),
+                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "inline", "flow-children": "row", "data-nav-row": true },
+                    React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: busy || !profileName.trim(), onClick: async () => {
+                            setBusy(true);
+                            setError("");
+                            try {
+                                const result = await createProfile(profileName.trim());
+                                if (!result.success) {
+                                    setError(result.error);
+                                    return;
+                                }
+                                setPresets(current => [...current, { id: result.id, name: result.name }]);
+                                setGame(result.id);
+                                setTab("channels");
+                                setCreatingProfile(false);
+                                setProfileName("");
+                            }
+                            catch (error) {
+                                setError(String(error));
+                            }
+                            finally {
+                                setBusy(false);
+                            }
+                        } }, t("Create profile")),
+                    React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: busy, onClick: () => setCreatingProfile(false) }, t("Cancel")))),
             pending && React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "notice", role: "alertdialog", "aria-label": t("Unsaved changes") },
                 React__default["default"].createElement("div", null, t("Discard unsaved changes?")),
                 React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "inline", "flow-children": "row", "data-nav-row": true },
@@ -3797,6 +3835,14 @@
                     " \u00D7"))),
                 !profile.hotwords.length && React__default["default"].createElement("p", { className: "hint" }, t("No custom keywords yet. Add character names, places, or unusual game terms."))),
             React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "editor-footer", role: "contentinfo", "flow-children": "row", "data-nav-row": true },
+                React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled || !profile, onClick: () => {
+                        if (dirty) {
+                            setError(t("Save or discard your changes before creating a profile."));
+                            return;
+                        }
+                        setCreatingProfile(true);
+                        setError("");
+                    } }, t("New profile")),
                 React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: busy, onClick: () => leave() }, t("Back")),
                 React__default["default"].createElement("div", { role: error ? "alert" : "status", className: error ? "error" : "hint" }, error || (dirty ? t("Unsaved changes") : message)),
                 React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled || !profile || !dirty, onClick: save }, busy ? t("Saving...") : t("Save changes"))));
@@ -4654,6 +4700,19 @@
             }).catch((error) => setRpcError(String(error)));
         }, []);
         React.useEffect(() => {
+            if (page !== "game")
+                return;
+            let active = true;
+            getPresets().then(result => {
+                if (active && result.success)
+                    setPresets(result.presets.map((preset) => ({
+                        data: preset.id, label: PRESET_DISPLAY_NAMES[preset.id] || preset.name,
+                    })));
+            }).catch(error => { if (active)
+                setRpcError(String(error)); });
+            return () => { active = false; };
+        }, [page, qamVisible]);
+        React.useEffect(() => {
             let cancelled = false;
             let timeout;
             const poll = async () => {
@@ -5387,7 +5446,7 @@
                                 } })))),
                 page === "game" && React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Mode") },
                     React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                        React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: () => openProfileEditor(activePreset) }, t("Edit game profile"))),
+                        React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: () => openProfileEditor() }, t("Edit game profile"))),
                     rpcError && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                         React__default["default"].createElement("div", { role: "alert" }, rpcError)),
                     presets.map(option => React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, { key: String(option.data) },

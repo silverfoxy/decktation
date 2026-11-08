@@ -250,5 +250,9 @@
   "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.": "Type requires an English (US) keyboard layout and ASCII text. Other text fails without sending.",
   "Paste": "Paste (default)",
   "Edit game profile": "Edit game profile",
-  "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command."
+  "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.": "Include a space after the chat command, for example \"/p \". Leave empty to type without a channel command.",
+  "New profile": "New profile",
+  "New profile name": "New profile name",
+  "Create profile": "Create profile",
+  "Save or discard your changes before creating a profile.": "Save or discard your changes before creating a profile."
 }

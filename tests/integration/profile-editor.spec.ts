@@ -280,3 +280,27 @@ test('pane navigation works inside a separate Steam window document', async ({ p
   });
   expect(result).toEqual({ right: true, left: true, requested: 2 });
 });
+
+
+test('editor opens the active game and can create and save a new profile', async ({ page, harness }) => {
+  expect((await harness.rpc('set_active_preset', ['guildwars2'])).success).toBe(true);
+  await openEditor(page);
+  await expect(page.getByLabel('Game profile')).toHaveValue('guildwars2');
+  await page.getByRole('button', { name: 'New profile', exact: true }).click();
+  await page.getByLabel('New profile name').fill('My Game');
+  await page.getByRole('button', { name: 'Create profile', exact: true }).click();
+  await expect(page.getByLabel('Game profile')).toHaveValue('my_game');
+  await expect(page.getByLabel('Chat command')).toHaveValue('');
+  await page.getByLabel('Chat command').fill('/chat ');
+  await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(page.getByRole('status')).toHaveText('Saved');
+  expect((await harness.rpc('get_profile_editor', ['my_game'])).profile.channels.type).toBe('/chat ');
+  // Creating/editing does not implicitly change the active game.
+  expect((await harness.rpc('get_active_preset')).game).toBe('guildwars2');
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await page.getByRole('button', { name: /^Mode:/ }).click();
+  await page.getByRole('button', { name: 'My Game', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Mode: My Game', exact: true })).toBeVisible();
+  await openEditor(page);
+  await expect(page.getByLabel('Game profile')).toHaveValue('my_game');
+});
