@@ -1181,7 +1181,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					</PanelSection>
 					<PanelSection title={t("Input and service")}>
 						<PanelSectionRow><DropdownItem label={t("Controller input (test build)")} menuLabel={t("Controller input (test build)")}
-							rgOptions={[{data:"sdl",label:"SDL 3 (experimental)"},{data:"legacy",label:t("Legacy (evdev / HID)")}]} selectedOption={controllerBackend}
+							rgOptions={[{data:"sdl",label:t("SDL 3 (experimental)")},{data:"legacy",label:t("Legacy (evdev / HID)")}]} selectedOption={controllerBackend}
 							onChange={async (option) => { const backend = option.data as string; const result = await setControllerBackendRpc(backend); if (result.success) setControllerBackend(backend); else setRpcError(result.error || t("Could not switch controller input")); }} /></PanelSectionRow>
 						<PanelSectionRow><div>{t("Controller")}: {t(controllerStatus)}</div></PanelSectionRow>
 						<PanelSectionRow><div>{t("Binding supported")}: {controllerComboSupported ? t("Yes") : t("No")}</div></PanelSectionRow>

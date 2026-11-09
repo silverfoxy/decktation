@@ -392,7 +392,11 @@
       "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
       "Receiving download data...": "Receiving download data...",
       "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
-      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
+      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language.",
+      "Controller input (test build)": "Controller input (test build)",
+      "SDL 3 (experimental)": "SDL 3 (experimental)",
+      "Legacy (evdev / HID)": "Legacy (evdev / HID)",
+      "Could not switch controller input": "Could not switch controller input"
     };
 
     var af = "Afrikaans";
@@ -909,7 +913,11 @@
       "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
       "Receiving download data...": "Receiving download data...",
       "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
-      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
+      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language.",
+      "Controller input (test build)": "Entrada del mando (versión de prueba)",
+      "SDL 3 (experimental)": "SDL 3 (experimental)",
+      "Legacy (evdev / HID)": "Anterior (evdev / HID)",
+      "Could not switch controller input": "No se pudo cambiar la entrada del mando"
     };
 
     var Back$7 = "Назад";
@@ -1223,7 +1231,11 @@
       "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
       "Receiving download data...": "Receiving download data...",
       "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
-      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
+      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language.",
+      "Controller input (test build)": "Ввод контроллера (тестовая сборка)",
+      "SDL 3 (experimental)": "SDL 3 (экспериментальный)",
+      "Legacy (evdev / HID)": "Прежний способ (evdev / HID)",
+      "Could not switch controller input": "Не удалось переключить ввод контроллера"
     };
 
     var Back$6 = "Voltar";
@@ -1537,7 +1549,11 @@
       "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
       "Receiving download data...": "Receiving download data...",
       "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
-      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
+      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language.",
+      "Controller input (test build)": "Entrada do controle (versão de teste)",
+      "SDL 3 (experimental)": "SDL 3 (experimental)",
+      "Legacy (evdev / HID)": "Anterior (evdev / HID)",
+      "Could not switch controller input": "Não foi possível alterar a entrada do controle"
     };
 
     var Back$5 = "Wstecz";
@@ -1851,7 +1867,11 @@
       "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
       "Receiving download data...": "Receiving download data...",
       "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
-      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
+      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language.",
+      "Controller input (test build)": "Wejście kontrolera (wersja testowa)",
+      "SDL 3 (experimental)": "SDL 3 (eksperymentalne)",
+      "Legacy (evdev / HID)": "Dotychczasowe (evdev / HID)",
+      "Could not switch controller input": "Nie udało się zmienić wejścia kontrolera"
     };
 
     var Back$4 = "뒤로";
@@ -2165,7 +2185,11 @@
       "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
       "Receiving download data...": "Receiving download data...",
       "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
-      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
+      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language.",
+      "Controller input (test build)": "컨트롤러 입력 (테스트 빌드)",
+      "SDL 3 (experimental)": "SDL 3 (실험적)",
+      "Legacy (evdev / HID)": "기존 방식 (evdev / HID)",
+      "Could not switch controller input": "컨트롤러 입력을 전환하지 못했습니다"
     };
 
     var Back$3 = "戻る";
@@ -2479,7 +2503,11 @@
       "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
       "Receiving download data...": "Receiving download data...",
       "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
-      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
+      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language.",
+      "Controller input (test build)": "コントローラー入力（テスト版）",
+      "SDL 3 (experimental)": "SDL 3（実験的）",
+      "Legacy (evdev / HID)": "従来方式（evdev / HID）",
+      "Could not switch controller input": "コントローラー入力を切り替えられませんでした"
     };
 
     var Back$2 = "Zurück";
@@ -2793,7 +2821,11 @@
       "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
       "Receiving download data...": "Receiving download data...",
       "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
-      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
+      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language.",
+      "Controller input (test build)": "Controller-Eingabe (Testversion)",
+      "SDL 3 (experimental)": "SDL 3 (experimentell)",
+      "Legacy (evdev / HID)": "Bisherige Eingabe (evdev / HID)",
+      "Could not switch controller input": "Controller-Eingabe konnte nicht gewechselt werden"
     };
 
     var Back$1 = "Retour";
@@ -3107,7 +3139,11 @@
       "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
       "Receiving download data...": "Receiving download data...",
       "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
-      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
+      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language.",
+      "Controller input (test build)": "Entrée manette (version de test)",
+      "SDL 3 (experimental)": "SDL 3 (expérimental)",
+      "Legacy (evdev / HID)": "Ancien système (evdev / HID)",
+      "Could not switch controller input": "Impossible de changer l’entrée manette"
     };
 
     var Back = "返回";
@@ -3421,7 +3457,11 @@
       "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
       "Receiving download data...": "Receiving download data...",
       "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
-      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
+      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language.",
+      "Controller input (test build)": "控制器输入（测试版本）",
+      "SDL 3 (experimental)": "SDL 3（实验性）",
+      "Legacy (evdev / HID)": "旧版（evdev / HID）",
+      "Could not switch controller input": "无法切换控制器输入"
     };
 
     const catalogs = { en: en$1, es, ru, pt, pl, ko, ja, de, fr, zh };
@@ -5658,7 +5698,7 @@
                             React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: () => setPage("microphone-help") }, t("Having problems with your microphone?")))),
                     React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Input and service") },
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                            React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: t("Controller input (test build)"), menuLabel: t("Controller input (test build)"), rgOptions: [{ data: "sdl", label: "SDL 3 (experimental)" }, { data: "legacy", label: t("Legacy (evdev / HID)") }], selectedOption: controllerBackend, onChange: async (option) => { const backend = option.data; const result = await setControllerBackendRpc(backend); if (result.success)
+                            React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: t("Controller input (test build)"), menuLabel: t("Controller input (test build)"), rgOptions: [{ data: "sdl", label: t("SDL 3 (experimental)") }, { data: "legacy", label: t("Legacy (evdev / HID)") }], selectedOption: controllerBackend, onChange: async (option) => { const backend = option.data; const result = await setControllerBackendRpc(backend); if (result.success)
                                     setControllerBackend(backend);
                                 else
                                     setRpcError(result.error || t("Could not switch controller input")); } })),
