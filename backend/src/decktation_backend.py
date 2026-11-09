@@ -190,7 +190,7 @@ DEFAULT_BUTTON_CONFIG = {
     "spokenPunctuation": False,
 }
 
-SUPPORTED_WHISPER_MODEL_SIZES = {"base", "small", "medium"}
+SUPPORTED_WHISPER_MODEL_SIZES = {"base", "small", "medium", "parakeet-v3", "parakeet-ultra"}
 SUPPORTED_RECORDING_INDICATORS = {"toast", "overlay", "none"}
 
 SUPPORTED_WHISPER_LANGUAGES = {

@@ -4,6 +4,7 @@ WoW Voice-to-Chat Service for Steam Deck
 Captures voice input, transcribes with whisper.cpp, and sends to WoW chat
 """
 
+import hashlib
 import os
 import json
 import logging
@@ -17,6 +18,7 @@ import threading
 import subprocess
 import tempfile
 import uuid
+import urllib.error
 import urllib.request
 import certifi
 from pathlib import Path
@@ -25,7 +27,7 @@ import numpy as np
 import wave
 from audio_runtime import ensure_audio_environment
 from clipboard_injection import temporary_clipboard
-from resident_whisper import ResidentWhisper
+from resident_whisper import ResidentWhisper, parakeet_command
 
 
 _AUDIO_CUE_PATTERN = re.compile(
@@ -174,6 +176,50 @@ def _vulkan_environment():
         else:
             env.pop("LD_LIBRARY_PATH", None)
     return env
+
+
+PARAKEET_MODEL = {
+    "id": "parakeet-v3",
+    "filename": "parakeet-tdt-0.6b-v3-Q8_0.gguf",
+    "url": "https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf/resolve/main/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+    "size": 739508576,
+    "sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+}
+
+PARAKEET_MODELS = {
+    "parakeet-v3": PARAKEET_MODEL,
+    "parakeet-ultra": {
+        "id": "parakeet-ultra",
+        "filename": "parakeet-ultra-Q8_0.gguf",
+        "url": "https://huggingface.co/handy-computer/parakeet-ultra-gguf/resolve/main/parakeet-ultra-Q8_0.gguf",
+        "size": 740363168,
+        "sha256": "007a59761e9258779f189df396b50d12b83bb5b79e66df4b955c230d2f2a0a59",
+    },
+}
+
+
+def _plugin_root():
+    configured = os.environ.get("DECKY_PLUGIN_DIR")
+    return Path(configured) if configured else Path(__file__).resolve().parent.parent
+
+
+def _parakeet_environment():
+    root = _plugin_root()
+    env = _vulkan_environment()
+    lib = str(root / "bin" / "lib")
+    env["TRANSCRIBE_LIBRARY"] = str(root / "bin" / "lib" / "libtranscribe.so")
+    env["PYTHONPATH"] = ":".join(p for p in (str(root / "bin" / "python"), env.get("PYTHONPATH")) if p)
+    env["LD_LIBRARY_PATH"] = ":".join(p for p in (lib, env.get("LD_LIBRARY_PATH")) if p)
+    env["TRANSCRIBE_BACKEND"] = "cpu"
+    return env
+
+
+def _sha256(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for block in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def _format_casual_message(text: str, preserve_punctuation=False) -> str:
@@ -335,8 +381,8 @@ class WoWVoiceChat:
             self.default_channel_commands = config.get("channel_commands", self.default_channel_commands)
 
             # Build trigger lookup from all enabled languages
-            enabled_languages = config.get("enabled_languages", ["en"])
             languages = config.get("languages", {})
+            enabled_languages = config.get("enabled_languages", ["en"])
 
             for lang_code in enabled_languages:
                 if lang_code not in languages:
@@ -374,19 +420,26 @@ class WoWVoiceChat:
             self.model_download_cancelled = False
             self.model_cancel_event.clear()
             try:
-                whisper_server = _whisper_server_path()
-                if not whisper_server.is_file():
-                    raise FileNotFoundError(f"Bundled whisper-server not found: {whisper_server}")
-                model = self._ensure_whisper_model()
-
-                if self._vulkan_available():
-                    try:
-                        self._start_whisper_worker(whisper_server, model, use_gpu=True)
-                    except Exception as error:
-                        logger.warning("Resident Vulkan startup failed; using whisper.cpp CPU: %s", error)
-
-                if self.whisper_worker is None:
-                    self._start_whisper_worker(whisper_server, model, use_gpu=False)
+                if self.model_size in PARAKEET_MODELS:
+                    model = self._ensure_parakeet_model()
+                    root = _plugin_root()
+                    interpreter = root / "bin" / "runtime" / "bin" / "python3.11"
+                    script = root / "bin" / "parakeet_server.py"
+                    if not interpreter.is_file() or not script.is_file():
+                        raise FileNotFoundError(f"Bundled Parakeet worker not found under {root / 'bin'}")
+                    self._start_parakeet_worker(interpreter, script, model)
+                else:
+                    whisper_server = _whisper_server_path()
+                    if not whisper_server.is_file():
+                        raise FileNotFoundError(f"Bundled whisper-server not found: {whisper_server}")
+                    model = self._ensure_whisper_model()
+                    if self._vulkan_available():
+                        try:
+                            self._start_whisper_worker(whisper_server, model, use_gpu=True)
+                        except Exception as error:
+                            logger.warning("Resident Vulkan startup failed; using whisper.cpp CPU: %s", error)
+                    if self.whisper_worker is None:
+                        self._start_whisper_worker(whisper_server, model, use_gpu=False)
                 self.model_load_error = None
                 return True
             except ModelDownloadCancelled:
@@ -492,6 +545,38 @@ class WoWVoiceChat:
                 self.model_stage = "loading"
         return model
 
+    def _ensure_parakeet_model(self):
+        """Download and verify the Parakeet V3 GGUF when missing or corrupt."""
+        spec = PARAKEET_MODELS[self.model_size]
+        cache_dir = Path(os.environ.get("DECKY_USER_HOME", Path.home())) / ".cache" / "decktation" / "transcribe.cpp"
+        model = cache_dir / spec["filename"]
+        if model.exists() and _sha256(model) == spec["sha256"]:
+            return model
+        model.unlink(missing_ok=True)
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        temporary = model.with_suffix(".download")
+        logger.info("Downloading Parakeet model %s to %s", self.model_size, model)
+        self.model_stage = "downloading"
+        try:
+            _download_vulkan_model(spec["url"], temporary, self.model_cancel_event)
+            with self.model_stage_lock:
+                if self.model_cancel_event.is_set():
+                    raise ModelDownloadCancelled()
+                self.model_stage = "loading"
+            if _sha256(temporary) != spec["sha256"]:
+                raise RuntimeError(f"Parakeet model checksum mismatch for {spec['filename']}")
+            temporary.replace(model)
+        except Exception as error:
+            temporary.unlink(missing_ok=True)
+            with self.model_stage_lock:
+                cancelled = self.model_cancel_event.is_set()
+            if cancelled and not isinstance(error, ModelDownloadCancelled):
+                raise ModelDownloadCancelled() from error
+            raise
+        finally:
+            self.model_stage = "loading"
+        return model
+
     def _start_whisper_worker(self, whisper_server, model, use_gpu):
         """Start and record a healthy resident GPU or CPU worker."""
         if self._closing.is_set():
@@ -509,6 +594,22 @@ class WoWVoiceChat:
             "Using resident whisper.cpp transcription: device=%s executable=%s model=%s",
             self.inference_device, whisper_server, model,
         )
+
+    def _start_parakeet_worker(self, interpreter, script, model):
+        """Start the resident transcribe.cpp Parakeet worker on CPU."""
+        if self._closing.is_set():
+            raise RuntimeError("Voice service is shutting down")
+        worker = ResidentWhisper(
+            None, model, _parakeet_environment(), use_gpu=False, timeout=120,
+            command=lambda port: parakeet_command(interpreter, script, model, port),
+        )
+        if self._closing.is_set():
+            worker.close()
+            raise RuntimeError("Voice service is shutting down")
+        self.whisper_worker = worker
+        self.whisper_model = model
+        self.inference_device = "cpu"
+        logger.info("Using resident transcribe.cpp Parakeet: model=%s", model)
 
     def _transcribe_with_worker(self, audio_input, initial_prompt, hotwords):
         """Send one recording to the active resident worker."""
@@ -562,7 +663,10 @@ class WoWVoiceChat:
             return self._transcribe_with_worker(audio_input, initial_prompt, hotwords)
         except Exception as error:
             if self.inference_device != "gpu":
-                self._stop_whisper_worker()
+                # A 4xx is about this recording (too long, malformed); the
+                # resident worker is healthy, so keep it instead of reloading.
+                if not (isinstance(error, urllib.error.HTTPError) and 400 <= error.code < 500):
+                    self._stop_whisper_worker()
                 raise
             logger.warning("Vulkan Whisper failed; retrying with whisper.cpp CPU: %s", error)
             model = self.whisper_model
