@@ -257,5 +257,11 @@
   "Save or discard your changes before creating a profile.": "Save or discard your changes before creating a profile.",
   "Delete profile": "Delete profile",
   "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.",
-  "Switch to another active profile in Mode before deleting this profile.": "Switch to another active profile in Mode before deleting this profile."
+  "Switch to another active profile in Mode before deleting this profile.": "Switch to another active profile in Mode before deleting this profile.",
+  "Model type": "Model type",
+  "Model variant": "Model variant",
+  "Parakeet": "Parakeet",
+  "Whisper": "Whisper",
+  "V3": "V3",
+  "Ultra · More accurate": "Ultra · More accurate"
 }

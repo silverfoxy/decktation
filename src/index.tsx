@@ -306,11 +306,24 @@ const WHISPER_LANGUAGE_OPTIONS: DropdownOption[] = [
 	{ data: "zh", label: "Chinese" },
 ];
 
-const MODEL_SIZE_OPTIONS: DropdownOption[] = [
-	{ data: "base", label: "Base · Fast" },
-	{ data: "small", label: "Small · Balanced" },
-	{ data: "medium", label: "Medium · More accurate" },
+type ModelType = { data: "whisper" | "parakeet"; label: string; variants: DropdownOption[] };
+const MODEL_TYPES: ModelType[] = [
+	{ data: "whisper", label: "Whisper", variants: [
+		{ data: "base", label: "Base · Fast" },
+		{ data: "small", label: "Small · Balanced" },
+		{ data: "medium", label: "Medium · More accurate" },
+	] },
+	{ data: "parakeet", label: "Parakeet", variants: [
+		{ data: "parakeet-v3", label: "V3" },
+		{ data: "parakeet-ultra", label: "Ultra · More accurate" },
+	] },
 ];
+const modelTypeOf = (modelId: string): ModelType["data"] => modelId.startsWith("parakeet") ? "parakeet" : "whisper";
+const modelLabel = (modelId: string, translate: (key: string) => string) => {
+	const type = MODEL_TYPES.find(item => item.data === modelTypeOf(modelId));
+	const variant = type?.variants.find(item => item.data === modelId);
+	return type && variant ? `${translate(type.label)} · ${translate(String(variant.label))}` : modelId;
+};
 
 const POPULAR_STEAM_LANGUAGE_CODES = new Set(["en", "zh", "ru", "es", "pt", "de", "ja", "fr", "pl", "ko"]);
 const byLanguageName = (left: DropdownOption, right: DropdownOption) => String(left.label).localeCompare(String(right.label));
@@ -443,6 +456,8 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
         ? `${t("Recording controller input")} · ${controllerSeconds} ${t("seconds remaining")}`
         : t("Start 30-second capture");
 	const [modelSize, setModelSize] = useState<string>("base");
+	const [modelTypeView, setModelTypeView] = useState<ModelType["data"]>("whisper");
+	useEffect(() => { setModelTypeView(modelTypeOf(modelSize)); }, [modelSize]);
 	const [transcriptionLanguage, setTranscriptionLanguage] = useState<string>("auto");
 	const [spokenPunctuation, setSpokenPunctuation] = useState<boolean>(false);
 	const [lastTranscription, setLastTranscription] = useState<string>("");
@@ -1040,7 +1055,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					</PanelSection>
 					<PanelSection title={t("Transcription model")}>
 						<PanelSectionRow><div ref={advancedModelRowRef}><ButtonItem layout="below" onClick={() => setPage("model")}>
-							{t("Model")}: {t(String(MODEL_SIZE_OPTIONS.find(option => option.data === modelSize)?.label || modelSize))}
+							{t("Model")}: {modelLabel(modelSize, t)}
 						</ButtonItem></div></PanelSectionRow>
 						{modelReady && !modelLoading && inferenceDevice && (
 							<PanelSectionRow><div>
@@ -1186,11 +1201,14 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 						else setRpcError(result.error || t("Could not update game"));
 					}}>{option.data === activePreset ? "✓ " : ""}{t(String(option.label))}</ButtonItem></PanelSectionRow>)}
 				</PanelSection>}
-				{page === "model" && <PanelSection title={t("Model")}>
+				{page === "model" && <><PanelSection title={t("Model type")}>
+					{MODEL_TYPES.map(type => <PanelSectionRow key={type.data}><ButtonItem layout="below" onClick={() => setModelTypeView(type.data)}>{type.data === modelTypeView ? "✓ " : ""}{t(type.label)}</ButtonItem></PanelSectionRow>)}
+				</PanelSection>
+				<PanelSection title={t("Model variant")}>
 					{rpcError && <PanelSectionRow><div role="alert">{rpcError}</div></PanelSectionRow>}
 					{modelLoading && <PanelSectionRow><div role="status" aria-live="polite">{modelCancelling ? t("Cancelling model download...") : modelStage === "downloading" ? t("Downloading transcription model...") : t("Loading transcription model...")}</div></PanelSectionRow>}
 					{modelStage === "downloading" && <PanelSectionRow><ButtonItem layout="below" disabled={modelCancelling} onClick={cancelDownload}>{modelCancelling ? t("Cancelling model download...") : t("Cancel download")}</ButtonItem></PanelSectionRow>}
-					{MODEL_SIZE_OPTIONS.map(option => <PanelSectionRow key={String(option.data)}><ButtonItem layout="below" disabled={modelLoading || modelChangeInFlight.current} onClick={async () => {
+					{(MODEL_TYPES.find(type => type.data === modelTypeView)?.variants || []).map(option => <PanelSectionRow key={String(option.data)}><ButtonItem layout="below" disabled={modelLoading || modelChangeInFlight.current} onClick={async () => {
 						if (modelLoading || modelChangeInFlight.current) return;
 						modelChangeInFlight.current = true;
 						const next = option.data as string;
@@ -1206,7 +1224,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 						} catch (error) { setRpcError(String(error)); }
 						finally { modelChangeInFlight.current = false; setModelCancelling(false); setModelLoading(false); }
 					}}>{option.data === modelSize ? "✓ " : ""}{t(String(option.label))}</ButtonItem></PanelSectionRow>)}
-				</PanelSection>}
+				</PanelSection></>}
 
 				{page === "help" && <>
 					<PanelSection title={t("How to use")}>

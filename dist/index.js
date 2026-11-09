@@ -119,6 +119,9 @@
     var Released$9 = "Released";
     var ms$a = "ms";
     var Paste$9 = "Paste (default)";
+    var Parakeet$9 = "Parakeet";
+    var Whisper$9 = "Whisper";
+    var V3$9 = "V3";
     var en$1 = {
       Back: Back$9,
       Enable: Enable$9,
@@ -378,7 +381,13 @@
       "Save or discard your changes before creating a profile.": "Save or discard your changes before creating a profile.",
       "Delete profile": "Delete profile",
       "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.",
-      "Switch to another active profile in Mode before deleting this profile.": "Switch to another active profile in Mode before deleting this profile."
+      "Switch to another active profile in Mode before deleting this profile.": "Switch to another active profile in Mode before deleting this profile.",
+      "Model type": "Model type",
+      "Model variant": "Model variant",
+      Parakeet: Parakeet$9,
+      Whisper: Whisper$9,
+      V3: V3$9,
+      "Ultra · More accurate": "Ultra · More accurate"
     };
 
     var af = "Afrikaans";
@@ -622,6 +631,9 @@
     var Released$8 = "Soltado";
     var ms$8 = "ms";
     var Paste$8 = "Pegar (predeterminado)";
+    var Parakeet$8 = "Parakeet";
+    var Whisper$8 = "Whisper";
+    var V3$8 = "V3";
     var es = {
       Back: Back$8,
       Enable: Enable$8,
@@ -881,7 +893,13 @@
       "Save or discard your changes before creating a profile.": "Guarda o descarta los cambios antes de crear un perfil.",
       "Delete profile": "Eliminar perfil",
       "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "¿Eliminar el perfil \"{name}\" y todos sus ajustes? También se perderán los cambios sin guardar.",
-      "Switch to another active profile in Mode before deleting this profile.": "Activa otro perfil en Modo antes de eliminar este perfil."
+      "Switch to another active profile in Mode before deleting this profile.": "Activa otro perfil en Modo antes de eliminar este perfil.",
+      "Model type": "Tipo de modelo",
+      "Model variant": "Variante del modelo",
+      Parakeet: Parakeet$8,
+      Whisper: Whisper$8,
+      V3: V3$8,
+      "Ultra · More accurate": "Ultra · Más preciso"
     };
 
     var Back$7 = "Назад";
@@ -922,6 +940,9 @@
     var Released$7 = "Отпущена";
     var ms$7 = "мс";
     var Paste$7 = "Вставка (по умолчанию)";
+    var Parakeet$7 = "Parakeet";
+    var Whisper$7 = "Whisper";
+    var V3$7 = "V3";
     var ru = {
       Back: Back$7,
       Enable: Enable$7,
@@ -1181,7 +1202,13 @@
       "Save or discard your changes before creating a profile.": "Сохраните или отмените изменения перед созданием профиля.",
       "Delete profile": "Удалить профиль",
       "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "Удалить профиль «{name}» и все его настройки? Несохранённые изменения также будут потеряны.",
-      "Switch to another active profile in Mode before deleting this profile.": "Перед удалением этого профиля активируйте другой профиль в меню «Режим»."
+      "Switch to another active profile in Mode before deleting this profile.": "Перед удалением этого профиля активируйте другой профиль в меню «Режим».",
+      "Model type": "Model type",
+      "Model variant": "Model variant",
+      Parakeet: Parakeet$7,
+      Whisper: Whisper$7,
+      V3: V3$7,
+      "Ultra · More accurate": "Ultra · More accurate"
     };
 
     var Back$6 = "Voltar";
@@ -1222,6 +1249,9 @@
     var Released$6 = "Solto";
     var ms$6 = "ms";
     var Paste$6 = "Colar (padrão)";
+    var Parakeet$6 = "Parakeet";
+    var Whisper$6 = "Whisper";
+    var V3$6 = "V3";
     var pt = {
       Back: Back$6,
       Enable: Enable$6,
@@ -1481,7 +1511,13 @@
       "Save or discard your changes before creating a profile.": "Salve ou descarte suas alterações antes de criar um perfil.",
       "Delete profile": "Excluir perfil",
       "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "Excluir o perfil \"{name}\" e todas as suas configurações? As alterações não salvas também serão perdidas.",
-      "Switch to another active profile in Mode before deleting this profile.": "Ative outro perfil em Modo antes de excluir este perfil."
+      "Switch to another active profile in Mode before deleting this profile.": "Ative outro perfil em Modo antes de excluir este perfil.",
+      "Model type": "Tipo de modelo",
+      "Model variant": "Variante do modelo",
+      Parakeet: Parakeet$6,
+      Whisper: Whisper$6,
+      V3: V3$6,
+      "Ultra · More accurate": "Ultra · Mais preciso"
     };
 
     var Back$5 = "Wstecz";
@@ -1522,6 +1558,9 @@
     var Released$5 = "Zwolniony";
     var ms$5 = "ms";
     var Paste$5 = "Wklej (domyślnie)";
+    var Parakeet$5 = "Parakeet";
+    var Whisper$5 = "Whisper";
+    var V3$5 = "V3";
     var pl = {
       Back: Back$5,
       Enable: Enable$5,
@@ -1781,7 +1820,13 @@
       "Save or discard your changes before creating a profile.": "Zapisz lub odrzuć zmiany przed utworzeniem profilu.",
       "Delete profile": "Usuń profil",
       "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "Usunąć profil „{name}” i wszystkie jego ustawienia? Niezapisane zmiany również zostaną utracone.",
-      "Switch to another active profile in Mode before deleting this profile.": "Aktywuj inny profil w menu Tryb przed usunięciem tego profilu."
+      "Switch to another active profile in Mode before deleting this profile.": "Aktywuj inny profil w menu Tryb przed usunięciem tego profilu.",
+      "Model type": "Model type",
+      "Model variant": "Model variant",
+      Parakeet: Parakeet$5,
+      Whisper: Whisper$5,
+      V3: V3$5,
+      "Ultra · More accurate": "Ultra · More accurate"
     };
 
     var Back$4 = "뒤로";
@@ -1822,6 +1867,9 @@
     var Released$4 = "뗌";
     var ms$4 = "밀리초";
     var Paste$4 = "붙여넣기 (기본값)";
+    var Parakeet$4 = "Parakeet";
+    var Whisper$4 = "Whisper";
+    var V3$4 = "V3";
     var ko = {
       Back: Back$4,
       Enable: Enable$4,
@@ -2081,7 +2129,13 @@
       "Save or discard your changes before creating a profile.": "프로필을 만들기 전에 변경 사항을 저장하거나 취소하세요.",
       "Delete profile": "프로필 삭제",
       "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "프로필 \"{name}\" 및 모든 설정을 삭제할까요? 저장하지 않은 변경 사항도 사라집니다.",
-      "Switch to another active profile in Mode before deleting this profile.": "이 프로필을 삭제하기 전에 모드에서 다른 프로필을 활성화하세요."
+      "Switch to another active profile in Mode before deleting this profile.": "이 프로필을 삭제하기 전에 모드에서 다른 프로필을 활성화하세요.",
+      "Model type": "Model type",
+      "Model variant": "Model variant",
+      Parakeet: Parakeet$4,
+      Whisper: Whisper$4,
+      V3: V3$4,
+      "Ultra · More accurate": "Ultra · More accurate"
     };
 
     var Back$3 = "戻る";
@@ -2122,6 +2176,9 @@
     var Released$3 = "解放";
     var ms$3 = "ミリ秒";
     var Paste$3 = "貼り付け（既定）";
+    var Parakeet$3 = "Parakeet";
+    var Whisper$3 = "Whisper";
+    var V3$3 = "V3";
     var ja = {
       Back: Back$3,
       Enable: Enable$3,
@@ -2381,7 +2438,13 @@
       "Save or discard your changes before creating a profile.": "プロフィールを作成する前に変更を保存または破棄してください。",
       "Delete profile": "プロフィールを削除",
       "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "プロフィール「{name}」とすべての設定を削除しますか？未保存の変更も失われます。",
-      "Switch to another active profile in Mode before deleting this profile.": "このプロフィールを削除する前に、モードで別のプロフィールを有効にしてください。"
+      "Switch to another active profile in Mode before deleting this profile.": "このプロフィールを削除する前に、モードで別のプロフィールを有効にしてください。",
+      "Model type": "Model type",
+      "Model variant": "Model variant",
+      Parakeet: Parakeet$3,
+      Whisper: Whisper$3,
+      V3: V3$3,
+      "Ultra · More accurate": "Ultra · More accurate"
     };
 
     var Back$2 = "Zurück";
@@ -2422,6 +2485,9 @@
     var Released$2 = "Losgelassen";
     var ms$2 = "ms";
     var Paste$2 = "Einfügen (Standard)";
+    var Parakeet$2 = "Parakeet";
+    var Whisper$2 = "Whisper";
+    var V3$2 = "V3";
     var de = {
       Back: Back$2,
       Enable: Enable$2,
@@ -2681,7 +2747,13 @@
       "Save or discard your changes before creating a profile.": "Speichere oder verwirf deine Änderungen, bevor du ein Profil erstellst.",
       "Delete profile": "Profil löschen",
       "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "Profil „{name}“ und alle Einstellungen löschen? Ungespeicherte Änderungen gehen ebenfalls verloren.",
-      "Switch to another active profile in Mode before deleting this profile.": "Aktiviere unter Modus ein anderes Profil, bevor du dieses Profil löschst."
+      "Switch to another active profile in Mode before deleting this profile.": "Aktiviere unter Modus ein anderes Profil, bevor du dieses Profil löschst.",
+      "Model type": "Modelltyp",
+      "Model variant": "Modellvariante",
+      Parakeet: Parakeet$2,
+      Whisper: Whisper$2,
+      V3: V3$2,
+      "Ultra · More accurate": "Ultra · Genauer"
     };
 
     var Back$1 = "Retour";
@@ -2722,6 +2794,9 @@
     var Released$1 = "Relâché";
     var ms$1 = "ms";
     var Paste$1 = "Coller (par défaut)";
+    var Parakeet$1 = "Parakeet";
+    var Whisper$1 = "Whisper";
+    var V3$1 = "V3";
     var fr = {
       Back: Back$1,
       Enable: Enable$1,
@@ -2981,7 +3056,13 @@
       "Save or discard your changes before creating a profile.": "Enregistrez ou abandonnez vos modifications avant de créer un profil.",
       "Delete profile": "Supprimer le profil",
       "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "Supprimer le profil « {name} » et tous ses paramètres ? Les modifications non enregistrées seront également perdues.",
-      "Switch to another active profile in Mode before deleting this profile.": "Activez un autre profil dans Mode avant de supprimer ce profil."
+      "Switch to another active profile in Mode before deleting this profile.": "Activez un autre profil dans Mode avant de supprimer ce profil.",
+      "Model type": "Type de modèle",
+      "Model variant": "Variante du modèle",
+      Parakeet: Parakeet$1,
+      Whisper: Whisper$1,
+      V3: V3$1,
+      "Ultra · More accurate": "Ultra · Plus précis"
     };
 
     var Back = "返回";
@@ -3022,6 +3103,9 @@
     var Released = "松开";
     var ms = "毫秒";
     var Paste = "粘贴（默认）";
+    var Parakeet = "Parakeet";
+    var Whisper = "Whisper";
+    var V3 = "V3";
     var zh = {
       Back: Back,
       Enable: Enable,
@@ -3281,7 +3365,13 @@
       "Save or discard your changes before creating a profile.": "创建配置前，请保存或放弃更改。",
       "Delete profile": "删除配置",
       "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "删除配置“{name}”及其所有设置？未保存的更改也将丢失。",
-      "Switch to another active profile in Mode before deleting this profile.": "删除此配置前，请在模式菜单中激活其他配置。"
+      "Switch to another active profile in Mode before deleting this profile.": "删除此配置前，请在模式菜单中激活其他配置。",
+      "Model type": "Model type",
+      "Model variant": "Model variant",
+      Parakeet: Parakeet,
+      Whisper: Whisper,
+      V3: V3,
+      "Ultra · More accurate": "Ultra · More accurate"
     };
 
     const catalogs = { en: en$1, es, ru, pt, pl, ko, ja, de, fr, zh };
@@ -4504,11 +4594,23 @@
         { data: "yue", label: "Cantonese" },
         { data: "zh", label: "Chinese" },
     ];
-    const MODEL_SIZE_OPTIONS = [
-        { data: "base", label: "Base · Fast" },
-        { data: "small", label: "Small · Balanced" },
-        { data: "medium", label: "Medium · More accurate" },
+    const MODEL_TYPES = [
+        { data: "whisper", label: "Whisper", variants: [
+                { data: "base", label: "Base · Fast" },
+                { data: "small", label: "Small · Balanced" },
+                { data: "medium", label: "Medium · More accurate" },
+            ] },
+        { data: "parakeet", label: "Parakeet", variants: [
+                { data: "parakeet-v3", label: "V3" },
+                { data: "parakeet-ultra", label: "Ultra · More accurate" },
+            ] },
     ];
+    const modelTypeOf = (modelId) => modelId.startsWith("parakeet") ? "parakeet" : "whisper";
+    const modelLabel = (modelId, translate) => {
+        const type = MODEL_TYPES.find(item => item.data === modelTypeOf(modelId));
+        const variant = type?.variants.find(item => item.data === modelId);
+        return type && variant ? `${translate(type.label)} · ${translate(String(variant.label))}` : modelId;
+    };
     const POPULAR_STEAM_LANGUAGE_CODES = new Set(["en", "zh", "ru", "es", "pt", "de", "ja", "fr", "pl", "ko"]);
     const byLanguageName = (left, right) => String(left.label).localeCompare(String(right.label));
     const POPULAR_LANGUAGE_OPTIONS = WHISPER_LANGUAGE_OPTIONS.filter(option => POPULAR_STEAM_LANGUAGE_CODES.has(String(option.data))).sort(byLanguageName);
@@ -4646,6 +4748,8 @@
                             ? `${t("Recording controller input")} · ${controllerSeconds} ${t("seconds remaining")}`
                             : t("Start 30-second capture");
         const [modelSize, setModelSize] = React.useState("base");
+        const [modelTypeView, setModelTypeView] = React.useState("whisper");
+        React.useEffect(() => { setModelTypeView(modelTypeOf(modelSize)); }, [modelSize]);
         const [transcriptionLanguage, setTranscriptionLanguage] = React.useState("auto");
         const [spokenPunctuation, setSpokenPunctuation] = React.useState(false);
         const [lastTranscription, setLastTranscription] = React.useState("");
@@ -5338,7 +5442,7 @@
                                 React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: () => setPage("model") },
                                     t("Model"),
                                     ": ",
-                                    t(String(MODEL_SIZE_OPTIONS.find(option => option.data === modelSize)?.label || modelSize))))),
+                                    modelLabel(modelSize, t)))),
                         modelReady && !modelLoading && inferenceDevice && (React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement("div", null, inferenceDevice === "gpu"
                                 ? t("whisper.cpp runs on the GPU via Vulkan.")
@@ -5572,47 +5676,52 @@
                             } },
                             option.data === activePreset ? "✓ " : "",
                             t(String(option.label)))))),
-                page === "model" && React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Model") },
-                    rpcError && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                        React__default["default"].createElement("div", { role: "alert" }, rpcError)),
-                    modelLoading && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                        React__default["default"].createElement("div", { role: "status", "aria-live": "polite" }, modelCancelling ? t("Cancelling model download...") : modelStage === "downloading" ? t("Downloading transcription model...") : t("Loading transcription model..."))),
-                    modelStage === "downloading" && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                        React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: modelCancelling, onClick: cancelDownload }, modelCancelling ? t("Cancelling model download...") : t("Cancel download"))),
-                    MODEL_SIZE_OPTIONS.map(option => React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, { key: String(option.data) },
-                        React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: modelLoading || modelChangeInFlight.current, onClick: async () => {
-                                if (modelLoading || modelChangeInFlight.current)
-                                    return;
-                                modelChangeInFlight.current = true;
-                                const next = option.data;
-                                setRpcError("");
-                                if (enabled && modelReady)
-                                    setModelLoading(true);
-                                try {
-                                    const result = await setModelSizeRpc(next);
-                                    if (result.success) {
-                                        setModelSize(next);
-                                        if (pageRef.current === "model")
-                                            setPage("advanced");
+                page === "model" && React__default["default"].createElement(React__default["default"].Fragment, null,
+                    React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Model type") }, MODEL_TYPES.map(type => React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, { key: type.data },
+                        React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: () => setModelTypeView(type.data) },
+                            type.data === modelTypeView ? "✓ " : "",
+                            t(type.label))))),
+                    React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Model variant") },
+                        rpcError && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement("div", { role: "alert" }, rpcError)),
+                        modelLoading && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement("div", { role: "status", "aria-live": "polite" }, modelCancelling ? t("Cancelling model download...") : modelStage === "downloading" ? t("Downloading transcription model...") : t("Loading transcription model..."))),
+                        modelStage === "downloading" && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: modelCancelling, onClick: cancelDownload }, modelCancelling ? t("Cancelling model download...") : t("Cancel download"))),
+                        (MODEL_TYPES.find(type => type.data === modelTypeView)?.variants || []).map(option => React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, { key: String(option.data) },
+                            React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: modelLoading || modelChangeInFlight.current, onClick: async () => {
+                                    if (modelLoading || modelChangeInFlight.current)
+                                        return;
+                                    modelChangeInFlight.current = true;
+                                    const next = option.data;
+                                    setRpcError("");
+                                    if (enabled && modelReady)
+                                        setModelLoading(true);
+                                    try {
+                                        const result = await setModelSizeRpc(next);
+                                        if (result.success) {
+                                            setModelSize(next);
+                                            if (pageRef.current === "model")
+                                                setPage("advanced");
+                                        }
+                                        else if (result.cancelled) {
+                                            setModelSize(result.modelSize || modelSize);
+                                            setRpcError(t(result.error || "Model download cancelled."));
+                                        }
+                                        else
+                                            setRpcError(result.error || t("Could not update model size"));
                                     }
-                                    else if (result.cancelled) {
-                                        setModelSize(result.modelSize || modelSize);
-                                        setRpcError(t(result.error || "Model download cancelled."));
+                                    catch (error) {
+                                        setRpcError(String(error));
                                     }
-                                    else
-                                        setRpcError(result.error || t("Could not update model size"));
-                                }
-                                catch (error) {
-                                    setRpcError(String(error));
-                                }
-                                finally {
-                                    modelChangeInFlight.current = false;
-                                    setModelCancelling(false);
-                                    setModelLoading(false);
-                                }
-                            } },
-                            option.data === modelSize ? "✓ " : "",
-                            t(String(option.label)))))),
+                                    finally {
+                                        modelChangeInFlight.current = false;
+                                        setModelCancelling(false);
+                                        setModelLoading(false);
+                                    }
+                                } },
+                                option.data === modelSize ? "✓ " : "",
+                                t(String(option.label))))))),
                 page === "help" && React__default["default"].createElement(React__default["default"].Fragment, null,
                     React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("How to use") },
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,

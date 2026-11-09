@@ -257,5 +257,11 @@
   "Save or discard your changes before creating a profile.": "プロフィールを作成する前に変更を保存または破棄してください。",
   "Delete profile": "プロフィールを削除",
   "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "プロフィール「{name}」とすべての設定を削除しますか？未保存の変更も失われます。",
-  "Switch to another active profile in Mode before deleting this profile.": "このプロフィールを削除する前に、モードで別のプロフィールを有効にしてください。"
+  "Switch to another active profile in Mode before deleting this profile.": "このプロフィールを削除する前に、モードで別のプロフィールを有効にしてください。",
+  "Model type": "Model type",
+  "Model variant": "Model variant",
+  "Parakeet": "Parakeet",
+  "Whisper": "Whisper",
+  "V3": "V3",
+  "Ultra · More accurate": "Ultra · More accurate"
 }
