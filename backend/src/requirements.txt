@@ -4,4 +4,5 @@ numpy==2.4.2
 pycparser==3.0
 sentry-sdk==2.66.0
 sounddevice==0.5.5
+transcribe-cpp==0.4.1
 urllib3==2.7.0

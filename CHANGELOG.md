@@ -9,6 +9,10 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- Optional Parakeet speech engine (transcribe.cpp, CPU) with V3 and Ultra
+  variants. Parakeet covers 25 European languages with automatic language
+  detection and leaves the GPU to the game. Whisper stays the default.
+- Model page split into Model type (Whisper or Parakeet) and Model variant.
 - Automatic Discord announcements after stable releases are published, using
   the tagged changelog notes and installable download links.
 
