@@ -59,3 +59,27 @@ def test_timeout_kills_worker(tmp_path):
     process.terminate.assert_called_once(); process.kill.assert_called_once()
     assert worker.process is None
     assert process.wait.call_args_list == [call(timeout=1)] * 2
+
+
+def test_parakeet_command_uses_launcher_and_loopback():
+    command = resident_whisper.parakeet_command('/p/python3.11', '/p/parakeet_server.py', '/m.gguf', 4321)
+    assert command[:3] == ['/usr/bin/python3', str(Path(resident_whisper.__file__).resolve()), '/p/python3.11']
+    assert command[3] == '/p/parakeet_server.py'
+    assert command[command.index('--model') + 1] == '/m.gguf'
+    assert command[command.index('--host') + 1] == '127.0.0.1'
+    assert command[command.index('--port') + 1] == '4321'
+
+
+def test_custom_command_receives_port(monkeypatch):
+    socket = MagicMock(); socket.__enter__.return_value.getsockname.return_value = ('127.0.0.1', 5555)
+    monkeypatch.setattr(resident_whisper.socket, 'socket', lambda: socket)
+    seen = {}
+    process = MagicMock(); process.poll.return_value = 1
+    def popen(command, **kwargs):
+        seen['command'] = command
+        return process
+    monkeypatch.setattr(resident_whisper.subprocess, 'Popen', popen)
+    with pytest.raises(RuntimeError):
+        resident_whisper.ResidentWhisper(None, '/m', {}, use_gpu=False,
+            command=lambda port: ['x', '--port', str(port)])
+    assert seen['command'] == ['x', '--port', '5555']
