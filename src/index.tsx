@@ -71,6 +71,7 @@ const stopControllerDebug = callable<[session: string], RpcResponse>("stop_contr
 const uploadControllerDebug = callable<[session: string, consent: boolean], RpcResponse>("upload_controller_debug");
 const resumeControllerDebug = callable<[], RpcResponse>("resume_controller_debug");
 const getButtonConfig = callable<[], RpcResponse>("get_button_config");
+const setControllerBackendRpc = callable<[backend: string], RpcResponse>("set_controller_backend");
 const getPresets = callable<[], RpcResponse>("get_presets");
 const setEnabledRpc = callable<[enabled: boolean], RpcResponse>("set_enabled");
 const loadModel = callable<[], RpcResponse>("load_model");
@@ -432,6 +433,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [textInsertionMode, setTextInsertionMode] = useState<string>("paste");
 	const [rememberLastChannel, setRememberLastChannel] = useState<boolean>(false);
 	const [shareDiagnostics, setShareDiagnostics] = useState<boolean>(false);
+	const [controllerBackend, setControllerBackend] = useState<string>("sdl");
 	const [controllerClient] = useState(() => new ControllerDebugClient({
         start: startControllerDebug, get: getControllerDebug, stop: stopControllerDebug,
         resume: resumeControllerDebug, upload: uploadControllerDebug,
@@ -597,6 +599,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					if (config.shareDiagnostics !== undefined) {
 						setShareDiagnostics(config.shareDiagnostics);
 					}
+					setControllerBackend(config.controllerBackend === "legacy" ? "legacy" : "sdl");
 					if (config.modelSize) {
 						setModelSize(config.modelSize);
 					}
@@ -1177,6 +1180,9 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 						<PanelSectionRow><ButtonItem layout="below" onClick={() => setPage("microphone-help")}>{t("Having problems with your microphone?")}</ButtonItem></PanelSectionRow>
 					</PanelSection>
 					<PanelSection title={t("Input and service")}>
+						<PanelSectionRow><DropdownItem label={t("Controller input (test build)")} menuLabel={t("Controller input (test build)")}
+							rgOptions={[{data:"sdl",label:"SDL 3 (experimental)"},{data:"legacy",label:t("Legacy (evdev / HID)")}]} selectedOption={controllerBackend}
+							onChange={async (option) => { const backend = option.data as string; const result = await setControllerBackendRpc(backend); if (result.success) setControllerBackend(backend); else setRpcError(result.error || t("Could not switch controller input")); }} /></PanelSectionRow>
 						<PanelSectionRow><div>{t("Controller")}: {t(controllerStatus)}</div></PanelSectionRow>
 						<PanelSectionRow><div>{t("Binding supported")}: {controllerComboSupported ? t("Yes") : t("No")}</div></PanelSectionRow>
 						<PanelSectionRow><div>{t("Held buttons")}: <strong>{t(buttonState)}</strong></div></PanelSectionRow>

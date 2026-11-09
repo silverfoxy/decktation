@@ -15,6 +15,7 @@ import tempfile
 from deck_hid import STEAM_DECK_BUTTON_BITS
 from gamepad_evdev import EvdevGamepad
 from controller_profiles import PROFILES_BY_KIND, HidGamepad, find_hidraw
+from gamepad_sdl import SdlInput, SdlGamepad
 from binding_capture import BindingCapture, read_json, write_json
 from controller_debug_report import InputReport, DURATION
 from controller_debug_session import PROTOCOL, START_TIMEOUT, finite_number, read_bounded
@@ -51,6 +52,10 @@ def inspect_rejected_device(device):
 
 
 def controller_details(device, controller_type):
+    if controller_type == 'sdl_gamepad':
+        return {**device.identity, 'controller_type': controller_type,
+                'input_backend': 'sdl', 'connection': 'other',
+                'supported_buttons': sorted(device.supported_buttons)}
     if controller_type in PROFILES_BY_KIND:
         profile = PROFILES_BY_KIND[controller_type]
         return {**getattr(device, 'identity', {}), 'controller_type': profile.kind,
@@ -197,9 +202,11 @@ class ControllerDebug:
         keys = getattr(device, 'capability_keys', ())
         axes = getattr(device, 'capability_axes', ())
         identity = {**getattr(device, 'identity', {}),
-                    'input_backend': 'evdev' if kind == 'evdev_gamepad' else 'hidraw',
+                    'input_backend': 'sdl' if kind == 'sdl_gamepad' else 'evdev' if kind == 'evdev_gamepad' else 'hidraw',
                     'controller_type': kind, 'bindings_accepted': not rejected,
                     'diagnostic_observed': True}
+        if kind == 'sdl_gamepad':
+            identity['supported_buttons'] = sorted(device.supported_buttons)
         if rejected:
             buttons_missing = not {0x130, 0x131}.issubset(keys)
             axes_missing = not {0, 1}.issubset(axes)
@@ -207,9 +214,9 @@ class ControllerDebug:
                 if buttons_missing and axes_missing else 'missing_gamepad_buttons'
                 if buttons_missing else 'missing_stick_axes')
         self.device(path, 'rejected' if rejected else
-                    'accepted' if kind == 'evdev_gamepad' else 'hidraw', identity, keys, axes)
+                    'accepted' if kind in ('evdev_gamepad', 'sdl_gamepad') else 'hidraw', identity, keys, axes)
         if self.report and not self.finished_written:
-            if kind == 'evdev_gamepad':
+            if kind in ('evdev_gamepad', 'sdl_gamepad'):
                 if rejected:
                     states = {}  # Raw controller-only keys are observed, never mapped for bindings.
                 elif hasattr(device, 'states'):
@@ -304,6 +311,13 @@ def main():
     capture_blocked = False
     debug = ControllerDebug(button_names)
     rejected = {}
+    # Standalone defaults to legacy for development; the experimental plugin
+    # explicitly selects SDL. Never silently fall back: testers need to know
+    # which reader actually supplied their binding and push-to-talk inputs.
+    backend = os.environ.get('DECKTATION_CONTROLLER_BACKEND', 'legacy')
+    if backend not in ('legacy', 'sdl'):
+        raise ValueError('Unknown controller backend')
+    sdl = None
     request_file = os.path.join(CONFIG_DIR, "binding_capture_request.json")
     result_file = os.path.join(CONFIG_DIR, "binding_capture_result.json")
 
@@ -385,7 +399,7 @@ def main():
                   f"changed={changed} held={[name for name, down in states.items() if down]} "
                   f"evdev_keys={raw_keys}", flush=True)
             for name, pressed in changed.items():
-                debug.transition(path, 'mapped' if isinstance(device, EvdevGamepad) else 'hid',
+                debug.transition(path, 'mapped' if isinstance(device, (EvdevGamepad, SdlGamepad)) else 'hid',
                                  name, pressed, time.monotonic())
         # Keep the controller responsible for a held combo selected even when
         # another controller sends unrelated input or a virtual duplicate.
@@ -415,8 +429,11 @@ def main():
         debug.disconnected(path, getattr(error, 'errno', None))
         disconnected = details.pop(path)
         device, _ = devices.pop(path)
-        selector.unregister(device.fd)
-        device.close()
+        if isinstance(device, SdlGamepad):
+            sdl.remove(path)
+        else:
+            selector.unregister(device.fd)
+            device.close()
         tracker.remove(path)
         if active_source == path:
             active_source = next((source for source, states in tracker.sources.items()
@@ -429,14 +446,23 @@ def main():
         update_combo()
 
     try:
+        if backend == 'sdl':
+            sdl = SdlInput()
         next_scan = 0
+        next_debug_refresh = 0
+        debug_active = False
         waiting = False
         with open(CONTROLLER_TYPE_FILE, 'w') as f:
             f.write('unknown')
         diagnostic('started', process_identity=identity)
         while True:
             previous_debug_session = getattr(debug.report, 'session', None)
-            debug_active = debug.refresh(time.monotonic())
+            now = time.monotonic()
+            # Poll SDL quickly without writing heartbeat/report files at the
+            # controller sampling rate. Capture commands still refresh at 10Hz.
+            if sdl is None or now >= next_debug_refresh:
+                debug_active = debug.refresh(now)
+                next_debug_refresh = now + 0.1
             if debug_active and debug.report.session != previous_debug_session:
                 # Populate every source before an early Stop can finalize.
                 next_scan = 0
@@ -458,9 +484,30 @@ def main():
                     device.on_key = None
             update_capture()
             update_combo()
+            if sdl is not None:
+                for path, states in sdl.poll():
+                    if states is None:
+                        if path in devices:
+                            remove(path)
+                        continue
+                    if path not in devices:
+                        device = sdl.devices[path]
+                        devices[path] = (device, 'sdl_gamepad')
+                        details[path] = controller_details(device, 'sdl_gamepad')
+                        details[path].update(combo_supported=set(button_names).issubset(device.supported_buttons),
+                                             input_received=False, resync_count=0)
+                        if debug_active:
+                            debug.observe_device(path, device, 'sdl_gamepad')
+                        diagnostic('connected', affected_controller=details[path])
+                    if states != tracker.sources.get(path, {}) and any(states.values()) and not details[path]['input_received']:
+                        details[path]['input_received'] = True
+                        diagnostic('first_input', affected_controller=details[path])
+                    publish(path, states, 'sdl_gamepad')
             if time.monotonic() >= next_scan:
-                candidates = dict(find_hidraw())
-                candidates.update({path: 'evdev_gamepad' for path in glob.glob('/dev/input/event*')})
+                candidates = ({path: 'sdl_gamepad' for path in devices} if sdl is not None
+                              else dict(find_hidraw()))
+                if sdl is None:
+                    candidates.update({path: 'evdev_gamepad' for path in glob.glob('/dev/input/event*')})
                 for path in list(devices):
                     if path not in candidates:
                         remove(path)
@@ -519,7 +566,7 @@ def main():
                     diagnostic('waiting')
                 waiting = not devices
                 next_scan = time.monotonic() + 2
-            ready_events = selector.select(timeout=0 if debug.terminal_pending else 0.25)
+            ready_events = selector.select(timeout=0 if debug.terminal_pending else 0.008 if sdl is not None else 0.25)
             for key, _ in ready_events:
                 path = key.data
                 if path in rejected:
@@ -558,6 +605,8 @@ def main():
             device.close()
         for device, _ in devices.values():
             device.close()
+        if sdl is not None:
+            sdl.close()
         selector.close()
         for path in (STATE_FILE, PID_FILE, PREVIEW_FILE, CONTROLLER_TYPE_FILE, STATUS_FILE,
                      HAPTIC_SOURCE_FILE, RECENT_SOURCE_FILE):

@@ -3,14 +3,28 @@ FROM ghcr.io/steamdeckhomebrew/holo-base:latest
 ARG YDOTOOL_COMMIT=57ba7d0af525e82da2de0e275d169477f293b197
 ARG WHISPER_CPP_COMMIT=f24588a272ae8e23280d9c220536437164e6ed28
 ARG TRANSCRIBE_CPP_COMMIT=4d7c1ccefd39e5a9ea36cca5f8fefc6dcc14b99b
+ARG SDL_COMMIT=829a65d769d935c4852f8159e964312c0957260a
 
 # holo-base already ships glslc, shaderc, the Vulkan headers, and binutils.
 # Reinstalling those packages fails because their files are untracked by pacman.
 RUN pacman -Sydd --noconfirm --dbpath /var/lib/pacman \
-        alsa-lib cmake cppdap git libuv python-pip rhash spirv-headers vulkan-icd-loader xclip wayland \
+        alsa-lib cmake cppdap git libusb libuv python-pip rhash spirv-headers vulkan-icd-loader xclip wayland \
     && command -v strip \
     && cmake --version \
     && glslc --version
+
+# SDL 3.4.18, pinned for reproducible controller testing. No video/audio device
+# initialization is needed by the headless controller listener.
+RUN git init /sdl-src \
+    && git -C /sdl-src remote add origin https://github.com/libsdl-org/SDL.git \
+    && git -C /sdl-src fetch --depth 1 origin "${SDL_COMMIT}" \
+    && git -C /sdl-src checkout --detach FETCH_HEAD \
+    && cmake -S /sdl-src -B /sdl-build \
+        -DCMAKE_BUILD_TYPE=Release -DSDL_SHARED=ON -DSDL_STATIC=OFF \
+        -DSDL_UNIX_CONSOLE_BUILD=ON -DSDL_VIDEO=OFF -DSDL_AUDIO=OFF \
+        -DSDL_RENDER=OFF -DSDL_GPU=OFF -DSDL_CAMERA=OFF \
+        -DSDL_TESTS=OFF -DSDL_TEST_LIBRARY=OFF -DSDL_EXAMPLES=OFF \
+    && cmake --build /sdl-build -j2
 
 # Use ALSA (including the desktop PipeWire ALSA device), without starting
 # JACK clients whose callbacks can crash while Decky replaces the plugin.

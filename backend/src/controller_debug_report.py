@@ -24,7 +24,7 @@ def _controller_key(code):
 BUTTONS = {'A', 'B', 'X', 'Y', 'L1', 'R1', 'L2', 'R2', 'L3', 'R3',
            'L4', 'R4', 'L5', 'R5', 'View', 'Menu', 'D-pad Up', 'D-pad Down',
            'D-pad Left', 'D-pad Right', 'Left Trackpad', 'Right Trackpad'}
-CONTROLLER_TYPES = {'evdev_gamepad', *PROFILES_BY_KIND}
+CONTROLLER_TYPES = {'evdev_gamepad', 'sdl_gamepad', *PROFILES_BY_KIND}
 REJECTION_REASONS = {'missing_gamepad_buttons', 'missing_stick_axes',
                      'missing_gamepad_buttons_and_stick_axes'}
 METADATA_FIELDS = ('decktation_version', 'os_id', 'os_version', 'os_build',
@@ -149,7 +149,7 @@ def sanitize_report(report):
             safe['source'] = device['source']
         if isinstance(device.get('status'), str) and device['status'] in ('accepted', 'rejected', 'open_failed', 'disconnected', 'hidraw'):
             safe['status'] = device['status']
-        for key, allowed in (('input_backend', {'evdev', 'hidraw'}),
+        for key, allowed in (('input_backend', {'evdev', 'hidraw', 'sdl'}),
                              ('controller_type', CONTROLLER_TYPES),
                              ('rejection_reason', REJECTION_REASONS)):
             if isinstance(device.get(key), str) and device[key] in allowed:
@@ -160,6 +160,13 @@ def sanitize_report(report):
         for key in ('bus', 'vendor_id', 'product_id', 'hardware_version', 'errno', 'resync_count'):
             number = _number(device.get(key), 65535)
             if number is not None: safe[key] = number
+        for key, maximum in (('sdl_version', 9999999), ('sdl_gamepad_type', 64), ('sdl_connection_state', 2)):
+            number = _number(device.get(key), maximum)
+            if number is not None:
+                safe[key] = number
+        buttons = device.get('supported_buttons')
+        if isinstance(buttons, list):
+            safe['supported_buttons'] = [b for b in buttons[:32] if isinstance(b, str) and b in BUTTONS]
         for key, limit in (('keys', MAX_CONTROLLER_KEY), ('axes', 0x3f)):
             values = device.get(key)
             if isinstance(values, list):

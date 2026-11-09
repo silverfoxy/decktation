@@ -14,6 +14,14 @@ Ongoing diagnostics exclude audio, transcript and chat text, WoW context, creden
 
 ## Controller capture controls
 
+The SDL experimental build also records the selected SDL input backend, numeric
+SDL library version, gamepad type and connection state, and allowlisted supported
+button names in the reviewed controller report. It does not add device names,
+mapping strings, serials, addresses, input paths, or raw HID payloads. SDL gamepad
+events use the same bounded press/release capture and per-report upload consent.
+Selecting SDL observes SDL-visible gamepads; selecting Legacy observes the
+existing evdev and supported raw HID sources.
+
 The backend owns one session with explicit starting, recording, stopping, ready, and failed states. The 30-second recording window starts when the controller listener acknowledges that session, not when the user clicks Start or from the browser clock. The countdown is reported by the backend. A missing or dead listener produces an error instead of an apparently completed empty report. Reopening the panel reconnects to the existing session; closing the panel does not stop or upload it.
 
 During capture, a dedicated focusable screen consumes Decky controller navigation events (including A/confirm, B/back, and directional navigation). Controller presses therefore exercise the diagnostic recorder rather than buttons in the plugin UI. Steam and Quick Access remain system-reserved and may open system menus. Capture ends automatically after 30 seconds; a touch/mouse-only **Stop and review** control permits an early stop. Normal push-to-talk actions are suppressed until capture ends and held buttons have been released. This is UI event handling, not an exclusive operating-system input-device grab. Ordinary keyboard typing remains excluded from the report.
@@ -23,7 +31,8 @@ During capture, a dedicated focusable screen consumes Decky controller navigatio
 Decktation declares Decky’s `_root` permission for controller input and text entry:
 
 - It reads Valve raw controller reports from `/dev/hidraw*` so Steam Deck buttons and grips work independently of a game’s Steam Input layout.
-- It reads gamepad events from `/dev/input/event*` for other controllers. It does not exclusively grab devices or change their mappings.
+- The legacy reader reads gamepad events from `/dev/input/event*` for other controllers. It does not exclusively grab devices or change their mappings.
+- The SDL experimental reader uses a bundled SDL3 library with background gamepad input enabled and no video/audio initialization. SDL chooses its Linux or supported HID controller drivers; some HID drivers configure device modes when opened. This reader does not request an exclusive grab or enable sensors. Normal game controls and coexistence with Steam require hardware testing.
 - Its bundled `ydotoold` helper uses `/dev/uinput` to enter the transcription in the active window. The helper uses a private, owner-only socket in `/tmp` and stops when the plugin unloads.
 - Transcribed text is passed to the helper as data; it is never evaluated as a shell command.
 

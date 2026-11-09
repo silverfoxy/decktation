@@ -4426,6 +4426,7 @@
     const uploadControllerDebug = callable("upload_controller_debug");
     const resumeControllerDebug = callable("resume_controller_debug");
     const getButtonConfig = callable("get_button_config");
+    const setControllerBackendRpc = callable("set_controller_backend");
     const getPresets = callable("get_presets");
     const setEnabledRpc = callable("set_enabled");
     const loadModel = callable("load_model");
@@ -4778,6 +4779,7 @@
         const [textInsertionMode, setTextInsertionMode] = React.useState("paste");
         const [rememberLastChannel, setRememberLastChannel] = React.useState(false);
         const [shareDiagnostics, setShareDiagnostics] = React.useState(false);
+        const [controllerBackend, setControllerBackend] = React.useState("sdl");
         const [controllerClient] = React.useState(() => new ControllerDebugClient({
             start: startControllerDebug, get: getControllerDebug, stop: stopControllerDebug,
             resume: resumeControllerDebug, upload: uploadControllerDebug,
@@ -4953,6 +4955,7 @@
                         if (config.shareDiagnostics !== undefined) {
                             setShareDiagnostics(config.shareDiagnostics);
                         }
+                        setControllerBackend(config.controllerBackend === "legacy" ? "legacy" : "sdl");
                         if (config.modelSize) {
                             setModelSize(config.modelSize);
                         }
@@ -5654,6 +5657,11 @@
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: () => setPage("microphone-help") }, t("Having problems with your microphone?")))),
                     React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Input and service") },
+                        React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: t("Controller input (test build)"), menuLabel: t("Controller input (test build)"), rgOptions: [{ data: "sdl", label: "SDL 3 (experimental)" }, { data: "legacy", label: t("Legacy (evdev / HID)") }], selectedOption: controllerBackend, onChange: async (option) => { const backend = option.data; const result = await setControllerBackendRpc(backend); if (result.success)
+                                    setControllerBackend(backend);
+                                else
+                                    setRpcError(result.error || t("Could not switch controller input")); } })),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement("div", null,
                                 t("Controller"),
