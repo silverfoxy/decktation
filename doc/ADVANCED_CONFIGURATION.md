@@ -15,13 +15,16 @@ Most settings can be changed in the Decktation panel. The source configuration f
 
 ## Game presets
 
-Decktation includes three presets defined in [`defaults/game_presets.json`](../defaults/game_presets.json):
+Decktation includes four presets defined in [`defaults/game_presets.json`](../defaults/game_presets.json):
 
 | Preset | Behavior |
 | --- | --- |
 | **World of Warcraft** | For chat channels, opens chat, adds the selected channel command, and sends with Enter. |
+| **WoW Forever** | Uses WoW channels and opens chat with Enter, then submits with controller A. Requires in-game validation with your controller setup. |
 | **Guild Wars 2** | For chat channels, opens chat, adds the selected channel command, and sends with Enter. |
 | **Generic** | Enters text directly in the focused field without opening or sending game chat. |
+
+In **Edit game profile**, open **Sending → Submit chat with** to choose Enter, Controller A, or Do not submit for each profile. Controller A emits the Linux `BTN_SOUTH` button, not the keyboard letter A. **Press Enter yourself** overrides automatic submission; the **type** channel also never submits. Steam Input/Proton must pass the synthetic button through to the game.
 
 In WoW or GW2, start a message with a spoken channel name to route it. For example, “party ready” selects party chat, and “guild: hello” selects guild chat. Prefix matching is case-insensitive; a space, colon, comma, or period can separate the channel from the message. The **type** channel enters the text without opening or sending game chat. Trigger words are configured in [`defaults/channel_languages.json`](../defaults/channel_languages.json).
 
@@ -114,7 +117,7 @@ Add another entry to `defaults/game_presets.json`. The `channels` keys must matc
 }
 ```
 
-The chat keys can be `"enter"` or `null`. The optional chat delays are in seconds. `whisper_prompt` supplies game vocabulary to the speech recognizer.
+`chat_open_key` can be `"enter"` or `null`. `chat_send_key` can be `"enter"`, `"controller_a"` (controller A / `BTN_SOUTH`), or `null` to leave chat unsent. The optional chat delays are in seconds. `whisper_prompt` supplies game vocabulary to the speech recognizer.
 
 ## Controller buttons
 

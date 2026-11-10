@@ -102,3 +102,23 @@ def test_delete_active_profile_is_rejected_without_writing(editor, tmp_path):
     assert not result["success"]
     assert "Switch to another" in result["error"]
     assert (tmp_path / "profiles.json").read_text() == before
+
+
+@pytest.mark.parametrize("send_key", ["enter", "controller_a", None])
+def test_editor_round_trips_submission_input(editor, send_key):
+    settings = {**profile(), "chat_send_key": send_key}
+    assert asyncio.run(editor.save_profile_editor("wow", settings))["success"]
+    assert asyncio.run(editor.get_profile_editor("wow"))["profile"]["chat_send_key"] == send_key
+
+
+def test_editor_rejects_unknown_submission_input(editor, tmp_path):
+    assert not asyncio.run(editor.save_profile_editor(
+        "wow", {**profile(), "chat_send_key": "a"}))["success"]
+    assert not (tmp_path / "profiles.json").exists()
+
+
+def test_legacy_editor_save_preserves_forever_submission(editor):
+    assert asyncio.run(editor.save_profile_editor("wow_forever", profile()))["success"]
+    presets = backend._load_game_presets()
+    assert presets["wow_forever"]["chat_send_key"] == "controller_a"
+    assert presets["wow"]["chat_send_key"] == "enter"

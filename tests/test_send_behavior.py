@@ -398,3 +398,43 @@ def test_command_preserves_argument_case_and_bypasses_remembered_party(mock_run)
     assert svc.send_to_wow_chat("command slash whisper Thrall Hello there.")
     assert PASTED_TEXT == ["/whisper Thrall Hello there"]
     assert svc.last_channel == "party"
+
+
+@pytest.mark.parametrize("mode", ["paste", "ydotool"])
+@patch("subprocess.run")
+def test_controller_a_submits_after_text_insertion(mock_run, mode):
+    mock_run.return_value = MagicMock(returncode=0)
+    svc = make_service({**WOW_PRESET, "chat_send_key": "controller_a"})
+    svc.text_insertion_mode = mode
+    assert svc.send_to_wow_chat("hello", channel="party")
+    sent = commands(mock_run)
+    assert sent[0] == ENTER
+    assert sent[1][0] == ("key" if mode == "paste" else "type")
+    assert sent[2:] == [["key", "-d", "80", "304:1", "304:0"]]
+
+
+@pytest.mark.parametrize("manual,channel", [(True, "say"), (False, "type")])
+@patch("subprocess.run")
+def test_controller_a_respects_manual_and_type_modes(mock_run, manual, channel):
+    mock_run.return_value = MagicMock(returncode=0)
+    svc = make_service({**WOW_PRESET, "chat_send_key": "controller_a"})
+    svc.manual_send = manual
+    assert svc.send_to_wow_chat("hello", channel=channel)
+    assert commands(mock_run) == ([ENTER, PASTE] if manual else [PASTE])
+
+
+@pytest.mark.parametrize("failure", [1, 2])
+@patch("subprocess.run")
+def test_controller_a_reports_insertion_and_submission_failures(mock_run, failure):
+    mock_run.side_effect = [MagicMock(returncode=1 if index == failure else 0)
+                            for index in range(3)]
+    svc = make_service({**WOW_PRESET, "chat_send_key": "controller_a"})
+    assert not svc.send_to_wow_chat("hello", channel="say")
+    assert len(commands(mock_run)) == failure + 1
+
+
+def test_no_submission_profile_labels_review_as_typing():
+    svc = make_service({**WOW_PRESET, "chat_send_key": None})
+    svc.review_mode = True
+    svc.queue_transcription("party hello")
+    assert svc.pending_snapshot()["action"] == "Type into chat"

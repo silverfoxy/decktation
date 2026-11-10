@@ -328,3 +328,20 @@ test('user profile deletion requires confirmation and protects the active profil
   await expect(page.getByRole('alert')).toContainText('Switch to another active profile');
   await expect(page.getByRole('alertdialog')).toHaveCount(0);
 });
+
+test('submission input persists per profile and WoW Forever defaults to A', async ({ page, harness }) => {
+  await openEditor(page);
+  await page.getByRole('button', { name: 'Sending', exact: true }).click();
+  await expect(page.getByLabel('Submit chat with')).toHaveValue('enter');
+  await page.getByLabel('Submit chat with').selectOption('controller_a');
+  await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(page.getByRole('status')).toHaveText('Saved');
+  expect((await harness.rpc('get_profile_editor', ['wow'])).profile.chat_send_key).toBe('controller_a');
+  await page.getByLabel('Game profile').selectOption('wow_forever');
+  await expect(page.getByLabel('Submit chat with')).toHaveValue('controller_a');
+  await page.getByLabel('Submit chat with').selectOption('none');
+  await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(page.getByRole('status')).toHaveText('Saved');
+  expect((await harness.rpc('get_profile_editor', ['wow_forever'])).profile.chat_send_key).toBeNull();
+  expect((await harness.rpc('get_profile_editor', ['wow'])).profile.chat_send_key).toBe('controller_a');
+});

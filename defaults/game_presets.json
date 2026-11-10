@@ -31,6 +31,38 @@
     "context_file": "wow_context.json",
     "casual_case": true
   },
+  "wow_forever": {
+    "name": "WoW Forever",
+    "chat_open_key": "enter",
+    "chat_send_key": "controller_a",
+    "default_channel": "say",
+    "channels": {
+      "say": "/s ",
+      "party": "/p ",
+      "raid": "/raid ",
+      "guild": "/g ",
+      "officer": "/o ",
+      "yell": "/y ",
+      "instance": "/i ",
+      "whisper": "/w ",
+      "reply": "/r ",
+      "type": "",
+      "alert": "/rw ",
+      "channel_1": "/1 ",
+      "channel_2": "/2 ",
+      "channel_3": "/3 ",
+      "channel_4": "/4 ",
+      "channel_5": "/5 ",
+      "general_chat": "/1 ",
+      "trade_chat": "/2 ",
+      "local_defense_chat": "/3 ",
+      "services_chat": "/4 ",
+      "looking_for_group_chat": "/5 "
+    },
+    "whisper_prompt": "",
+    "context_file": "wow_context.json",
+    "casual_case": true
+  },
   "guildwars2": {
     "name": "Guild Wars 2",
     "chat_open_key": "enter",

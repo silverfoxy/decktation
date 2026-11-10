@@ -14,6 +14,7 @@ type Profile = {
     channels: Record<string, string>;
     channel_triggers: Record<string, string>;
     default_channel: string;
+    chat_send_key?: "enter" | "controller_a" | null;
 };
 type Preset = { id: string; name: string };
 const loadProfile = callable<[game: string], any>("get_profile_editor");
@@ -92,7 +93,7 @@ export function ProfileEditor() {
     const [presets, setPresets] = useState<Preset[]>([]);
     const [profile, setProfile] = useState<Profile | null>(null);
     const [selected, setSelected] = useState("");
-    const [tab, setTab] = useState<"channels" | "keywords">("channels");
+    const [tab, setTab] = useState<"channels" | "keywords" | "sending">("channels");
     const [canDelete, setCanDelete] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [activeGame, setActiveGame] = useState("");
@@ -268,7 +269,8 @@ export function ProfileEditor() {
         <style>{styles}</style>
         <Focusable className="editor-header" role="banner" flow-children="row" data-nav-row><h1>{t("Game profiles")}</h1>
             <Focusable className="tabs" flow-children="row" data-nav-row><DialogButton className="editor-button" disabled={disabled} onClick={() => setTab("channels")}>{tab === "channels" ? "● " : ""}{t("Channels")}</DialogButton>
-                <DialogButton className="editor-button" disabled={disabled} onClick={() => setTab("keywords")}>{tab === "keywords" ? "● " : ""}{t("Keywords")}</DialogButton></Focusable>
+                <DialogButton className="editor-button" disabled={disabled} onClick={() => setTab("keywords")}>{tab === "keywords" ? "● " : ""}{t("Keywords")}</DialogButton>
+                <DialogButton className="editor-button" disabled={disabled} onClick={() => setTab("sending")}>{tab === "sending" ? "● " : ""}{t("Sending")}</DialogButton></Focusable>
             <div className="profile-picker"><span>{t("Game profile")}</span><Dropdown menuLabel={t("Game profile")} rgOptions={presets.map(preset => ({ data:preset.id, label:t(preset.name) }))} selectedOption={game} disabled={disabled}
                 onChange={option => { if (String(option.data) !== game) leave(String(option.data)); }} /></div></Focusable>
         {confirmDelete && <Focusable className="notice" role="alertdialog" aria-label={t("Delete profile")}>
@@ -307,6 +309,17 @@ export function ProfileEditor() {
                 <DialogButton className="editor-button" onClick={() => { const next = pendingAction?.game; setPendingAction(null); if (next) setGame(next); else Navigation.NavigateBack(); }}>{t("Discard changes")}</DialogButton>
             </Focusable></Focusable>}
         {!profile && <div role="status">{error || t("Loading...")}</div>}
+        {profile && tab === "sending" && <Focusable className="keywords" flow-children="column">
+            <h2>{t("Sending")}</h2>
+            <Focusable className="inline" flow-children="row" data-nav-row>
+            <span>{t("Submit chat with")}</span>
+            <Dropdown menuLabel={t("Submit chat with")} disabled={disabled}
+                selectedOption={profile.chat_send_key === null ? "none" : profile.chat_send_key || "enter"}
+                rgOptions={[{ data:"enter", label:t("Enter") }, { data:"controller_a", label:t("Controller A") }, { data:"none", label:t("Do not submit") }]}
+                onChange={option => update({ ...profile, chat_send_key:option.data === "none" ? null : option.data as "enter" | "controller_a" })} />
+            </Focusable>
+            <p className="hint">{t("Applies to this profile. Manual send still leaves chat unsent.")}</p>
+        </Focusable>}
         {profile && tab === "channels" && <Focusable className="workspace" flow-children="row">
             <Focusable className="channel-list" flow-children="column" onGamepadDirection={navigate}><EditorTextField label={t("Search channels")} value={search} disabled={disabled} onChange={event => setSearch(event.target.value)} />
                 <Focusable flow-children="column" onGamepadDirection={navigate} className="channel-rows" aria-label={t("Channel list")}>

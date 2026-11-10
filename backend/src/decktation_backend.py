@@ -1523,6 +1523,7 @@ class Plugin:
             "channels": profile.get("channels", {}),
             "channel_triggers": profile.get("channel_triggers", {}),
             "default_channel": profile.get("default_channel", "type"),
+            "chat_send_key": profile.get("chat_send_key", "enter"),
         }}
 
     async def save_profile_editor(self, game: str, profile: dict):
@@ -1556,6 +1557,9 @@ class Plugin:
                 raise ValueError("Spoken triggers must be unique lowercase phrases targeting a channel.")
             if profile.get("default_channel") not in channels:
                 raise ValueError("Choose an existing default channel.")
+            send_key = profile.get("chat_send_key", presets[game].get("chat_send_key", "enter"))
+            if send_key not in (None, "enter", "controller_a"):
+                raise ValueError("Choose Enter, Controller A, or no chat submission.")
             # Preserve overrides from whichever legacy profile file is active.
             existing = {}
             for name in ("profiles.json", "custom_presets.json", "game_presets.json"):
@@ -1569,6 +1573,7 @@ class Plugin:
             override = dict(existing.get(game, {}))
             override.update({key: profile[key] for key in (
                 "hotwords", "channels", "channel_triggers", "default_channel")})
+            override["chat_send_key"] = send_key
             existing[game] = override
             path = os.path.join(CONFIG_DIR, "profiles.json")
             temporary = path + ".tmp"

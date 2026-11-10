@@ -283,3 +283,12 @@ class TestUserProfileOverrides:
 
         presets = decktation_backend._load_game_presets()
         assert presets["wow"]["whisper_prompt"] == "legacy custom preset prompt"
+
+
+def test_wow_forever_keeps_wow_channels_and_uses_controller_a():
+    with open(PRESETS_FILE) as source:
+        presets = json.load(source)
+    assert presets["wow_forever"]["chat_send_key"] == "controller_a"
+    assert presets["wow"]["chat_send_key"] == "enter"
+    for key in ("channels", "context_file", "default_channel", "chat_open_key"):
+        assert presets["wow_forever"][key] == presets["wow"][key]
