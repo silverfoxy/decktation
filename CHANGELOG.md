@@ -7,7 +7,12 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.3.23] - 2026-11-10
+
 ### Added
+
+- Experimental SDL 3 controller input, enabled by default, with a legacy
+  evdev/HID option under Diagnostics for comparison and recovery.
 
 - Optional output muting while recording: keep volume unchanged or mute it,
   with automatic restoration when capture ends (#91).
@@ -26,6 +31,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   the tagged changelog notes and installable download links.
 
 ### Fixed
+
+- Restore recording haptics for SDL controllers and ignore queued activation
+  presses when capturing a new recording binding.
 
 - Parakeet displays Auto Detect and disables manual language selection.
 - Show the correct CPU engine for Parakeet and keep model selection in sync
