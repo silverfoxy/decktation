@@ -256,6 +256,11 @@ class Runtime:
                 stage = payload.get('stage')
                 if stage not in ('downloading', 'loading', 'idle'):
                     raise ValueError('Unknown model stage')
+                model_size = payload.get('modelSize')
+                if model_size is not None:
+                    if model_size not in ('base', 'small', 'medium', 'parakeet-v3', 'parakeet-ultra'):
+                        raise ValueError('Unknown model size')
+                    self.plugin.voice_service.model_size = model_size
                 self.plugin.voice_service.model_stage = stage
                 self.plugin.voice_service.model_loading = stage != 'idle'
                 self.plugin.model_operations = int(stage != 'idle')
