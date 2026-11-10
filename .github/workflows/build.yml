@@ -48,7 +48,7 @@ jobs:
           node-version: '20'
       - run: npm install --ignore-scripts
       - run: npm run test:update
-      - run: python -m py_compile main.py backend/src/decktation_backend.py backend/src/plugin_update.py backend/src/wow_voice_chat.py backend/src/controller_listener.py backend/src/deck_hid.py backend/src/gamepad_evdev.py backend/src/telemetry.py backend/src/haptic_feedback.py
+      - run: python -m py_compile main.py backend/src/decktation_backend.py backend/src/plugin_update.py backend/src/wow_voice_chat.py backend/src/parakeet_server.py backend/src/controller_listener.py backend/src/deck_hid.py backend/src/gamepad_evdev.py backend/src/telemetry.py backend/src/haptic_feedback.py
 
   build:
     runs-on: ubuntu-latest
@@ -100,6 +100,11 @@ jobs:
           unzip -l build-output/decktation.zip | grep -q 'decktation/bin/whisper-server'
           ! unzip -l build-output/decktation.zip | grep -q 'decktation/bin/whisper-cli'
           unzip -l build-output/decktation.zip | grep -q 'decktation/bin/resident_whisper.py'
+          unzip -l build-output/decktation.zip | grep -q 'decktation/bin/parakeet_server.py'
+          unzip -l build-output/decktation.zip | grep -q 'decktation/bin/lib/libtranscribe.so'
+          unzip -l build-output/decktation.zip | grep -q 'decktation/bin/lib/libggml-cpu.so.0'
+          unzip -l build-output/decktation.zip | grep -q 'decktation/bin/python/transcribe_cpp/__init__.py'
+          unzip -l build-output/decktation.zip | grep -q 'decktation/bin/licenses/transcribe.cpp-MIT.txt'
           unzip -l build-output/decktation.zip | grep -q 'decktation/bin/xclip'
           unzip -l build-output/decktation.zip | grep -q 'decktation/bin/clipboard_injection.py'
           unzip -l build-output/decktation.zip | grep -q 'decktation/bin/python/sentry_sdk'

@@ -25,8 +25,13 @@ def server_command(binary, model, port, use_gpu):
     return command
 
 
+def parakeet_command(interpreter, script, model, port):
+    return ['/usr/bin/python3', str(Path(__file__).resolve()), str(interpreter), str(script),
+            '--model', str(model), '--host', '127.0.0.1', '--port', str(port)]
+
+
 class ResidentWhisper:
-    def __init__(self, binary, model, environment, use_gpu=True, timeout=60):
+    def __init__(self, binary, model, environment, use_gpu=True, timeout=60, command=None):
         self.process = None
         self.device = 'gpu' if use_gpu else 'cpu'
         self.directory = tempfile.TemporaryDirectory(prefix='decktation-resident-')
@@ -40,7 +45,7 @@ class ResidentWhisper:
             self.url = f'http://127.0.0.1:{port}'
             self.http = urllib.request.build_opener(urllib.request.ProxyHandler({}))
             self.process = subprocess.Popen(
-                server_command(binary, model, port, use_gpu),
+                command(port) if command else server_command(binary, model, port, use_gpu),
                 env={**environment, "DECKTATION_WHISPER_PARENT": str(os.getpid())}, stdin=subprocess.DEVNULL,
                 stdout=self.log_file, stderr=subprocess.STDOUT, start_new_session=True)
             while time.monotonic() - start < timeout:

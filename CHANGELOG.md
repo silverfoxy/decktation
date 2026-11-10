@@ -12,11 +12,21 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Per-profile chat submission with Enter or controller A, plus a separate WoW
   Forever preset that submits with A by default. Regular WoW keeps Enter.
 
+- Model downloads show a progress bar, downloaded size, and activity status for
+  both Whisper and Parakeet.
+
+- Optional Parakeet speech engine (transcribe.cpp, CPU) with V3 and Ultra
+  variants. Parakeet covers 25 European languages with automatic language
+  detection and leaves the GPU to the game. Whisper stays the default.
+- Model page split into Model type (Whisper or Parakeet) and Model variant.
 - Automatic Discord announcements after stable releases are published, using
   the tagged changelog notes and installable download links.
 
 ### Fixed
 
+- Parakeet displays Auto Detect and disables manual language selection.
+- Show the correct CPU engine for Parakeet and keep model selection in sync
+  with the backend after reopening the panel.
 - Remove branch/master packages from Pages and publish PR test builds only.
   Pages uploads now contain metadata and download pages, with no plugin ZIPs.
 - Preserve each build publication when deployments queue, while coalescing only

@@ -37,7 +37,7 @@ def test_model_download_stage_is_reported_while_rpc_is_pending(monkeypatch, tmp_
     monkeypatch.setenv("DECKY_USER_HOME", str(tmp_path))
     started, release = threading.Event(), threading.Event()
 
-    def download(_url, destination, _cancel_event):
+    def download(_url, destination, _cancel_event, _progress=None):
         started.set()
         assert release.wait(5)
         destination.write_bytes(b"model")
@@ -147,7 +147,7 @@ def test_cancel_never_acknowledges_after_final_download_check(monkeypatch, tmp_p
     service = PausedStageService(lazy_load=True, model_size="medium")
     service.transition_started = threading.Event()
     service.transition_release = threading.Event()
-    def downloaded(_url, destination, _cancel_event):
+    def downloaded(_url, destination, _cancel_event, _progress=None):
         if not download_times_out:
             destination.write_bytes(b"complete model")
         service.pause_transition = True
@@ -198,7 +198,7 @@ def test_switch_after_cancelled_initial_download_loads_cached_smaller_model(monk
 
 def test_model_stage_clears_when_download_fails(monkeypatch, tmp_path):
     monkeypatch.setenv("DECKY_USER_HOME", str(tmp_path))
-    def broken(_url, _destination, _cancel_event):
+    def broken(_url, _destination, _cancel_event, _progress=None):
         raise OSError("network unavailable")
     monkeypatch.setattr("wow_voice_chat._download_vulkan_model", broken)
     server = tmp_path / "whisper-server"
@@ -291,3 +291,37 @@ def test_model_load_rejects_active_recording(monkeypatch):
     assert result["success"] is False
     assert backend.Plugin.model_operations == 0
     service._load_model.assert_not_called()
+
+
+@pytest.mark.parametrize("length", [None, "invalid", "600000"])
+def test_download_reports_real_bytes_with_optional_total(monkeypatch, tmp_path, length):
+    import io
+    payload = b"x" * 600000
+    class Response(io.BytesIO):
+        headers = {} if length is None else {"Content-Length": length}
+    monkeypatch.setattr(wow_voice_chat.urllib.request, "urlopen", lambda *a, **kw: Response(payload))
+    service = WoWVoiceChat(lazy_load=True)
+    service.model_stage = "downloading"
+    observations = []
+    def progress(received, total):
+        service._update_model_download(received, total)
+        observations.append(service.model_download_status())
+    destination = tmp_path / "model.download"
+    wow_voice_chat._download_vulkan_model("https://example.com/model", destination, progress=progress)
+    assert destination.read_bytes() == payload
+    assert [item["received"] for item in observations] == [0, 262144, 524288, 600000]
+    assert observations[-1]["total"] == (600000 if length == "600000" else None)
+    assert observations[-1]["seconds_since_data"] == 0
+    monkeypatch.setattr(wow_voice_chat.time, "monotonic", lambda: service.model_download["updated"] + 15)
+    assert service.model_download_status()["seconds_since_data"] == 15
+    service.model_stage = "idle"
+    assert service.model_download_status() is None
+
+
+def test_truncated_model_download_fails(monkeypatch, tmp_path):
+    import io
+    class Response(io.BytesIO):
+        headers = {"Content-Length": "100"}
+    monkeypatch.setattr(wow_voice_chat.urllib.request, "urlopen", lambda *a, **kw: Response(b"short"))
+    with pytest.raises(IOError, match="expected size"):
+        wow_voice_chat._download_vulkan_model("https://example.com/model", tmp_path / "model.download")
