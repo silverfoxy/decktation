@@ -1,8 +1,0 @@
-{
-  "plugin": "Decktation",
-  "channel": "branch",
-  "ref": "fix/ci-prerelease-version",
-  "commit": "948fb20c8aa4b488df7945513e9fa5d89c752259",
-  "zip_url": "https://decktation.com/branches/fix-ci-prerelease-version/Decktation.zip",
-  "generated_at": "2026-10-03T18:30:12Z"
-}
