@@ -122,6 +122,8 @@
     var Parakeet$9 = "Parakeet";
     var Whisper$9 = "Whisper";
     var V3$9 = "V3";
+    var Unchanged$9 = "Unchanged";
+    var Mute$9 = "Mute";
     var en$1 = {
       Back: Back$9,
       Enable: Enable$9,
@@ -396,7 +398,11 @@
       "Controller input (test build)": "Controller input (test build)",
       "SDL 3 (experimental)": "SDL 3 (experimental)",
       "Legacy (evdev / HID)": "Legacy (evdev / HID)",
-      "Could not switch controller input": "Could not switch controller input"
+      "Could not switch controller input": "Could not switch controller input",
+      "Output volume while recording": "Output volume while recording",
+      Unchanged: Unchanged$9,
+      Mute: Mute$9,
+      "Could not update recording volume": "Could not update recording volume"
     };
 
     var af = "Afrikaans";
@@ -643,6 +649,8 @@
     var Parakeet$8 = "Parakeet";
     var Whisper$8 = "Whisper";
     var V3$8 = "V3";
+    var Unchanged$8 = "Sin cambios";
+    var Mute$8 = "Silenciar";
     var es = {
       Back: Back$8,
       Enable: Enable$8,
@@ -917,7 +925,11 @@
       "Controller input (test build)": "Entrada del mando (versión de prueba)",
       "SDL 3 (experimental)": "SDL 3 (experimental)",
       "Legacy (evdev / HID)": "Anterior (evdev / HID)",
-      "Could not switch controller input": "No se pudo cambiar la entrada del mando"
+      "Could not switch controller input": "No se pudo cambiar la entrada del mando",
+      "Output volume while recording": "Volumen de salida al grabar",
+      Unchanged: Unchanged$8,
+      Mute: Mute$8,
+      "Could not update recording volume": "No se pudo actualizar el volumen de grabación"
     };
 
     var Back$7 = "Назад";
@@ -961,6 +973,8 @@
     var Parakeet$7 = "Parakeet";
     var Whisper$7 = "Whisper";
     var V3$7 = "V3";
+    var Unchanged$7 = "Без изменений";
+    var Mute$7 = "Без звука";
     var ru = {
       Back: Back$7,
       Enable: Enable$7,
@@ -1235,7 +1249,11 @@
       "Controller input (test build)": "Ввод контроллера (тестовая сборка)",
       "SDL 3 (experimental)": "SDL 3 (экспериментальный)",
       "Legacy (evdev / HID)": "Прежний способ (evdev / HID)",
-      "Could not switch controller input": "Не удалось переключить ввод контроллера"
+      "Could not switch controller input": "Не удалось переключить ввод контроллера",
+      "Output volume while recording": "Громкость вывода при записи",
+      Unchanged: Unchanged$7,
+      Mute: Mute$7,
+      "Could not update recording volume": "Не удалось изменить громкость при записи"
     };
 
     var Back$6 = "Voltar";
@@ -1279,6 +1297,8 @@
     var Parakeet$6 = "Parakeet";
     var Whisper$6 = "Whisper";
     var V3$6 = "V3";
+    var Unchanged$6 = "Sem alteração";
+    var Mute$6 = "Silenciar";
     var pt = {
       Back: Back$6,
       Enable: Enable$6,
@@ -1553,7 +1573,11 @@
       "Controller input (test build)": "Entrada do controle (versão de teste)",
       "SDL 3 (experimental)": "SDL 3 (experimental)",
       "Legacy (evdev / HID)": "Anterior (evdev / HID)",
-      "Could not switch controller input": "Não foi possível alterar a entrada do controle"
+      "Could not switch controller input": "Não foi possível alterar a entrada do controle",
+      "Output volume while recording": "Volume de saída durante a gravação",
+      Unchanged: Unchanged$6,
+      Mute: Mute$6,
+      "Could not update recording volume": "Não foi possível atualizar o volume de gravação"
     };
 
     var Back$5 = "Wstecz";
@@ -1597,6 +1621,8 @@
     var Parakeet$5 = "Parakeet";
     var Whisper$5 = "Whisper";
     var V3$5 = "V3";
+    var Unchanged$5 = "Bez zmian";
+    var Mute$5 = "Wycisz";
     var pl = {
       Back: Back$5,
       Enable: Enable$5,
@@ -1871,7 +1897,11 @@
       "Controller input (test build)": "Wejście kontrolera (wersja testowa)",
       "SDL 3 (experimental)": "SDL 3 (eksperymentalne)",
       "Legacy (evdev / HID)": "Dotychczasowe (evdev / HID)",
-      "Could not switch controller input": "Nie udało się zmienić wejścia kontrolera"
+      "Could not switch controller input": "Nie udało się zmienić wejścia kontrolera",
+      "Output volume while recording": "Głośność wyjścia podczas nagrywania",
+      Unchanged: Unchanged$5,
+      Mute: Mute$5,
+      "Could not update recording volume": "Nie udało się zmienić głośności nagrywania"
     };
 
     var Back$4 = "뒤로";
@@ -1915,6 +1945,8 @@
     var Parakeet$4 = "Parakeet";
     var Whisper$4 = "Whisper";
     var V3$4 = "V3";
+    var Unchanged$4 = "변경 없음";
+    var Mute$4 = "음소거";
     var ko = {
       Back: Back$4,
       Enable: Enable$4,
@@ -2189,7 +2221,11 @@
       "Controller input (test build)": "컨트롤러 입력 (테스트 빌드)",
       "SDL 3 (experimental)": "SDL 3 (실험적)",
       "Legacy (evdev / HID)": "기존 방식 (evdev / HID)",
-      "Could not switch controller input": "컨트롤러 입력을 전환하지 못했습니다"
+      "Could not switch controller input": "컨트롤러 입력을 전환하지 못했습니다",
+      "Output volume while recording": "녹음 중 출력 볼륨",
+      Unchanged: Unchanged$4,
+      Mute: Mute$4,
+      "Could not update recording volume": "녹음 중 볼륨을 변경하지 못했습니다"
     };
 
     var Back$3 = "戻る";
@@ -2233,6 +2269,8 @@
     var Parakeet$3 = "Parakeet";
     var Whisper$3 = "Whisper";
     var V3$3 = "V3";
+    var Unchanged$3 = "変更しない";
+    var Mute$3 = "ミュート";
     var ja = {
       Back: Back$3,
       Enable: Enable$3,
@@ -2507,7 +2545,11 @@
       "Controller input (test build)": "コントローラー入力（テスト版）",
       "SDL 3 (experimental)": "SDL 3（実験的）",
       "Legacy (evdev / HID)": "従来方式（evdev / HID）",
-      "Could not switch controller input": "コントローラー入力を切り替えられませんでした"
+      "Could not switch controller input": "コントローラー入力を切り替えられませんでした",
+      "Output volume while recording": "録音中の出力音量",
+      Unchanged: Unchanged$3,
+      Mute: Mute$3,
+      "Could not update recording volume": "録音中の音量を更新できませんでした"
     };
 
     var Back$2 = "Zurück";
@@ -2551,6 +2593,8 @@
     var Parakeet$2 = "Parakeet";
     var Whisper$2 = "Whisper";
     var V3$2 = "V3";
+    var Unchanged$2 = "Unverändert";
+    var Mute$2 = "Stumm";
     var de = {
       Back: Back$2,
       Enable: Enable$2,
@@ -2825,7 +2869,11 @@
       "Controller input (test build)": "Controller-Eingabe (Testversion)",
       "SDL 3 (experimental)": "SDL 3 (experimentell)",
       "Legacy (evdev / HID)": "Bisherige Eingabe (evdev / HID)",
-      "Could not switch controller input": "Controller-Eingabe konnte nicht gewechselt werden"
+      "Could not switch controller input": "Controller-Eingabe konnte nicht gewechselt werden",
+      "Output volume while recording": "Ausgabelautstärke während der Aufnahme",
+      Unchanged: Unchanged$2,
+      Mute: Mute$2,
+      "Could not update recording volume": "Aufnahmelautstärke konnte nicht aktualisiert werden"
     };
 
     var Back$1 = "Retour";
@@ -2869,6 +2917,8 @@
     var Parakeet$1 = "Parakeet";
     var Whisper$1 = "Whisper";
     var V3$1 = "V3";
+    var Unchanged$1 = "Inchangé";
+    var Mute$1 = "Couper le son";
     var fr = {
       Back: Back$1,
       Enable: Enable$1,
@@ -3143,7 +3193,11 @@
       "Controller input (test build)": "Entrée manette (version de test)",
       "SDL 3 (experimental)": "SDL 3 (expérimental)",
       "Legacy (evdev / HID)": "Ancien système (evdev / HID)",
-      "Could not switch controller input": "Impossible de changer l’entrée manette"
+      "Could not switch controller input": "Impossible de changer l’entrée manette",
+      "Output volume while recording": "Volume de sortie pendant l’enregistrement",
+      Unchanged: Unchanged$1,
+      Mute: Mute$1,
+      "Could not update recording volume": "Impossible de modifier le volume pendant l’enregistrement"
     };
 
     var Back = "返回";
@@ -3187,6 +3241,8 @@
     var Parakeet = "Parakeet";
     var Whisper = "Whisper";
     var V3 = "V3";
+    var Unchanged = "保持不变";
+    var Mute = "静音";
     var zh = {
       Back: Back,
       Enable: Enable,
@@ -3461,7 +3517,11 @@
       "Controller input (test build)": "控制器输入（测试版本）",
       "SDL 3 (experimental)": "SDL 3（实验性）",
       "Legacy (evdev / HID)": "旧版（evdev / HID）",
-      "Could not switch controller input": "无法切换控制器输入"
+      "Could not switch controller input": "无法切换控制器输入",
+      "Output volume while recording": "录音时的输出音量",
+      Unchanged: Unchanged,
+      Mute: Mute,
+      "Could not update recording volume": "无法更新录音音量"
     };
 
     const catalogs = { en: en$1, es, ru, pt, pl, ko, ja, de, fr, zh };
@@ -4483,6 +4543,7 @@
     const setRememberLastChannelRpc = callable("set_remember_last_channel");
     const setShareDiagnosticsRpc = callable("set_share_diagnostics");
     const setRecordingIndicatorRpc = callable("set_recording_indicator");
+    const setRecordingVolumeRpc = callable("set_recording_volume");
     const setHapticFeedbackRpc = callable("set_haptic_feedback");
     const setActivePresetRpc = callable("set_active_preset");
     const setModelSizeRpc = callable("set_model_size");
@@ -4773,6 +4834,7 @@
         const [controllerComboSupported, setControllerComboSupported] = React.useState(true);
         const [buttons, setButtons] = React.useState(["L1", "R1"]);
         const [recordingIndicator, setRecordingIndicator] = React.useState("toast");
+        const [recordingVolume, setRecordingVolume] = React.useState("off");
         const [hapticFeedback, setHapticFeedback] = React.useState(false);
         const [activePreset, setActivePreset] = React.useState("wow");
         const [presets, setPresets] = React.useState([]);
@@ -4977,6 +5039,7 @@
                         }
                         const indicator = config.recordingIndicator || (config.showNotifications === false ? "none" : "toast");
                         setRecordingIndicator(indicator);
+                        setRecordingVolume(config.recordingVolume === "mute" ? "mute" : "off");
                         logic.recordingIndicator = indicator;
                         if (config.hapticFeedback !== undefined) {
                             setHapticFeedback(config.hapticFeedback);
@@ -5638,6 +5701,20 @@
                                     }
                                 } }))),
                     React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Feedback") },
+                        React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: t("Output volume while recording"), menuLabel: t("Output volume while recording"), rgOptions: [{ data: "off", label: t("Unchanged") }, { data: "mute", label: t("Mute") }], selectedOption: recordingVolume, onChange: async (option) => {
+                                    try {
+                                        const mode = option.data;
+                                        const result = await setRecordingVolumeRpc(mode);
+                                        if (result.success)
+                                            setRecordingVolume(mode);
+                                        else
+                                            setRpcError(result.error || t("Could not update recording volume"));
+                                    }
+                                    catch (error) {
+                                        setRpcError(String(error));
+                                    }
+                                } })),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: t("Recording cue"), menuLabel: t("Recording cue"), rgOptions: [{ data: "toast", label: t("Toast") }, { data: "overlay", label: t("Overlay") }, { data: "none", label: t("None") }], selectedOption: recordingIndicator, onChange: async (option) => { const mode = option.data; setRecordingIndicator(mode); logic.recordingIndicator = mode; const result = await setRecordingIndicatorRpc(mode); if (!result.success)
                                     setRpcError(result.error || t("Could not update recording cue")); } })),

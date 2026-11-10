@@ -38,9 +38,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - run: node scripts/release-version.mjs check
-      - run: node --test cloudflare/tests/*.test.js
-      - run: sudo apt-get update -qq && sudo apt-get install -y libwayland-dev libwayland-bin libudev-dev libusb-1.0-0-dev
+      - run: sudo apt-get update -qq && sudo apt-get install -y libwayland-dev libwayland-bin
+      - run: pip install pytest sentry-sdk==2.66.0 certifi==2026.1.4
+      - run: pytest tests/ --ignore=tests/test_gamepad_sdl.py -v
+      - run: python -m py_compile main.py backend/src/decktation_backend.py backend/src/plugin_update.py backend/src/wow_voice_chat.py backend/src/parakeet_server.py backend/src/controller_listener.py backend/src/deck_hid.py backend/src/gamepad_evdev.py backend/src/telemetry.py backend/src/haptic_feedback.py
+
+  sdl-test:
+    name: SDL virtual controller tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: sudo apt-get update -qq && sudo apt-get install -y libudev-dev libusb-1.0-0-dev
       - name: Build pinned SDL for virtual controller tests
         run: |
           SDL_COMMIT="$(sed -n 's/^ARG SDL_COMMIT=//p' backend/Dockerfile)"
@@ -55,13 +66,20 @@ jobs:
           cmake --build /tmp/sdl-build -j2
           echo 'DECKTATION_TEST_SDL_LIBRARY=/tmp/sdl-build/libSDL3.so.0' >> "$GITHUB_ENV"
       - run: pip install pytest sentry-sdk==2.66.0 certifi==2026.1.4
-      - run: pytest tests/ -v
+      - run: pytest tests/test_gamepad_sdl.py -v
+
+  javascript-test:
+    name: Frontend, Worker, and version checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - run: node scripts/release-version.mjs check
+      - run: node --test cloudflare/tests/*.test.js
       - run: npm install --ignore-scripts
       - run: npm run test:update
-      - run: python -m py_compile main.py backend/src/decktation_backend.py backend/src/plugin_update.py backend/src/wow_voice_chat.py backend/src/parakeet_server.py backend/src/controller_listener.py backend/src/deck_hid.py backend/src/gamepad_evdev.py backend/src/telemetry.py backend/src/haptic_feedback.py
 
   build:
     runs-on: ubuntu-latest

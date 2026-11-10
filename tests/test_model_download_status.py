@@ -296,6 +296,10 @@ def test_model_load_rejects_active_recording(monkeypatch):
 @pytest.mark.parametrize("length", [None, "invalid", "600000"])
 def test_download_reports_real_bytes_with_optional_total(monkeypatch, tmp_path, length):
     import io
+    # Use exactly representable timestamps: real monotonic values can round
+    # a simulated 15-second difference just below 15 before int() truncation.
+    clock = SimpleNamespace(now=1000.0)
+    monkeypatch.setattr(wow_voice_chat.time, "monotonic", lambda: clock.now)
     payload = b"x" * 600000
     class Response(io.BytesIO):
         headers = {} if length is None else {"Content-Length": length}
@@ -312,7 +316,7 @@ def test_download_reports_real_bytes_with_optional_total(monkeypatch, tmp_path, 
     assert [item["received"] for item in observations] == [0, 262144, 524288, 600000]
     assert observations[-1]["total"] == (600000 if length == "600000" else None)
     assert observations[-1]["seconds_since_data"] == 0
-    monkeypatch.setattr(wow_voice_chat.time, "monotonic", lambda: service.model_download["updated"] + 15)
+    clock.now += 15.0
     assert service.model_download_status()["seconds_since_data"] == 15
     service.model_stage = "idle"
     assert service.model_download_status() is None
