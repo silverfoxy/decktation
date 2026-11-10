@@ -5,6 +5,7 @@ Never execute a candidate's files here. PR ZIPs are immutable by run ID;
 only trusted default-branch publisher code writes the catalog.
 """
 import argparse
+from datetime import datetime, timezone
 import hashlib
 import importlib.util
 import json
@@ -21,6 +22,7 @@ HELPERS = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(HELPERS)
 STORE = HELPERS.STORE
 SHA_RE = HELPERS.SHA_RE
+PR_ARTIFACT_BASE = 'https://decktation.com'
 
 
 def fetch_open_prs(repository, token):
@@ -62,10 +64,10 @@ def verified_pr_version(root, number, run_id, attempt, sha, repository, base_url
     folder = root / 'pulls' / str(number) / str(run_id) / str(attempt)
     artifact = folder / 'Decktation.zip'
     metadata = folder / 'metadata.json'
-    if (not artifact.is_file() or not metadata.is_file() or artifact.is_symlink() or
+    if (not metadata.is_file() or artifact.is_symlink() or
             metadata.is_symlink() or folder.is_symlink() or folder.parent.is_symlink()):
         return None
-    expected_url = f'{base_url}/pulls/{number}/{run_id}/{attempt}/Decktation.zip'
+    expected_url = f'{PR_ARTIFACT_BASE}/pulls/{number}/{run_id}/{attempt}/Decktation.zip'
     try:
         data = json.loads(metadata.read_text(encoding='utf-8'))
         if (data.get('channel') != 'pull_request' or data.get('number') != number or
@@ -73,6 +75,17 @@ def verified_pr_version(root, number, run_id, attempt, sha, repository, base_url
                 data.get('commit') != sha or
                 data.get('head_repository') != repository or data.get('zip_url') != expected_url):
             return None
+        if 'artifact_id' in data:
+            version = data.get('version')
+            if (type(data['artifact_id']) is not int or data['artifact_id'] <= 0 or
+                    type(data.get('size_in_bytes')) is not int or
+                    not 0 < data['size_in_bytes'] <= 512 * 1024 * 1024 or
+                    not isinstance(version, str) or not STORE.SEMVER_RE.fullmatch(version) or
+                    not version.endswith(f'.pr-{number}.{sha[:7]}') or
+                    not re.fullmatch(r'[0-9a-f]{64}', data.get('sha256', '')) or
+                    datetime.fromisoformat(data['expires_at'].replace('Z', '+00:00')) <= datetime.now(timezone.utc)):
+                return None
+            return {'name': version, 'hash': data['sha256'], 'artifact': expected_url}
         with zipfile.ZipFile(artifact) as archive:
             members = archive.infolist()
             names = [member.filename for member in members]
