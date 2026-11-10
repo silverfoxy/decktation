@@ -41,15 +41,51 @@ def sdl():
     reader.close()
 
 
-def attach(reader):
+def attach(reader, rumble=None):
     desc = VirtualDesc(version=c.sizeof(VirtualDesc), type=1, vendor=0x1234,
                        product=0x5678, axes=6, buttons=21,
                        button_mask=(1 << 21) - 1, axis_mask=63, name=b'Decktation test gamepad')
+    if rumble is not None:
+        desc.callbacks[3] = c.cast(rumble, c.c_void_p)
     instance = reader.lib.SDL_AttachVirtualJoystick(c.byref(desc))
     assert instance
     reader.poll()
     path = f'sdl:{instance}'
     return path, reader.devices[path]
+
+
+def test_haptic_requests_route_to_owner_and_reject_stale_sessions(sdl, tmp_path):
+    import time
+    from binding_capture import write_json
+    pulses = []
+    callback_type = c.CFUNCTYPE(c.c_bool, c.c_void_p, c.c_uint16, c.c_uint16)
+    callback = callback_type(lambda _, low, high: pulses.append((low, high)) or True)
+    path, pad = attach(sdl, callback)
+    other, _ = attach(sdl)
+    request_file = tmp_path / 'haptics.json'
+    request = {'id': 'start', 'session': sdl.session, 'path': path,
+               'time': time.time(), 'speed': 45000, 'duration_ms': 150}
+    write_json(request_file, request)
+    sdl.update_haptics(request_file)
+    assert pulses[-1] == (45000, 45000)
+    count = len(pulses)
+    sdl.update_haptics(request_file)
+    assert len(pulses) == count  # The same request is not replayed every pump.
+    for invalid in ({'session': 'old-listener'}, {'time': time.time() - 2},
+                    {'time': time.time() + 2}, {'duration_ms': 1000},
+                    {'path': 'sdl:missing'}, {'speed': -1}):
+        write_json(request_file, {**request, 'id': str(invalid), **invalid})
+        sdl.update_haptics(request_file)
+        assert len(pulses) == count
+    write_json(request_file, {**request, 'id': 'stop', 'speed': 0, 'duration_ms': 0})
+    sdl.update_haptics(request_file)
+    assert pulses[-1] == (0, 0)
+    assert sdl.lib.SDL_DetachVirtualJoystick(pad.instance)
+    count = len(pulses)
+    write_json(request_file, {**request, 'id': 'disconnected'})
+    sdl.update_haptics(request_file)
+    assert len(pulses) == count
+    assert other in sdl.devices  # Never redirect to another connected pad.
 
 
 def test_virtual_buttons_triggers_capabilities_and_disconnect(sdl):

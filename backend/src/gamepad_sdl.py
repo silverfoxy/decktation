@@ -1,11 +1,17 @@
 """SDL 3 gamepad input for the experimental controller listener.
 
 Only joystick/gamepad subsystems are initialized: no window, keyboard capture,
-exclusive grab, sensor enablement, or rumble. Keep SDL calls on the listener's
+exclusive grab, or sensor enablement. Keep SDL calls on the listener's
 main thread. ctypes uses SDL's public SDL3 ABI; no Python wheel is required.
 """
 import ctypes as c
 import os
+import time
+import uuid
+
+from binding_capture import read_json
+
+HAPTIC_REQUEST_FILE = '/tmp/decktation_sdl_haptic.json'
 
 BUTTONS = dict(enumerate((
     'A', 'B', 'X', 'Y', 'View', None, 'Menu', 'L3', 'R3', 'L1', 'R1',
@@ -52,6 +58,7 @@ def load_sdl(path=None):
         'SDL_OpenGamepad': (c.c_void_p, [c.c_uint32]),
         'SDL_CloseGamepad': (None, [c.c_void_p]),
         'SDL_GamepadConnected': (c.c_bool, [c.c_void_p]),
+        'SDL_RumbleGamepad': (c.c_bool, [c.c_void_p, c.c_uint16, c.c_uint16, c.c_uint32]),
         'SDL_GamepadHasButton': (c.c_bool, [c.c_void_p, c.c_int]),
         'SDL_GamepadHasAxis': (c.c_bool, [c.c_void_p, c.c_int]),
         'SDL_GetGamepadButton': (c.c_bool, [c.c_void_p, c.c_int]),
@@ -97,6 +104,7 @@ class SdlGamepad:
 
     def close(self):
         if self.handle:
+            self.lib.SDL_RumbleGamepad(self.handle, 0, 0, 0)
             self.lib.SDL_CloseGamepad(self.handle)
             self.handle = None
 
@@ -107,6 +115,10 @@ class SdlInput:
         self.lib = lib if lib is not None else load_sdl()
         self.devices = {}
         self.open_failed = set()
+        # Instance IDs can be reused after a listener restart. Never replay a
+        # request from an earlier listener against a different controller.
+        self.session = uuid.uuid4().hex
+        self._haptic_request = None
         self.lib.SDL_SetHint(b'SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS', b'1')
         # No window or video initialization. Joystick is implied by GAMEPAD.
         if not self.lib.SDL_Init(0x00002000):
@@ -165,6 +177,32 @@ class SdlInput:
                 pad._states[name] = down
                 frames.append((path, pad.states()))
         return frames
+
+    def update_haptics(self, request_file=HAPTIC_REQUEST_FILE):
+        request = read_json(request_file)
+        if not isinstance(request, dict):
+            return
+        request_id = request.get('id')
+        if not request_id or request_id == self._haptic_request:
+            return
+        self._haptic_request = request_id
+        if request.get('session') != self.session:
+            return
+        sent = request.get('time')
+        if not isinstance(sent, (int, float)) or not 0 <= time.time() - sent <= 0.5:
+            return
+        path = request.get('path')
+        if not isinstance(path, str):
+            return
+        pad = self.devices.get(path)
+        speed, duration = request.get('speed'), request.get('duration_ms')
+        if (pad is None or not pad.handle or not self.lib.SDL_GamepadConnected(pad.handle)
+                or type(speed) is not int or not 0 <= speed <= 65535
+                or type(duration) is not int or not 0 <= duration <= 150
+                or (speed > 0 and duration == 0)):
+            return
+        if not self.lib.SDL_RumbleGamepad(pad.handle, speed, speed, duration):
+            print(f'SDL haptic feedback unavailable: {self.lib.SDL_GetError()!r}', flush=True)
 
     def remove(self, path):
         self.devices.pop(path).close()

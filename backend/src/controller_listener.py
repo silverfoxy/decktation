@@ -380,6 +380,7 @@ def main():
         if path not in details:
             return None
         return {'path': path, 'kind': devices[path][1],
+                'sdl_session': sdl.session if sdl is not None else None,
                 'identity': {key: details[path].get(key) for key in
                              ('bus', 'vendor_id', 'product_id')},
                 'time': time.time()}
@@ -503,6 +504,7 @@ def main():
                         details[path]['input_received'] = True
                         diagnostic('first_input', affected_controller=details[path])
                     publish(path, states, 'sdl_gamepad')
+                sdl.update_haptics()
             if time.monotonic() >= next_scan:
                 candidates = ({path: 'sdl_gamepad' for path in devices} if sdl is not None
                               else dict(find_hidraw()))

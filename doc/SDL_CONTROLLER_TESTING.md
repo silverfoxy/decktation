@@ -13,8 +13,10 @@ half-pull triggers, supported paddles mapped to L4/R4/L5/R5, and the standard
 touchpad click mapped to Right Trackpad. Guide/Steam/QAM and other miscellaneous
 buttons are not bindable. A separate Left Trackpad click is not represented by
 SDL's standard mapping. Existing bindings are preserved; recapture them if the
-selected controller does not expose the required controls. Rumble cues are not
-implemented for SDL sources in this experiment; use the visual recording cue.
+selected controller does not expose the required controls. With haptic feedback
+enabled, SDL sends a short recording-start pulse and a double recording-stop
+pulse to the gamepad that started dictation. The controller and its SDL driver
+must support rumble; unsupported devices keep the visual recording cue.
 
 SDL is initialized without video or audio and with background input enabled.
 Some SDL HID drivers configure devices on opening. Coexistence with Steam and
@@ -45,6 +47,10 @@ Legion Go, Legion Go 2, Legion Go S, Steam Deck LCD/OLED, and external controlle
    a recording, pending draft, binding capture, or diagnostic capture.
 6. Test controller reconnect and sleep/resume. Confirm controls are released
    after a disconnect and push-to-talk works again after reconnect/resume.
+7. Enable haptic feedback. Check one pulse at recording start and two at stop.
+   With two controllers connected, confirm only the controller starting the
+   recording vibrates. Disable feedback and confirm the cues stop. Disconnect
+   during a cue, reconnect, and confirm old cues do not replay.
 
 Keep the runtime log from this same session. SDL startup logs its numeric
 version; controller reports include `input_backend: sdl`, numeric gamepad type,
@@ -59,7 +65,7 @@ and passive in-game access remain experimental.
 ## Development checks
 
 `tests/test_gamepad_sdl.py` uses SDL virtual gamepads to exercise the actual C
-ABI, button/trigger events, rapid press/release pairs, reconnection, and scrubbed
+ABI, button/trigger events, rapid press/release pairs, rumble routing, reconnection, and scrubbed
 reports without controller hardware. It skips when SDL is unavailable locally;
 CI builds the pinned dependency and sets `DECKTATION_TEST_SDL_LIBRARY`, making
 library-load errors fail the tests. The Decky builder also initializes the
