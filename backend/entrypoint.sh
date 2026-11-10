@@ -61,7 +61,8 @@ cp /xclip-src/COPYING out/licenses/xclip-GPL-2.0.txt
 cp /portaudio-src/LICENSE.txt out/licenses/portaudio-MIT.txt
 
 # Validate imports with the shipped interpreter, not the builder or Decky's Python.
-out/runtime/bin/python3.11 -I - <<'CHECK'
+# Match the native library search path used by the Parakeet subprocess.
+LD_LIBRARY_PATH="/backend/out/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" out/runtime/bin/python3.11 -I - <<'CHECK'
 import sys
 import ctypes.util
 sys.path.insert(0, '/backend/out/python')
