@@ -14,6 +14,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Fixed
 
+- Remove branch/master packages from Pages and publish PR test builds only.
+  Pages uploads now contain metadata and download pages, with no plugin ZIPs.
+- Preserve each build publication when deployments queue, while coalescing only
+  Pages deployments after metadata has been committed.
+
 - Keep PR test packages in GitHub Actions artifacts instead of duplicating them
   on Pages, with public downloads through the Worker and expiry-aware listings.
 - Deploy the exact uploaded Pages artifact when rerunning a publisher workflow.

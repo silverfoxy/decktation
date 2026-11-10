@@ -5,11 +5,11 @@ The existing `decktation` Worker serves the public site at
 `https://decktation.com/plugins.json`, and handles public download URLs.
 
 Astro builds `site/` into static landing assets bundled with the Worker.
-The Worker fetches the download list at `/downloads/`, branch/release pages,
-metadata, and catalogs from the existing GitHub Pages origin. Stable ZIP URLs
-redirect to GitHub Releases; branch ZIPs redirect to Pages. Pages retains at most
-512 MiB of content, primarily branch previews, and removes release/PR ZIP copies.
-PR ZIPs use Actions artifacts through the [download route](#pr-artifact-downloads).
+The Worker fetches the download list, release metadata, and catalogs from the
+existing GitHub Pages origin. Stable ZIP URLs redirect to GitHub Releases; PR
+ZIPs use Actions artifacts through the [download route](#pr-artifact-downloads).
+Pages contains only small metadata and HTML files (an 8 MiB budget), with no
+plugin ZIP copies. Branch/master previews are no longer publicly published.
 The GitHub Pages custom-domain setting must remain empty to prevent redirects
 back to the Worker. Cloudflare Pages is not required. See the complete
 [domain setup and deployment order](DOMAIN_SETUP.md).
@@ -122,8 +122,7 @@ or a misconfigured GitHub Pages custom domain.
 
 PR ZIPs remain in GitHub Actions (30-day retention). The trusted publisher checks
 package structure, PR/head identity, raw ZIP SHA-256, artifact digest, source run,
-size and expiration, then writes only metadata to Pages. Stable and branch
-hosting are unchanged. The public PR URL redirects to a short-lived signed
+size and expiration, then writes only metadata to Pages. Stable packages remain in GitHub Releases; branch previews are retired. The public PR URL redirects to a short-lived signed
 GitHub blob URL, so download bytes, HEAD and Range requests go directly to GitHub.
 The Worker never forwards its GitHub token to the blob host.
 

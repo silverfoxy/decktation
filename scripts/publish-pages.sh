@@ -29,15 +29,15 @@ if [ "$CLEANUP_ONLY" != "true" ]; then
   : "${BUILD_SHA:?BUILD_SHA is required}"
   : "${REF_NAME:?REF_NAME is required}"
   : "${REF_TYPE:?REF_TYPE is required}"
+  if [ "$REF_TYPE" != "tag" ] && [ "$REF_TYPE" != "pull_request" ]; then
+    echo "Only releases and PR builds are published" >&2
+    exit 1
+  fi
   if [ "$REF_TYPE" = "pull_request" ]; then
     [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ && "$PR_RUN_ID" =~ ^[1-9][0-9]*$ && "$PR_RUN_ATTEMPT" =~ ^[1-9][0-9]*$ ]] || exit 1
     [ -n "$PR_HEAD_REPO" ] || exit 1
   fi
 fi
-
-normalize_ref() {
-  python3 "$WORKSPACE_DIR/scripts/branch-slug.py" "$1"
-}
 
 encode_url_path() {
   python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe="/"))' "$1"
@@ -197,67 +197,6 @@ render_index_list() {
   printf '</ul></section>\n'
 }
 
-cleanup_deleted_branch_dirs() {
-  local branches_dir="$PAGES_DIR/branches"
-  local remote_heads
-  local normalized_heads
-
-  mkdir -p "$branches_dir"
-  remote_heads="$(git -C "$PAGES_DIR" ls-remote --heads origin)"
-  normalized_heads="$(
-    printf '%s\n' "$remote_heads" | while read -r _ ref; do
-      normalize_ref "${ref#refs/heads/}"
-    done
-  )"
-
-  find "$branches_dir" -mindepth 1 -maxdepth 1 -type d | while read -r branch_dir; do
-    local branch_key
-    branch_key="$(basename "$branch_dir")"
-    if ! printf '%s\n' "$normalized_heads" | grep -Fxq "$branch_key"; then
-      rm -rf "$branch_dir"
-    fi
-  done
-}
-
-refresh_branch_pages() {
-  local branches_dir="$PAGES_DIR/branches"
-  [ -d "$branches_dir" ] || return 0
-
-  find "$branches_dir" -mindepth 2 -maxdepth 2 -type f -name metadata.json -print | while read -r metadata; do
-    local relative_dir
-    relative_dir="$(dirname "${metadata#"$PAGES_DIR"/}")"
-    local url_dir
-    url_dir="$(encode_url_path "$relative_dir")"
-    # Also repair existing branch downloads when publishing another branch.
-    local download_dir
-    download_dir="$(dirname "$metadata")"
-    if [ -f "$download_dir/decktation.zip" ]; then
-      cp "$download_dir/decktation.zip" "$download_dir/Decktation.zip"
-    fi
-    local zip_url="$PAGES_BASE_URL/$url_dir/Decktation.zip"
-    local metadata_url="$PAGES_BASE_URL/$url_dir/metadata.json"
-    local branch_name
-    branch_name="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["ref"])' "$metadata")"
-
-    python3 - "$metadata" "$zip_url" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-metadata_path = Path(sys.argv[1])
-data = json.loads(metadata_path.read_text())
-data["zip_url"] = sys.argv[2]
-metadata_path.write_text(json.dumps(data, indent=2) + "\n")
-PY
-
-    write_download_page \
-      "$(dirname "$metadata")/index.html" \
-      "Decktation branch build: $branch_name" \
-      "$zip_url" \
-      "$metadata_url"
-  done
-}
-
 checkout_pages_branch() {
   git clone --depth 1 --branch gh-pages \
     "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
@@ -270,44 +209,6 @@ checkout_pages_branch() {
     git rm -rf . >/dev/null 2>&1 || true
     cd - >/dev/null
   }
-}
-
-migrate_branch_dirs() {
-  python3 - "$PAGES_DIR/branches" "$WORKSPACE_DIR/scripts/branch-slug.py" <<'PY_MIGRATE'
-import importlib.util, json, sys
-from pathlib import Path
-root = Path(sys.argv[1])
-spec = importlib.util.spec_from_file_location("branch_slug", sys.argv[2])
-module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(module)
-planned = {}
-for metadata in sorted(root.glob("*/metadata.json")):
-    ref = json.loads(metadata.read_text())["ref"]
-    slug = module.branch_slug(ref)
-    if slug in planned and planned[slug][1] != ref:
-        raise SystemExit(f"Branch URL collision: {ref} and {planned[slug][1]}")
-    planned[slug] = (metadata.parent, ref)
-for slug, (source, ref) in planned.items():
-    target = root / slug
-    if source != target:
-        if target.exists():
-            raise SystemExit(f"Migration target already exists: {target}")
-        source.rename(target)
-PY_MIGRATE
-}
-
-assert_branch_target_available() {
-  local branch_key="$1"
-  local metadata="$PAGES_DIR/branches/$branch_key/metadata.json"
-  if [ ! -f "$metadata" ]; then
-    return
-  fi
-  local existing_ref
-  existing_ref="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["ref"])' "$metadata")"
-  if [ "$existing_ref" != "$REF_NAME" ]; then
-    echo "Branch URL collision: $REF_NAME and $existing_ref both use $branch_key" >&2
-    exit 1
-  fi
 }
 
 assert_release_is_not_older() {
@@ -344,32 +245,6 @@ render_pages_content() {
     render_pr_content
   fi
   assert_release_is_not_older
-  migrate_branch_dirs
-  if [ "$CLEANUP_ONLY" != "true" ] && [ "$REF_TYPE" = "branch" ]; then
-    local branch_key
-    branch_key="$(normalize_ref "$REF_NAME")"
-    assert_branch_target_available "$branch_key"
-    local branch_url_path
-    branch_url_path="$(encode_url_path "branches/$branch_key")"
-    local zip_url="$PAGES_BASE_URL/$branch_url_path/Decktation.zip"
-    local metadata_url="$PAGES_BASE_URL/$branch_url_path/metadata.json"
-    mkdir -p "$PAGES_DIR/branches/$branch_key"
-    cp "$ZIP_SOURCE" "$PAGES_DIR/branches/$branch_key/Decktation.zip"
-    write_metadata \
-      "$PAGES_DIR/branches/$branch_key/metadata.json" \
-      "branch" \
-      "$REF_NAME" \
-      "$zip_url"
-    write_download_page \
-      "$PAGES_DIR/branches/$branch_key/index.html" \
-      "Decktation branch build: $REF_NAME" \
-      "$zip_url" \
-      "$metadata_url"
-  fi
-
-  cleanup_deleted_branch_dirs
-  refresh_branch_pages
-
   if [ "$CLEANUP_ONLY" != "true" ] && [ "$REF_TYPE" = "tag" ]; then
     mkdir -p "$PAGES_DIR/releases/$RELEASE_TAG" "$PAGES_DIR/releases/latest" \
       "$PAGES_DIR/store"
@@ -395,13 +270,9 @@ render_pages_content() {
       "$PAGES_BASE_URL/releases/latest/metadata.json"
   fi
 
-  if [ "$CLEANUP_ONLY" != "true" ] && { [ "$REF_TYPE" = "tag" ] || [ "$REF_NAME" = "master" ]; }; then
+  if [ "$CLEANUP_ONLY" != "true" ] && [ "$REF_TYPE" = "tag" ]; then
     local catalog_artifact_url
-    if [ "$REF_TYPE" = "tag" ]; then
-      catalog_artifact_url="https://github.com/$GITHUB_REPOSITORY/releases/download/$RELEASE_TAG/decktation.zip"
-    else
-      catalog_artifact_url="$PAGES_BASE_URL/branches/master/Decktation.zip"
-    fi
+    catalog_artifact_url="https://github.com/$GITHUB_REPOSITORY/releases/download/$RELEASE_TAG/decktation.zip"
     mkdir -p "$PAGES_DIR/store"
     local catalog_plugin_manifest="$WORKSPACE_DIR/plugin.json"
     local catalog_package_manifest="$WORKSPACE_DIR/package.json"
@@ -427,7 +298,7 @@ render_pages_content() {
   fi
 
   python3 "$WORKSPACE_DIR/scripts/compact-pages.py" "$PAGES_DIR" \
-    --repository "$GITHUB_REPOSITORY" --current-branch "$REF_NAME"
+    --repository "$GITHUB_REPOSITORY"
 
   mkdir -p "$PAGES_DIR/downloads"
   cat >"$PAGES_DIR/downloads/index.html" <<EOF
@@ -523,11 +394,10 @@ render_pages_content() {
         <p><strong>Short install URL</strong><br><a href="${PAGES_BASE_URL}/Decktation.zip">${PAGES_BASE_URL}/Decktation.zip</a></p>
         <p><strong>Latest release ZIP</strong><br><code>${PAGES_BASE_URL}/releases/latest/Decktation.zip</code></p>
         <p><strong>Decky Custom Store URL</strong><br><a href="https://decktation.com/plugins.json">https://decktation.com/plugins.json</a></p>
-        <p><strong>Branch ZIP pattern</strong><br><code>${PAGES_BASE_URL}/branches/&lt;branch-slug&gt;/Decktation.zip</code></p>
+        <p><strong>PR testing store</strong><br><code>${PAGES_BASE_URL}/testing/plugins.json</code></p>
       </div>
     </div>
     $(render_index_list "$PAGES_DIR/releases" "Releases" "$PAGES_BASE_URL")
-    $(render_index_list "$PAGES_DIR/branches" "Branches" "$PAGES_BASE_URL")
   </main>
 </body>
 </html>
@@ -595,19 +465,6 @@ publish_pages() (
     git add store/testing/plugins.json
     if ! git diff --cached --quiet; then
       git commit -m "Reconcile test catalog after PR moved"
-      git push origin gh-pages
-    fi
-  fi
-  # A ref may move between the pre-push check and the gh-pages push. Remove
-  # its catalog entry promptly; Decky also verifies the pinned ZIP hash.
-  if [ "$CLEANUP_ONLY" != "true" ] && [ "$REF_TYPE" = "branch" ] && \
-     ! bash "$WORKSPACE_DIR/scripts/verify-current-ref.sh" \
-       "https://github.com/${GITHUB_REPOSITORY}.git" "$REF_TYPE" "$REF_NAME" "$BUILD_SHA"; then
-    echo "Ref moved during publication; reconciling test catalog" >&2
-    refresh_testing_catalog
-    git add store/testing/plugins.json
-    if ! git diff --cached --quiet; then
-      git commit -m "Reconcile test catalog after branch moved"
       git push origin gh-pages
     fi
   fi

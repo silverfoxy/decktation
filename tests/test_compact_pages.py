@@ -35,25 +35,20 @@ def test_release_migration_preserves_hashes_and_pins_latest_metadata(tmp_path):
     assert not list(tmp_path.rglob("*.zip"))
     versions = json.loads(catalog.read_text())[0]["versions"]
     assert versions[0] == {"name": "0.3.20", "hash": "abc", "artifact": target.replace("/Decktation.zip", "/decktation.zip")}
-    assert versions[1]["artifact"] == "https://example.com/branch.zip"
+    assert len(versions) == 1
     before = catalog.read_bytes()
     MODULE.compact(tmp_path, "silverfoxy/decktation")
     assert catalog.read_bytes() == before
 
 
-def test_branch_budget_keeps_master_current_and_newest_then_expires_oldest(tmp_path):
-    for name, timestamp in [("master", "1"), ("current", "0"), ("old", "2"), ("new", "3")]:
+def test_all_branch_previews_are_retired_and_only_metadata_remains(tmp_path):
+    for name in ("master", "current", "old", "new"):
         directory = tmp_path / "branches" / name
-        write_metadata(directory, ref=name, generated_at=timestamp)
-        (directory / "decktation.zip").write_bytes(b"x" * 100)
+        write_metadata(directory, ref=name)
         (directory / "Decktation.zip").write_bytes(b"x" * 100)
-    branch = tmp_path / "branches"
-    one_size = 100 + (branch / "master/metadata.json").stat().st_size
-    MODULE.compact(tmp_path, "owner/repo", "current", budget=one_size * 3 + 10)
-    assert sorted(p.name for p in branch.iterdir()) == ["current", "master", "new"]
-    assert not list(branch.rglob("decktation.zip"))
-    with pytest.raises(ValueError, match="exceed"):
-        MODULE.compact(tmp_path, "owner/repo", "current", budget=1)
+    MODULE.compact(tmp_path, "owner/repo", "current")
+    assert not (tmp_path / "branches").exists()
+    assert not list(tmp_path.rglob("*.zip"))
 
 
 def test_pr_zips_are_removed_and_legacy_entries_retired(tmp_path):
