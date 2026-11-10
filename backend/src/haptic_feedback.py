@@ -9,7 +9,10 @@ import queue
 import struct
 import threading
 import time
+import uuid
 
+from binding_capture import write_json
+from gamepad_sdl import HAPTIC_REQUEST_FILE
 from controller_profiles import PROFILES_BY_KIND, find_hidraw
 from gamepad_evdev import bits, ioctl_read, EVENT
 
@@ -145,7 +148,7 @@ class HapticFeedback:
                     and isinstance(value.get('identity'), dict)
                     and isinstance(value.get('time'), (int, float))
                     and 0 <= time.time() - value['time'] <= max_age
-                    and (value.get('kind') == 'evdev_gamepad' or
+                    and (value.get('kind') in ('evdev_gamepad', 'sdl_gamepad') or
                          getattr(PROFILES_BY_KIND.get(value.get('kind')), 'feedback', None))):
                 source = value
         except (OSError, ValueError, TypeError):
@@ -225,6 +228,9 @@ class HapticFeedback:
 
     def _play(self, event, source, generation):
         kind, path = source['kind'], source['path']
+        if kind == 'sdl_gamepad':
+            self._sdl_pattern(event, source, generation)
+            return
         profile = PROFILES_BY_KIND.get(kind)
         feedback = profile.feedback if profile else None
         if feedback:
@@ -254,6 +260,37 @@ class HapticFeedback:
                 return
             self._info(f'{label}: FF_RUMBLE')
             self._evdev_pattern(ff_path, event, generation, source['identity'])
+
+    def _sdl_pattern(self, event, source, generation):
+        if not source.get('sdl_session'):
+            self._info('SDL controller session unavailable; cue skipped')
+            return
+
+        def rumble(speed, duration):
+            write_json(HAPTIC_REQUEST_FILE, {
+                'id': uuid.uuid4().hex, 'session': source['sdl_session'],
+                'path': source['path'], 'time': time.time(),
+                'speed': speed, 'duration_ms': duration,
+            })
+
+        self._info('sdl-gamepad: SDL_RumbleGamepad')
+        try:
+            for index in range(1 if event == 'started' else 2):
+                if not self._active(generation):
+                    return
+                duration = 150 if event == 'started' else 100
+                rumble(self.RUMBLE_SPEED, duration)
+                # Let disable/cancellation stop the cue promptly. SDL also
+                # bounds each pulse if the worker or IPC disappears.
+                for _ in range(duration // 25):
+                    if not self._active(generation):
+                        return
+                    time.sleep(0.025)
+                rumble(0, 0)
+                if event == 'stopped' and index == 0:
+                    time.sleep(0.075)
+        finally:
+            rumble(0, 0)
 
     def _deck_pattern(self, fd, event, generation):
         try:

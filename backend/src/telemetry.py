@@ -82,8 +82,8 @@ def _controller_details(data):
     result = {}
     for key, allowed in {
         'controller_type': {'steam_deck', 'steam_controller_wired', 'steam_controller_wireless',
-                            'xbox', 'playstation', 'nintendo', 'valve', 'generic_gamepad'},
-        'input_backend': {'evdev', 'hidraw'},
+                            'xbox', 'playstation', 'nintendo', 'valve', 'generic_gamepad', 'sdl_gamepad'},
+        'input_backend': {'evdev', 'hidraw', 'sdl'},
         'connection': {'usb', 'bluetooth', 'virtual', 'other'},
     }.items():
         value = data.get(key)
@@ -133,7 +133,7 @@ def controller_event(message):
     }
     if type(data.get('errno')) is int:
         snapshot['errno'] = data['errno']
-    if data.get('input_backend') in ('evdev', 'hidraw'):
+    if data.get('input_backend') in ('evdev', 'hidraw', 'sdl'):
         snapshot['input_backend'] = data['input_backend']
     _controller_context = snapshot
     breadcrumb('controller.' + data['event'], **snapshot)

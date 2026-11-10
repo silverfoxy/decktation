@@ -13,7 +13,7 @@ cp out/runtime/LICENSE.txt out/licenses/runtime/LICENSE.cpython.txt
 # Decky Loader entry point.
 cp src/runtime_proxy.py src/runtime_worker.py src/resident_whisper.py src/audio_runtime.py src/decktation_backend.py src/plugin_update.py src/wow_voice_chat.py src/clipboard_injection.py src/controller_listener.py src/binding_capture.py src/controller_debug_report.py src/controller_debug_session.py \
     src/haptic_feedback.py \
-    src/deck_hid.py src/gamepad_evdev.py src/legion_go_s.py src/controller_profiles.py src/telemetry.py src/convert_wow_context.py \
+    src/deck_hid.py src/gamepad_evdev.py src/gamepad_sdl.py src/legion_go_s.py src/controller_profiles.py src/telemetry.py src/convert_wow_context.py \
     src/recording_overlay.py src/recording_overlay_manager.py src/overlay_render.py src/review_gesture.py \
     src/parakeet_server.py out/
 
@@ -59,6 +59,20 @@ cp -L /portaudio-build/libportaudio.so out/lib/libportaudio.so.2
 cp /ydotool-src/LICENSE out/licenses/ydotool-AGPL-3.0.txt
 cp /xclip-src/COPYING out/licenses/xclip-GPL-2.0.txt
 cp /portaudio-src/LICENSE.txt out/licenses/portaudio-MIT.txt
+cp -L /sdl-build/libSDL3.so.0 out/lib/libSDL3.so.0
+cp /sdl-src/LICENSE.txt out/licenses/SDL3-zlib.txt
+
+# Fail the build if the controller ABI or SDL's runtime dependencies are missing.
+out/runtime/bin/python3.11 -I - <<'CHECK_SDL'
+import sys
+sys.path.insert(0, '/backend/out')
+from gamepad_sdl import SdlInput
+reader = SdlInput()
+assert reader.lib.SDL_GetVersion() == 3004018
+reader.poll()
+reader.close()
+print('Bundled SDL controller imports OK')
+CHECK_SDL
 
 # Validate imports with the shipped interpreter, not the builder or Decky's Python.
 # Match the native library search path used by the Parakeet subprocess.

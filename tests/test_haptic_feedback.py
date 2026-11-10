@@ -17,6 +17,35 @@ import wow_voice_chat
 from wow_voice_chat import WoWVoiceChat
 
 
+def test_sdl_patterns_and_disable_stop_the_same_source(monkeypatch):
+    feedback = haptic_feedback.HapticFeedback(enabled=True)
+    requests = []
+    source = {'kind': 'sdl_gamepad', 'path': 'sdl:42', 'sdl_session': 'listener'}
+    monkeypatch.setattr(haptic_feedback, 'write_json', lambda path, value: requests.append(value))
+    monkeypatch.setattr(haptic_feedback.time, 'sleep', lambda _: None)
+    feedback._play('started', source, 0)
+    assert [(r['speed'], r['duration_ms']) for r in requests] == [(45000, 150), (0, 0), (0, 0)]
+    assert all(r['path'] == 'sdl:42' and r['session'] == 'listener' for r in requests)
+    requests.clear()
+    feedback._play('stopped', source, 0)
+    assert [r['duration_ms'] for r in requests if r['speed']] == [100, 100]
+    requests.clear()
+    monkeypatch.setattr(haptic_feedback.time, 'sleep', lambda _: feedback.set_enabled(False))
+    feedback._play('started', source, 0)
+    assert [r['speed'] for r in requests] == [45000, 0]
+
+
+def test_sdl_session_is_accepted_from_recent_source(tmp_path):
+    import time
+    source = {'kind': 'sdl_gamepad', 'path': 'sdl:42', 'sdl_session': 'listener',
+              'identity': {}, 'time': time.time()}
+    path = tmp_path / 'source.json'
+    path.write_text(json.dumps(source))
+    feedback = haptic_feedback.HapticFeedback(enabled=True)
+    feedback.begin_session(path)
+    assert feedback._session == source
+
+
 def test_default_disabled_and_missing_hardware(monkeypatch):
     feedback = haptic_feedback.HapticFeedback()
     play = MagicMock()

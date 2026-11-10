@@ -29,6 +29,7 @@ class BindingCapture:
         self.previous = set()
         self.error = ''
         self.releasing = False
+        self.neutral_since = None
 
     @property
     def active(self):
@@ -41,7 +42,14 @@ class BindingCapture:
             self.phase, self.error = 'cancelled', 'Binding timed out. Your previous binding is unchanged.'
             return
         if self.phase == 'release':
-            if not any(any(states.values()) for states in sources.values()):
+            # The UI request can arrive before the input reader drains the A
+            # press that opened capture. Require a quiet release interval so
+            # that queued activation events cannot become the new binding.
+            if any(any(states.values()) for states in sources.values()):
+                self.neutral_since = None
+            elif self.neutral_since is None:
+                self.neutral_since = now
+            elif now - self.neutral_since >= 0.25:
                 self.phase = 'listening'
             return
         if self.source is None:

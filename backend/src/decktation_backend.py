@@ -171,6 +171,7 @@ if not os.path.exists(PRESETS_FILE):
     PRESETS_FILE = os.path.join(plugin_path, "defaults", "game_presets.json")
 
 DEFAULT_BUTTON_CONFIG = {
+    "controllerBackend": "sdl",
     "buttons": ["L1", "R1"],
     "showNotifications": True,
     "hapticFeedback": False,
@@ -264,12 +265,16 @@ def _read_button_config():
         config.get("recordingIndicator")
     )
     config["translateToEnglish"] = False
+    if config.get("controllerBackend") not in ("sdl", "legacy"):
+        config["controllerBackend"] = "sdl"
     return config
 
 
 def _write_button_config(config):
     normalized_config = dict(DEFAULT_BUTTON_CONFIG)
     normalized_config.update(config)
+    if normalized_config.get("controllerBackend") not in ("sdl", "legacy"):
+        raise ValueError("Unsupported controller backend")
     if type(normalized_config.get("textInsertionMode")) is not str or normalized_config["textInsertionMode"] not in {"paste", "ydotool"}:
         raise ValueError("Unsupported text insertion mode")
     normalized_config["typeAsKeys"] = normalized_config["textInsertionMode"] != "paste"
@@ -578,6 +583,7 @@ class Plugin:
                 env={
                     **os.environ,
                     "DECKTATION_CONFIG_DIR": CONFIG_DIR,
+                    "DECKTATION_CONTROLLER_BACKEND": _read_button_config().get("controllerBackend", "sdl"),
                 },
             )
             logger.info(f"Started controller listener (PID {Plugin.listener_process.pid})")
@@ -1131,6 +1137,29 @@ class Plugin:
         if result.get("phase") == "cancelled":
             await Plugin.cancel_binding_capture(None, session)
         return {"success": True, **result}
+
+    async def set_controller_backend(self, backend: str):
+        """Select one active reader for the SDL test build, never two triggers."""
+        if not isinstance(backend, str) or backend not in ("sdl", "legacy"):
+            return {"success": False, "error": "Unsupported controller backend"}
+        with Plugin.controller_lock:
+            debug = Plugin._controller_debug()
+            voice = Plugin.voice_service
+            if (debug.state in ACTIVE or debug.uploading or
+                    (Plugin.binding_session and time.time() < Plugin.binding_deadline) or
+                    (voice and (voice.is_recording or getattr(voice, 'is_transcribing', False) or
+                                voice.pending_snapshot()))):
+                return {"success": False, "error": "Finish recording, drafts, and controller capture before switching input."}
+            config = _read_button_config()
+            previous = config.get("controllerBackend", "sdl")
+            config["controllerBackend"] = backend
+            _write_button_config(config)
+            if not Plugin.start_controller_listener():
+                config["controllerBackend"] = previous
+                _write_button_config(config)
+                Plugin.start_controller_listener()
+                return {"success": False, "error": "Controller reader failed to start; previous selection restored. Check the runtime log."}
+            return {"success": True, "backend": backend}
 
     async def set_button_config(self, buttons: list, showNotifications: bool = None):
         """Set button configuration and settings, restart listener"""

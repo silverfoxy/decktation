@@ -5,6 +5,7 @@ def ready():
     capture = BindingCapture('test', 20)
     capture.update({'deck': {'A': True}}, 0)
     assert capture.phase == 'release'
+    capture.update({'deck': {}}, 0.5)
     capture.update({'deck': {}}, 1)
     assert capture.phase == 'listening'
     return capture
@@ -93,3 +94,20 @@ def test_rpc_save_clears_request_before_listener_restart(tmp_path, monkeypatch):
     assert backend.Plugin.binding_session is None
     # Cancelling and stale polling cannot overwrite the saved configuration.
     assert not asyncio.run(backend.Plugin.get_binding_capture(None, started['session']))['success']
+
+
+def test_queued_activation_press_is_ignored_until_stably_released():
+    capture = BindingCapture('test', 20)
+    # The request is observed before SDL drains the opening A down/up pair.
+    capture.update({'deck': {}}, 0)
+    capture.update({'deck': {'A': True}}, 0.01)
+    capture.update({'deck': {}}, 0.02)
+    capture.update({'deck': {}}, 0.2)
+    assert capture.phase == 'release'
+    assert capture.buttons == []
+    capture.update({'deck': {}}, 0.3)
+    assert capture.phase == 'listening'
+    capture.update({'deck': {'L1': True, 'R1': True}}, 0.4)
+    capture.update({'deck': {}}, 0.5)
+    assert capture.phase == 'captured'
+    assert capture.buttons == ['L1', 'R1']

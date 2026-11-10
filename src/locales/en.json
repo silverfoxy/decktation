@@ -268,5 +268,9 @@
   "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
   "Receiving download data...": "Receiving download data...",
   "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
-  "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
+  "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language.",
+  "Controller input (test build)": "Controller input (test build)",
+  "SDL 3 (experimental)": "SDL 3 (experimental)",
+  "Legacy (evdev / HID)": "Legacy (evdev / HID)",
+  "Could not switch controller input": "Could not switch controller input"
 }
