@@ -156,8 +156,4 @@ jobs:
             echo "- Ref: \`$REF_NAME\`"
             echo "- Commit: \`$GITHUB_SHA\`"
             echo "- [Download the ready-to-install plugin ZIP]($ARTIFACT_URL) from this Actions run. GitHub sign-in is required."
-            if [ "$EVENT_NAME" != "pull_request" ] && [ "$REF_TYPE" = "branch" ]; then
-              BRANCH_PATH="$(python3 scripts/branch-slug.py "$REF_NAME")"
-              echo "- Public branch URL (when GitHub Pages is enabled): [$PAGES_BASE_URL/branches/$BRANCH_PATH/Decktation.zip]($PAGES_BASE_URL/branches/$BRANCH_PATH/Decktation.zip)"
-            fi
           } >> "$GITHUB_STEP_SUMMARY"

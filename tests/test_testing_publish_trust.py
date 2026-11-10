@@ -52,11 +52,11 @@ def test_failed_branch_build_reconciles_approved_catalog():
     assert 'paths-ignore:' not in build.split('  pull_request:')[0]
 
 
-def test_publisher_rechecks_branch_head_after_push():
+def test_publisher_rechecks_pr_head_after_push():
     script = (ROOT / 'scripts/publish-pages.sh').read_text()
     publish = script.split('publish_pages() (', 1)[1].split('\nfor attempt in 1 2 3;', 1)[0]
-    assert publish.count('scripts/verify-current-ref.sh') >= 2
-    assert publish.index('git push origin gh-pages') < publish.rindex('scripts/verify-current-ref.sh')
+    assert publish.count('scripts/verify-current-pr.py') >= 2
+    assert publish.index('git push origin gh-pages') < publish.rindex('scripts/verify-current-pr.py')
     assert 'refresh_testing_catalog' in publish
 
 
@@ -85,3 +85,10 @@ def test_publisher_rejects_stale_or_deleted_branches(tmp_path):
                    check=True, capture_output=True)
     assert subprocess.run(['bash', str(script), str(remote), 'branch', 'feat/candidate', sha],
                           capture_output=True).returncode != 0
+
+
+def test_publishers_keep_each_source_event_but_coalesce_only_deployments():
+    workflow = (ROOT / '.github/workflows/publish.yml').read_text()
+    assert 'group: decktation-pages-publisher-${{ github.event.workflow_run.id' in workflow
+    deploy = workflow.split('  deploy-pages:', 1)[1]
+    assert 'group: decktation-pages-deployment' in deploy

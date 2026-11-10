@@ -3,7 +3,7 @@
 Use the existing **Cloudflare Worker** as the public entry point for the
 Astro product landing, custom store, and download URLs. **Cloudflare Pages is not needed.**
 Keep the existing GitHub Pages deployment as the origin for generated pages,
-catalogs, and a bounded set of branch ZIP files. Stable ZIPs live in GitHub Releases.
+catalogs, and release metadata. It stores no plugin ZIPs. Stable ZIPs live in GitHub Releases; PR ZIPs stay in Actions artifacts.
 
 | Purpose | Public URL | Worker behavior |
 | --- | --- | --- |
@@ -12,7 +12,7 @@ catalogs, and a bounded set of branch ZIP files. Stable ZIPs live in GitHub Rele
 | Latest stable plugin ZIP | `https://decktation.com/Decktation.zip` | Redirect download to GitHub Releases |
 | Custom Decky store | `https://decktation.com/plugins.json` | Fetch catalog and add Decky's CORS headers |
 | PR test builds | `https://decktation.com/pulls/…/Decktation.zip` | Verify trusted metadata and redirect to a signed Actions artifact download |
-| Branch / versioned builds | `https://decktation.com/branches/…` and `/releases/…` | Fetch pages and metadata; redirect ZIPs to their artifact host |
+| Versioned releases | `https://decktation.com/releases/…` | Fetch metadata; redirect ZIPs to GitHub Releases |
 
 The landing page links to both the ZIP and custom store, and to the full
 download list. It builds from `site/` using Astro; the Worker bundles that
@@ -31,11 +31,9 @@ which the built-in updater already accepts. The catalog uses the lowercase
 resolves that URL to the same `Decktation.zip` asset; public links and the saved
 filename retain the capital D. Release ZIPs are removed from Pages.
 
-Branch previews retain one `Decktation.zip` per branch. The Worker maps legacy
-lowercase branch filenames to it. Publishing retains at most 512 MiB of Pages content, keeping master and the current branch, then the newest previews by metadata
-timestamp. Older previews expire and disappear from the generated download index.
-Rebuild an expired branch to restore its preview. Git history may retain old ZIP
-blobs; only the current checkout is uploaded to Pages.
+Branch and master ZIP previews are retired. The testing catalog lists PR builds
+only. Pages enforces an 8 MiB metadata budget and removes all plugin ZIP copies.
+Old ZIP blobs may remain in Git history, but are not included in deployments.
 
 ## Configure and deploy
 
@@ -59,7 +57,7 @@ blobs; only the current checkout is uploaded to Pages.
    The workflow uses it for generated page links, catalog artifact URLs, and
    build summaries. Without it, links use the repository's GitHub Pages URL,
    including in forks.
-6. Run the build workflow on `master` to refresh the download index, branch links,
+6. Publish a tagged release or rerun a PR build to refresh the download index,
    and custom-store catalog. Future tagged releases publish stable download
    links with the same public base URL. Historical release pages and metadata
    are migrated to GitHub Release asset links during publishing.

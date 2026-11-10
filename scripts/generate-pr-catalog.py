@@ -121,11 +121,6 @@ def build_catalog(pages_root, plugin_manifest, base_url, pull_requests, current_
     root = Path(pages_root).resolve()
     plugin = json.loads(Path(plugin_manifest).read_text(encoding='utf-8'))
     versions, labels = [], []
-    master = current_heads.get('master')
-    if isinstance(master, str) and SHA_RE.fullmatch(master):
-        version = HELPERS.verified_version(root, 'master', master, base_url)
-        if version:
-            versions.append(version)  # Decky preselects the first version.
     if not isinstance(pull_requests, list):
         raise ValueError('Open PR list is required')
     for pr in sorted(pull_requests, key=lambda item: item.get('number', 0)):

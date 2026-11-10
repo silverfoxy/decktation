@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Keep bounded branch previews and PR metadata; remove release and PR ZIP copies."""
+"""Keep Pages metadata only; all plugin ZIPs live in Releases or Actions."""
 
 import argparse
 import json
@@ -8,7 +8,7 @@ import re
 import shutil
 
 
-def compact(root, repository, current_branch="", budget=512 * 1024 * 1024):
+def compact(root, repository, current_branch="", budget=8 * 1024 * 1024):
     release_base = f"https://github.com/{repository}/releases"
     for metadata in (root / "releases").glob("*/metadata.json"):
         data = json.loads(metadata.read_text())
@@ -32,66 +32,27 @@ def compact(root, repository, current_branch="", budget=512 * 1024 * 1024):
     if catalog.exists():
         data = json.loads(catalog.read_text())
         for plugin in data:
+            plugin["versions"] = [version for version in plugin["versions"]
+                                  if re.fullmatch(r"\d+\.\d+\.\d+", version["name"])]
             for version in plugin["versions"]:
-                if re.fullmatch(r"\d+\.\d+\.\d+", version["name"]):
-                    version["artifact"] = f"{release_base}/download/v{version['name']}/decktation.zip"
+                version["artifact"] = f"{release_base}/download/v{version['name']}/decktation.zip"
         catalog.write_text(json.dumps(data, indent=2) + "\n")
 
-    branches = []
-    for metadata in (root / "branches").glob("*/metadata.json"):
-        directory = metadata.parent
-        old = directory / "decktation.zip"
-        canonical = directory / "Decktation.zip"
-        if old.exists():
-            if not canonical.exists():
-                old.rename(canonical)
-            else:
-                old.unlink()
-        data = json.loads(metadata.read_text())
-        protected = data["ref"] in ("master", current_branch)
-        size = sum(p.stat().st_size for p in directory.rglob("*") if p.is_file())
-        branches.append((protected, data.get("generated_at", ""), directory, size))
-    # Keep the newest immutable build for each PR. Older runs/attempts can
-    # expire; the publisher regenerates the catalog from surviving files.
-    for pr in (root / "pulls").glob("*"):
-        builds = sorted(
-            (metadata.parent for metadata in pr.glob("*/*/metadata.json")
-             if metadata.parent.name.isdecimal() and metadata.parent.parent.name.isdecimal()),
-            key=lambda directory: (int(directory.parent.name), int(directory.name)),
-            reverse=True,
-        )
-        migrated = []
-        for directory in builds:
-            data = json.loads((directory / "metadata.json").read_text())
-            if 'artifact_id' not in data:
-                print(f"Retiring legacy Pages PR download: {directory.relative_to(root)}")
-                shutil.rmtree(directory)
-                continue
-            for archive in directory.glob('*.zip'):
-                archive.unlink()
-            migrated.append(directory)
-        builds = migrated
-        for index, directory in enumerate(builds):
-            size = sum(p.stat().st_size for p in directory.rglob("*") if p.is_file())
-            # Empty dates expire superseded PR builds before branch previews.
-            branches.append((index == 0, "", directory, size))
-
-    preview_dirs = [directory for _, _, directory, _ in branches]
+    # Branch previews are no longer published. Stable ZIPs live in Releases;
+    # only PR Actions artifact metadata belongs in the testing catalog.
+    if (root / "branches").exists():
+        shutil.rmtree(root / "branches")
+    for metadata in (root / "pulls").glob("*/*/*/metadata.json"):
+        if 'artifact_id' not in json.loads(metadata.read_text()):
+            shutil.rmtree(metadata.parent)
+    for directory in (root / "branches", root / "pulls"):
+        for archive in directory.rglob("*.zip"):
+            archive.unlink()
     used = sum(p.stat().st_size for p in root.rglob("*")
-               if p.is_file() and ".git" not in p.relative_to(root).parts
-               and not any(directory in p.parents for directory in preview_dirs))
-    required = used + sum(size for protected, _, _, size in branches if protected)
-    if required > budget:
-        raise ValueError("Current/master branch and latest PR downloads exceed the Pages budget")
-    for protected, _, directory, size in sorted(branches, reverse=True):
-        if used + size <= budget:
-            used += size
-        elif protected:
-            raise ValueError("Current/master branch downloads exceed the Pages budget")
-        else:
-            print(f"Expiring preview: {directory.relative_to(root)}")
-            shutil.rmtree(directory)
-    print(f"Pages content: {used} bytes (budget {budget})")
+               if p.is_file() and ".git" not in p.relative_to(root).parts)
+    if used > budget:
+        raise ValueError("Pages metadata exceeds the budget")
+    print(f"Pages metadata: {used} bytes (budget {budget}); no plugin ZIP copies")
 
 
 if __name__ == "__main__":
