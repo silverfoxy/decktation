@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from recording_volume import RecordingVolume
 
 
-def volume(mode="quiet"):
+def volume(mode="mute"):
     control = RecordingVolume(mode)
     control._run = Mock(side_effect=lambda *args: {
         ("get-default-sink",): "speakers\n",
@@ -17,11 +17,11 @@ def volume(mode="quiet"):
     return control
 
 
-def test_quiet_restores_each_channel_and_original_device():
+def test_mute_restores_each_channel_and_original_device():
     control = volume()
     control.transition("started")
-    control._run.assert_called_with("set-sink-volume", "speakers", "10000", "6000")
-    control.transition("started")  # Duplicate starts must not snapshot attenuated volume.
+    control._run.assert_called_with("set-sink-volume", "speakers", "0", "0")
+    control.transition("started")  # Duplicate starts must not snapshot muted volume.
     control.transition("stopped")
     control._run.assert_called_with("set-sink-volume", "speakers", "50000", "30000")
     count = control._run.call_count

@@ -401,7 +401,6 @@
       "Could not switch controller input": "Could not switch controller input",
       "Output volume while recording": "Output volume while recording",
       Unchanged: Unchanged$9,
-      "20% of current volume": "20% of current volume",
       Mute: Mute$9,
       "Could not update recording volume": "Could not update recording volume"
     };
@@ -929,7 +928,6 @@
       "Could not switch controller input": "No se pudo cambiar la entrada del mando",
       "Output volume while recording": "Volumen de salida al grabar",
       Unchanged: Unchanged$8,
-      "20% of current volume": "20% del volumen actual",
       Mute: Mute$8,
       "Could not update recording volume": "No se pudo actualizar el volumen de grabación"
     };
@@ -1254,7 +1252,6 @@
       "Could not switch controller input": "Не удалось переключить ввод контроллера",
       "Output volume while recording": "Громкость вывода при записи",
       Unchanged: Unchanged$7,
-      "20% of current volume": "20% текущей громкости",
       Mute: Mute$7,
       "Could not update recording volume": "Не удалось изменить громкость при записи"
     };
@@ -1579,7 +1576,6 @@
       "Could not switch controller input": "Não foi possível alterar a entrada do controle",
       "Output volume while recording": "Volume de saída durante a gravação",
       Unchanged: Unchanged$6,
-      "20% of current volume": "20% do volume atual",
       Mute: Mute$6,
       "Could not update recording volume": "Não foi possível atualizar o volume de gravação"
     };
@@ -1904,7 +1900,6 @@
       "Could not switch controller input": "Nie udało się zmienić wejścia kontrolera",
       "Output volume while recording": "Głośność wyjścia podczas nagrywania",
       Unchanged: Unchanged$5,
-      "20% of current volume": "20% bieżącej głośności",
       Mute: Mute$5,
       "Could not update recording volume": "Nie udało się zmienić głośności nagrywania"
     };
@@ -2229,7 +2224,6 @@
       "Could not switch controller input": "컨트롤러 입력을 전환하지 못했습니다",
       "Output volume while recording": "녹음 중 출력 볼륨",
       Unchanged: Unchanged$4,
-      "20% of current volume": "현재 볼륨의 20%",
       Mute: Mute$4,
       "Could not update recording volume": "녹음 중 볼륨을 변경하지 못했습니다"
     };
@@ -2554,7 +2548,6 @@
       "Could not switch controller input": "コントローラー入力を切り替えられませんでした",
       "Output volume while recording": "録音中の出力音量",
       Unchanged: Unchanged$3,
-      "20% of current volume": "現在の音量の20%",
       Mute: Mute$3,
       "Could not update recording volume": "録音中の音量を更新できませんでした"
     };
@@ -2879,7 +2872,6 @@
       "Could not switch controller input": "Controller-Eingabe konnte nicht gewechselt werden",
       "Output volume while recording": "Ausgabelautstärke während der Aufnahme",
       Unchanged: Unchanged$2,
-      "20% of current volume": "20% der aktuellen Lautstärke",
       Mute: Mute$2,
       "Could not update recording volume": "Aufnahmelautstärke konnte nicht aktualisiert werden"
     };
@@ -3204,7 +3196,6 @@
       "Could not switch controller input": "Impossible de changer l’entrée manette",
       "Output volume while recording": "Volume de sortie pendant l’enregistrement",
       Unchanged: Unchanged$1,
-      "20% of current volume": "20% du volume actuel",
       Mute: Mute$1,
       "Could not update recording volume": "Impossible de modifier le volume pendant l’enregistrement"
     };
@@ -3529,7 +3520,6 @@
       "Could not switch controller input": "无法切换控制器输入",
       "Output volume while recording": "录音时的输出音量",
       Unchanged: Unchanged,
-      "20% of current volume": "当前音量的20%",
       Mute: Mute,
       "Could not update recording volume": "无法更新录音音量"
     };
@@ -5049,7 +5039,7 @@
                         }
                         const indicator = config.recordingIndicator || (config.showNotifications === false ? "none" : "toast");
                         setRecordingIndicator(indicator);
-                        setRecordingVolume(config.recordingVolume || "off");
+                        setRecordingVolume(config.recordingVolume === "mute" ? "mute" : "off");
                         logic.recordingIndicator = indicator;
                         if (config.hapticFeedback !== undefined) {
                             setHapticFeedback(config.hapticFeedback);
@@ -5712,7 +5702,7 @@
                                 } }))),
                     React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Feedback") },
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                            React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: t("Output volume while recording"), menuLabel: t("Output volume while recording"), rgOptions: [{ data: "off", label: t("Unchanged") }, { data: "quiet", label: t("20% of current volume") }, { data: "mute", label: t("Mute") }], selectedOption: recordingVolume, onChange: async (option) => {
+                            React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: t("Output volume while recording"), menuLabel: t("Output volume while recording"), rgOptions: [{ data: "off", label: t("Unchanged") }, { data: "mute", label: t("Mute") }], selectedOption: recordingVolume, onChange: async (option) => {
                                     try {
                                         const mode = option.data;
                                         const result = await setRecordingVolumeRpc(mode);

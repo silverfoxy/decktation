@@ -1,4 +1,4 @@
-"""Temporarily attenuate the desktop output while capturing dictation."""
+"""Temporarily mute the desktop output while capturing dictation."""
 
 import json
 import subprocess
@@ -7,7 +7,7 @@ import threading
 
 class RecordingVolume:
     def __init__(self, mode="off", logger=None):
-        self.mode = mode if mode in ("off", "quiet", "mute") else "off"
+        self.mode = mode if mode in ("off", "mute") else "off"
         self.logger = logger
         self._lock = threading.Lock()
         self._original = None
@@ -20,7 +20,7 @@ class RecordingVolume:
     def set_mode(self, mode):
         with self._lock:
             self._restore()
-            self.mode = mode if mode in ("off", "quiet", "mute") else "off"
+            self.mode = mode if mode in ("off", "mute") else "off"
 
     def _warn(self, error):
         if self.logger:
@@ -54,9 +54,8 @@ class RecordingVolume:
                 # Remember the specific sink and individual channel volumes,
                 # so switching outputs never restores volume to the wrong device.
                 self._original = (sink_name, volumes)
-                factor = 0.2 if self.mode == "quiet" else 0
                 self._run("set-sink-volume", sink_name,
-                          *(str(round(v * factor)) for v in volumes))
+                          *("0" for _ in volumes))
             except Exception as error:
                 self._warn(error)
                 self._restore()

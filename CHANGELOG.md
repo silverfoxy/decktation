@@ -9,8 +9,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
-- Optional output volume reduction while recording: keep volume unchanged, lower
-  it to 20%, or mute it, with automatic restoration when capture ends (#91).
+- Optional output muting while recording: keep volume unchanged or mute it,
+  with automatic restoration when capture ends (#91).
 
 - Per-profile chat submission with Enter or controller A, plus a separate WoW
   Forever preset that submits with A by default. Regular WoW keeps Enter.

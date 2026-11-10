@@ -275,7 +275,6 @@
   "Could not switch controller input": "No se pudo cambiar la entrada del mando",
   "Output volume while recording": "Volumen de salida al grabar",
   "Unchanged": "Sin cambios",
-  "20% of current volume": "20% del volumen actual",
   "Mute": "Silenciar",
   "Could not update recording volume": "No se pudo actualizar el volumen de grabación"
 }

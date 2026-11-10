@@ -275,7 +275,6 @@
   "Could not switch controller input": "Controller-Eingabe konnte nicht gewechselt werden",
   "Output volume while recording": "Ausgabelautstärke während der Aufnahme",
   "Unchanged": "Unverändert",
-  "20% of current volume": "20% der aktuellen Lautstärke",
   "Mute": "Stumm",
   "Could not update recording volume": "Aufnahmelautstärke konnte nicht aktualisiert werden"
 }

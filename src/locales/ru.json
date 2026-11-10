@@ -275,7 +275,6 @@
   "Could not switch controller input": "Не удалось переключить ввод контроллера",
   "Output volume while recording": "Громкость вывода при записи",
   "Unchanged": "Без изменений",
-  "20% of current volume": "20% текущей громкости",
   "Mute": "Без звука",
   "Could not update recording volume": "Не удалось изменить громкость при записи"
 }

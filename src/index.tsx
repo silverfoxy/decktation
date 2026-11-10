@@ -583,7 +583,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					}
 					const indicator = config.recordingIndicator || (config.showNotifications === false ? "none" : "toast");
 					setRecordingIndicator(indicator);
-                    setRecordingVolume(config.recordingVolume || "off");
+                    setRecordingVolume(config.recordingVolume === "mute" ? "mute" : "off");
 					logic.recordingIndicator = indicator;
 					if (config.hapticFeedback !== undefined) {
 						setHapticFeedback(config.hapticFeedback);
@@ -1139,7 +1139,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					</PanelSection>
 					<PanelSection title={t("Feedback")}>
                         <PanelSectionRow><DropdownItem label={t("Output volume while recording")} menuLabel={t("Output volume while recording")}
-                            rgOptions={[{data: "off", label: t("Unchanged")}, {data: "quiet", label: t("20% of current volume")}, {data: "mute", label: t("Mute")}]}
+                            rgOptions={[{data: "off", label: t("Unchanged")}, {data: "mute", label: t("Mute")}]}
                             selectedOption={recordingVolume} onChange={async (option: { data: string | number }) => {
                                 try {
                                     const mode = option.data as string;

@@ -275,7 +275,6 @@
   "Could not switch controller input": "Impossible de changer l’entrée manette",
   "Output volume while recording": "Volume de sortie pendant l’enregistrement",
   "Unchanged": "Inchangé",
-  "20% of current volume": "20% du volume actuel",
   "Mute": "Couper le son",
   "Could not update recording volume": "Impossible de modifier le volume pendant l’enregistrement"
 }

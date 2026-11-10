@@ -275,7 +275,6 @@
   "Could not switch controller input": "コントローラー入力を切り替えられませんでした",
   "Output volume while recording": "録音中の出力音量",
   "Unchanged": "変更しない",
-  "20% of current volume": "現在の音量の20%",
   "Mute": "ミュート",
   "Could not update recording volume": "録音中の音量を更新できませんでした"
 }

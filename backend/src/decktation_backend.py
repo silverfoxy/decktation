@@ -1047,7 +1047,7 @@ class Plugin:
             Plugin.haptic_feedback.emit(state)
 
     async def set_recording_volume(self, mode: str):
-        if mode not in ("off", "quiet", "mute"):
+        if mode not in ("off", "mute"):
             return {"success": False, "error": "Unsupported recording volume"}
         try:
             config = _read_button_config()
