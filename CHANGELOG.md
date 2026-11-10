@@ -25,6 +25,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Automatic Discord announcements after stable releases are published, using
   the tagged changelog notes and installable download links.
 
+### Changed
+
+- WoW and WoW Forever spoken “reply” prefixes now type the explicit `/reply`
+  command to answer the last incoming whisper.
+
 ### Fixed
 
 - Parakeet displays Auto Detect and disables manual language selection.

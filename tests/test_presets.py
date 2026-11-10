@@ -86,7 +86,7 @@ class TestPresetsFile:
     def test_wow_chat_commands(self, presets):
         channels = presets["wow"]["channels"]
         assert channels["whisper"] == "/w "
-        assert channels["reply"] == "/r "
+        assert channels["reply"] == "/reply "
         assert channels["alert"] == "/rw "
 
     def test_wow_has_context_file(self, presets):
@@ -226,7 +226,7 @@ class TestUserProfileOverrides:
 
         preset = decktation_backend._load_game_presets()["wow"]
         assert preset["channels"]["say"] == "/custom-say "
-        assert preset["channels"]["reply"] == "/r "
+        assert preset["channels"]["reply"] == "/reply "
 
         service = WoWVoiceChat(preset=preset, lazy_load=True)
         assert service.parse_channel_and_text("reply I am ready") == (

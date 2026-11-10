@@ -30,6 +30,9 @@ In WoW or GW2, start a message with a spoken channel name to route it. For examp
 
 Built-in WoW channels include `say`, `party`, `raid`, `guild`, `officer`, `yell`, `instance`, `whisper`, `reply`, `type`, and `alert` (raid warning). GW2 includes `say`, `map`, `party`, `squad` (also `raid`), `team`, `guild`, `guild one` through `guild six`, `whisper`, and `type`.
 
+In the World of Warcraft and WoW Forever profiles, say “reply thanks for the invite” to type `/reply thanks for the invite`, replying to the last incoming whisper without naming a player. Generic and Guild Wars 2 profiles keep “reply” as ordinary message text. Custom channel mappings still take precedence.
+
+
 ### Spoken slash commands
 
 With **English** or **Auto Detect** selected, begin with **command**:

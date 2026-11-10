@@ -1,6 +1,8 @@
 """Preset-specific chat keys, clipboard payloads, and send timing behavior."""
 
 import os
+import json
+from pathlib import Path
 from contextlib import contextmanager
 
 import pytest
@@ -39,7 +41,7 @@ WOW_PRESET = {
     "chat_open_key": "enter",
     "chat_send_key": "enter",
     "default_channel": "say",
-    "channels": {"say": "/s ", "party": "/p ", "whisper": "/w ", "reply": "/r ", "type": ""},
+    "channels": {"say": "/s ", "party": "/p ", "whisper": "/w ", "reply": "/reply ", "type": ""},
     "whisper_prompt": "World of Warcraft gameplay.",
 }
 
@@ -206,14 +208,31 @@ class TestReplyChannel:
     def test_reply_pastes_reply_command_without_player_name(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0)
         make_service(WOW_PRESET).send_to_wow_chat("on my way", channel="reply")
-        assert PASTED_TEXT == ["/r on my way"]
+        assert PASTED_TEXT == ["/reply on my way"]
         assert commands(mock_run) == [ENTER, PASTE, ENTER]
 
     @patch("subprocess.run")
     def test_spoken_reply_prefix_needs_no_target_name(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0)
         make_service(WOW_PRESET).send_to_wow_chat("reply, thanks for the invite")
-        assert PASTED_TEXT == ["/r thanks for the invite"]
+        assert PASTED_TEXT == ["/reply thanks for the invite"]
+
+    @pytest.mark.parametrize("profile", ["wow", "wow_forever", "generic", "guildwars2"])
+    @patch("subprocess.run")
+    def test_spoken_reply_uses_shipped_profile_mapping(self, mock_run, profile):
+        mock_run.return_value = MagicMock(returncode=0)
+        presets = json.loads(
+            (Path(__file__).parents[1] / "defaults/game_presets.json").read_text()
+        )
+        service = make_service(presets[profile])
+        assert service.send_to_wow_chat("reply thanks for the invite")
+        expected = {
+            "wow": "/reply thanks for the invite",
+            "wow_forever": "/reply thanks for the invite",
+            "generic": "reply thanks for the invite",
+            "guildwars2": "/s reply thanks for the invite",
+        }
+        assert PASTED_TEXT == [expected[profile]]
 
     @patch("subprocess.run")
     def test_reply_is_distinct_from_whisper_command(self, mock_run):

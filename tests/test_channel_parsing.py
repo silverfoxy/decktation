@@ -26,7 +26,7 @@ WOW_PRESET = {
         "yell": "/y ",
         "instance": "/i ",
         "whisper": "/w ",
-        "reply": "/r ",
+        "reply": "/reply ",
         "type": "",
         "alert": "/rw ",
         "channel_1": "/1 ",

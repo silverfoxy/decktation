@@ -364,7 +364,7 @@ class WoWVoiceChat:
             "yell": "/y ",
             "instance": "/i ",
             "whisper": "/w ",
-            "reply": "/r ",
+            "reply": "/reply ",
             "type": "",
         }
 
