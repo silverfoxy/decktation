@@ -1,3 +1,5 @@
+import { handlePrArtifact } from "./pr-artifacts.js";
+
 // Keep GitHub Pages on its github.io hostname: assigning the Worker domain to
 // Pages would redirect the origin back to this Worker.
 const UPSTREAM_BASE = "https://silverfoxy.github.io/decktation";
@@ -152,6 +154,7 @@ export default {
           : { Allow: "GET, HEAD" },
       });
     }
+    if (url.pathname.startsWith("/pulls/") && url.pathname.endsWith(".zip")) return handlePrArtifact(request, env, url);
     if (isCatalog) return handleCatalog(request, isTestingCatalog);
     if (url.pathname === "/downloads") {
       return new Response(null, {

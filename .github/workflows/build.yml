@@ -141,6 +141,7 @@ jobs:
           name: decktation.zip
           path: build-output/decktation.zip
           archive: false
+          retention-days: 30
 
       - name: Add test download links to the workflow summary
         env:

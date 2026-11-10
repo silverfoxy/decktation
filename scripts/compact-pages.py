@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Keep Pages metadata and a bounded set of branch downloads, not release ZIPs."""
+"""Keep bounded branch previews and PR metadata; remove release and PR ZIP copies."""
 
 import argparse
 import json
@@ -51,16 +51,47 @@ def compact(root, repository, current_branch="", budget=512 * 1024 * 1024):
         protected = data["ref"] in ("master", current_branch)
         size = sum(p.stat().st_size for p in directory.rglob("*") if p.is_file())
         branches.append((protected, data.get("generated_at", ""), directory, size))
-    used = 0
+    # Keep the newest immutable build for each PR. Older runs/attempts can
+    # expire; the publisher regenerates the catalog from surviving files.
+    for pr in (root / "pulls").glob("*"):
+        builds = sorted(
+            (metadata.parent for metadata in pr.glob("*/*/metadata.json")
+             if metadata.parent.name.isdecimal() and metadata.parent.parent.name.isdecimal()),
+            key=lambda directory: (int(directory.parent.name), int(directory.name)),
+            reverse=True,
+        )
+        migrated = []
+        for directory in builds:
+            data = json.loads((directory / "metadata.json").read_text())
+            if 'artifact_id' not in data:
+                print(f"Retiring legacy Pages PR download: {directory.relative_to(root)}")
+                shutil.rmtree(directory)
+                continue
+            for archive in directory.glob('*.zip'):
+                archive.unlink()
+            migrated.append(directory)
+        builds = migrated
+        for index, directory in enumerate(builds):
+            size = sum(p.stat().st_size for p in directory.rglob("*") if p.is_file())
+            # Empty dates expire superseded PR builds before branch previews.
+            branches.append((index == 0, "", directory, size))
+
+    preview_dirs = [directory for _, _, directory, _ in branches]
+    used = sum(p.stat().st_size for p in root.rglob("*")
+               if p.is_file() and ".git" not in p.relative_to(root).parts
+               and not any(directory in p.parents for directory in preview_dirs))
+    required = used + sum(size for protected, _, _, size in branches if protected)
+    if required > budget:
+        raise ValueError("Current/master branch and latest PR downloads exceed the Pages budget")
     for protected, _, directory, size in sorted(branches, reverse=True):
         if used + size <= budget:
             used += size
         elif protected:
             raise ValueError("Current/master branch downloads exceed the Pages budget")
         else:
-            print(f"Expiring branch preview: {directory.name}")
+            print(f"Expiring preview: {directory.relative_to(root)}")
             shutil.rmtree(directory)
-    print(f"Pages branch downloads: {used} bytes (budget {budget})")
+    print(f"Pages content: {used} bytes (budget {budget})")
 
 
 if __name__ == "__main__":

@@ -10,6 +10,10 @@
     { "pattern": "decktation.com", "custom_domain": true },
     { "pattern": "www.decktation.com", "custom_domain": true }
   ],
+  "ratelimits": [
+    { "name": "PR_DOWNLOAD_LIMITER", "namespace_id": "1001", "simple": { "limit": 20, "period": 60 } },
+    { "name": "PR_API_LIMITER", "namespace_id": "1002", "simple": { "limit": 20, "period": 60 } }
+  ],
   "build": {
     "command": "npm --prefix ../site run build && npm --prefix ../site test"
   },

@@ -54,3 +54,24 @@ def test_branch_budget_keeps_master_current_and_newest_then_expires_oldest(tmp_p
     assert not list(branch.rglob("decktation.zip"))
     with pytest.raises(ValueError, match="exceed"):
         MODULE.compact(tmp_path, "owner/repo", "current", budget=1)
+
+
+def test_pr_zips_are_removed_and_legacy_entries_retired(tmp_path):
+    legacy = tmp_path / "pulls/104/100/1"
+    current = tmp_path / "pulls/104/101/1"
+    for directory in (legacy, current):
+        write_metadata(directory, number=104, **({'artifact_id': 123} if directory == current else {}))
+        (directory / "Decktation.zip").write_bytes(b"x" * 100)
+    MODULE.compact(tmp_path, "owner/repo")
+    assert not legacy.exists()
+    assert (current / "metadata.json").exists()
+    assert not list(tmp_path.rglob("*.zip"))
+    MODULE.compact(tmp_path, "owner/repo")
+
+
+def test_required_metadata_over_budget_fails_without_expiring_it(tmp_path):
+    directory = tmp_path / "pulls/104/100/1"
+    write_metadata(directory, number=104, artifact_id=123)
+    with pytest.raises(ValueError, match="exceed"):
+        MODULE.compact(tmp_path, "owner/repo", budget=1)
+    assert (directory / "metadata.json").exists()

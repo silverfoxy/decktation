@@ -3,6 +3,8 @@ name: Publish Decktation downloads and PR test builds
 # workflow_run uses the workflow on the default branch. Candidate builds only
 # upload an artifact with a read-only token; no candidate script runs here.
 on:
+  schedule:
+    - cron: '17 6 * * *'
   workflow_run:
     workflows: ['Build Decktation Plugin']
     types: [completed]
@@ -197,7 +199,7 @@ jobs:
         run: bash scripts/publish-pages.sh
 
   refresh-pr-catalog:
-    if: github.event_name == 'pull_request_target'
+    if: github.event_name == 'pull_request_target' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -241,13 +243,16 @@ jobs:
           path: pages-site
           persist-credentials: false
       - uses: actions/upload-pages-artifact@v4
+        id: pages-artifact
         with:
           path: pages-site
       - uses: actions/github-script@v7
         id: deployment
+        env:
+          PAGES_ARTIFACT_ID: ${{ steps.pages-artifact.outputs.artifact_id }}
         with:
           script: |
             const { execFileSync } = require('node:child_process');
             const snapshot = execFileSync('git', ['-C', 'pages-site', 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
             const { deployPages } = require(`${process.env.GITHUB_WORKSPACE}/trusted-tools/scripts/deploy-pages.cjs`);
-            await deployPages({ github, core, context, snapshot });
+            await deployPages({ github, core, context, snapshot, artifactId: process.env.PAGES_ARTIFACT_ID });

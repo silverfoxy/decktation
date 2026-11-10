@@ -114,3 +114,19 @@ def test_workflow_has_separate_read_only_pr_build_and_trusted_publisher():
     assert 'actions/download-artifact@v8' in publish
     assert 'ref: master' in publish
     assert 'pull_request_target:' in publish or 'schedule:' in publish
+
+
+def test_actions_metadata_lists_verified_build_without_pages_zip_and_expires(tmp_path):
+    sha = 'a' * 40
+    folder = package(tmp_path, 81, 123, sha)
+    metadata = folder / 'metadata.json'
+    data = json.loads(metadata.read_text())
+    data.update(artifact_id=987, expires_at='2099-01-01T00:00:00Z',
+                size_in_bytes=(folder / 'Decktation.zip').stat().st_size,
+                version='0.3.20-dev.pr-81.aaaaaaa')
+    metadata.write_text(json.dumps(data))
+    (folder / 'Decktation.zip').unlink()
+    assert catalog(tmp_path, [pr(81, sha)])[0]['versions'][0]['hash'] == data['sha256']
+    data['expires_at'] = '2020-01-01T00:00:00Z'
+    metadata.write_text(json.dumps(data))
+    assert catalog(tmp_path, [pr(81, sha)])[0]['versions'] == []

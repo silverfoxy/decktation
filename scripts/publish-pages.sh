@@ -335,27 +335,8 @@ PY_RELEASE_ORDER
 
 render_pr_content() {
   local dir="$PAGES_DIR/pulls/$PR_NUMBER/$PR_RUN_ID/$PR_RUN_ATTEMPT"
-  local url="$PAGES_BASE_URL/pulls/$PR_NUMBER/$PR_RUN_ID/$PR_RUN_ATTEMPT/Decktation.zip"
-  if [ -e "$dir/Decktation.zip" ] && ! cmp -s "$ZIP_SOURCE" "$dir/Decktation.zip"; then
-    echo "Refusing to overwrite immutable PR ZIP" >&2
-    return 1
-  fi
-  mkdir -p "$dir"
-  cp "$ZIP_SOURCE" "$dir/Decktation.zip"
-  local digest
-  digest="$(sha256sum "$dir/Decktation.zip")"
-  digest="${digest%% *}"
-  PR_ZIP_URL="$url" PR_ZIP_SHA256="$digest" python3 - "$dir/metadata.json" <<'PY_PR_METADATA'
-import json, os, sys
-from pathlib import Path
-Path(sys.argv[1]).write_text(json.dumps({
-    'channel': 'pull_request', 'number': int(os.environ['PR_NUMBER']),
-    'run_id': int(os.environ['PR_RUN_ID']), 'run_attempt': int(os.environ['PR_RUN_ATTEMPT']),
-    'commit': os.environ['BUILD_SHA'],
-    'head_repository': os.environ['PR_HEAD_REPO'],
-    'zip_url': os.environ['PR_ZIP_URL'], 'sha256': os.environ['PR_ZIP_SHA256'],
-}, indent=2) + '\n')
-PY_PR_METADATA
+  python3 "$WORKSPACE_DIR/scripts/record-pr-artifact.py" \
+    --artifact "$ZIP_SOURCE" --output "$dir/metadata.json"
 }
 
 render_pages_content() {

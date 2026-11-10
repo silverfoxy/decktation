@@ -11,6 +11,7 @@ catalogs, and a bounded set of branch ZIP files. Stable ZIPs live in GitHub Rele
 | Release / test-build list | `https://decktation.com/downloads/` | Fetch generated download index from GitHub Pages |
 | Latest stable plugin ZIP | `https://decktation.com/Decktation.zip` | Redirect download to GitHub Releases |
 | Custom Decky store | `https://decktation.com/plugins.json` | Fetch catalog and add Decky's CORS headers |
+| PR test builds | `https://decktation.com/pulls/…/Decktation.zip` | Verify trusted metadata and redirect to a signed Actions artifact download |
 | Branch / versioned builds | `https://decktation.com/branches/…` and `/releases/…` | Fetch pages and metadata; redirect ZIPs to their artifact host |
 
 The landing page links to both the ZIP and custom store, and to the full
@@ -31,8 +32,7 @@ resolves that URL to the same `Decktation.zip` asset; public links and the saved
 filename retain the capital D. Release ZIPs are removed from Pages.
 
 Branch previews retain one `Decktation.zip` per branch. The Worker maps legacy
-lowercase branch filenames to it. Publishing retains at most 512 MiB of branch
-files, keeping master and the current branch, then the newest previews by metadata
+lowercase branch filenames to it. Publishing retains at most 512 MiB of Pages content, keeping master and the current branch, then the newest previews by metadata
 timestamp. Older previews expire and disappear from the generated download index.
 Rebuild an expired branch to restore its preview. Git history may retain old ZIP
 blobs; only the current checkout is uploaded to Pages.

@@ -14,6 +14,10 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Fixed
 
+- Keep PR test packages in GitHub Actions artifacts instead of duplicating them
+  on Pages, with public downloads through the Worker and expiry-aware listings.
+- Deploy the exact uploaded Pages artifact when rerunning a publisher workflow.
+
 - Upload a single canonical GitHub release ZIP to avoid collisions between
   differently capitalized download names.
 

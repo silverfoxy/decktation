@@ -45,6 +45,8 @@ https://<owner>.github.io/decktation/branches/<branch-slug>/Decktation.zip
 
 Branch names use readable ASCII slugs. For example, `feat/haptic-feedback` uses `feat-haptic-feedback`. Names containing other punctuation or Unicode also receive a stable hash suffix. Prefer the exact URL shown in the workflow run summary or branch page.
 
+PR packages in the testing catalog stay in Actions artifacts for 30 days. Their public download URLs use the Worker, so Decky does not need a GitHub login. Expired builds require a new successful build.
+
 Every GitHub Actions build also uploads a `decktation.zip` artifact. Open the run for the branch or pull request and use the download link in its summary. This works without GitHub Pages, but downloading the artifact requires signing in and is subject to GitHub’s artifact retention period.
 
 To publish public branch ZIPs from a fork, enable **Settings → Pages → Build and deployment → Source → GitHub Actions** in that fork. The workflow deploys through the `decktation-previews` environment.
