@@ -7,7 +7,7 @@ function fixture(states = ['deployment_in_progress', 'succeed']) {
   return {
     calls, outputs,
     args: {
-      snapshot: 'b'.repeat(40), artifactId: 42,
+      snapshot: 'b'.repeat(40), artifactId: '42',
       context: { repo: { owner: 'owner', repo: 'repo' }, runId: 123, sha: 'a'.repeat(40) },
       core: { getIDToken: async () => 'test-oidc', setOutput: (...value) => outputs.push(value) },
       wait: async () => {}, polls: 3,
@@ -50,5 +50,12 @@ test('Pages refuses missing artifact IDs or invalid snapshot commits', async () 
   const { args, calls } = fixture();
   await assert.rejects(deployPages({ ...args, snapshot: 'not a commit' }), /Invalid/);
   await assert.rejects(deployPages({ ...args, artifactId: undefined }), /artifact ID/);
+  assert.deepEqual(calls, []);
+});
+
+
+test('Pages rejects artifact IDs that cannot be represented exactly by the API', async () => {
+  const { args, calls } = fixture();
+  await assert.rejects(deployPages({ ...args, artifactId: '9007199254740993' }), /artifact ID/);
   assert.deepEqual(calls, []);
 });
