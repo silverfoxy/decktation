@@ -7,6 +7,12 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- Optional status hook: set `statusHookCommand` in `button_config.json` to run
+  a command at each recording status change (`record_start`, `record_stop`,
+  `transcription_done`, `error`) so other tools can follow dictation.
+
 ## [0.3.23] - 2026-11-10
 
 ### Added

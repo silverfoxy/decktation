@@ -125,6 +125,27 @@ The default push-to-talk combination is **L1 + R1**. Use **Input → Add Button*
 
 Linux evdev gamepads provide their exposed buttons; Steam Deck raw HID input preserves the physical Deck controls and rear grips independently of Steam Input layouts. Original Steam Controllers expose L5/R5 grip input on wired or USB-receiver connections. A keyboard-and-mouse-only Steam Input layout may not expose gamepad buttons, and third-party paddles are not guaranteed to appear as separate inputs. Face-button names follow Xbox positions.
 
+## Status hook
+
+Other tools can follow dictation (for example an in-game indicator, an overlay, or lights) by setting `statusHookCommand` in `button_config.json` in the plugin settings directory, normally `/home/deck/homebrew/settings/decktation/`. It is empty (off) by default and has no panel setting.
+
+```json
+{
+  "statusHookCommand": "/home/deck/.local/bin/on-dictation"
+}
+```
+
+Decktation runs the command in the background at each recording status change, with the event in the `DECKTATION_EVENT` environment variable:
+
+| Event | When |
+| --- | --- |
+| `record_start` | Recording started. |
+| `record_stop` | Recording stopped; transcription is starting. |
+| `transcription_done` | Transcription finished. |
+| `error` | Starting, stopping, or transcribing failed. |
+
+The command is split like a shell command line but not run through a shell, so use a script for pipes or redirection. It runs as the plugin's user, detached, with its output discarded. Decktation does not wait for it, and a missing or failing command is logged and never interrupts dictation.
+
 ## Custom controller mappings
 
 Create `controller_mappings.json` in the plugin settings directory, normally `/home/deck/homebrew/settings/decktation/`. Each key is a lowercase hexadecimal `bus:vendor:product` identifier, with four digits per component. For example, this maps X/Y for a Bluetooth Xbox controller (`045e:02fd`):
