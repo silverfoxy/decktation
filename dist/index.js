@@ -4815,6 +4815,8 @@
         const [modelTypeView, setModelTypeView] = React.useState("whisper");
         React.useEffect(() => { setModelTypeView(modelTypeOf(modelSize)); }, [modelSize]);
         const [transcriptionLanguage, setTranscriptionLanguage] = React.useState("auto");
+        const parakeetSelected = modelTypeOf(modelSize) === "parakeet";
+        const effectiveTranscriptionLanguage = parakeetSelected ? "auto" : transcriptionLanguage;
         const [spokenPunctuation, setSpokenPunctuation] = React.useState(false);
         const [lastTranscription, setLastTranscription] = React.useState("");
         const [lastTranscriptionTime, setLastTranscriptionTime] = React.useState("");
@@ -5160,6 +5162,8 @@
         };
         const goBack = () => setPage(page === "microphone-help" ? "diagnostics" : page === "updates" || page === "diagnostics" || page === "help" || page === "model" ? "advanced" : "main");
         const chooseLanguage = async (language) => {
+            if (parakeetSelected)
+                return;
             const result = await setTranscriptionOptionsRpc(language);
             if (result.success) {
                 setTranscriptionLanguage(language);
@@ -5439,19 +5443,22 @@
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement("div", { style: { position: 'relative', width: '100%' } },
                                 React__default["default"].createElement("span", { ref: languageMenuAnchorRef, "aria-hidden": "true", style: { position: 'absolute', left: 0, top: 0, width: '1px', height: '1px', pointerEvents: 'none' } }),
-                                React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", onClick: (event) => {
+                                React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: parakeetSelected, onClick: (event) => {
+                                        if (parakeetSelected)
+                                            return;
                                         deckyFrontendLib.showContextMenu(React__default["default"].createElement(deckyFrontendLib.Menu, { label: t("Language") },
-                                            React__default["default"].createElement(deckyFrontendLib.MenuItem, { selected: transcriptionLanguage === "auto", onSelected: () => { void chooseLanguage("auto"); } }, t("Auto Detect")),
+                                            React__default["default"].createElement(deckyFrontendLib.MenuItem, { selected: effectiveTranscriptionLanguage === "auto", onSelected: () => { void chooseLanguage("auto"); } }, t("Auto Detect")),
                                             React__default["default"].createElement("div", { className: deckyFrontendLib.gamepadContextMenuClasses.ContextMenuSeparator }),
                                             React__default["default"].createElement("div", { className: deckyFrontendLib.gamepadContextMenuClasses.MenuSectionHeader }, t("Popular Steam languages")),
-                                            POPULAR_LANGUAGE_OPTIONS.map(option => React__default["default"].createElement(deckyFrontendLib.MenuItem, { key: String(option.data), selected: option.data === transcriptionLanguage, onSelected: () => { void chooseLanguage(String(option.data)); } }, languageName(String(option.data), String(option.label)))),
+                                            POPULAR_LANGUAGE_OPTIONS.map(option => React__default["default"].createElement(deckyFrontendLib.MenuItem, { key: String(option.data), selected: option.data === effectiveTranscriptionLanguage, onSelected: () => { void chooseLanguage(String(option.data)); } }, languageName(String(option.data), String(option.label)))),
                                             React__default["default"].createElement("div", { className: deckyFrontendLib.gamepadContextMenuClasses.ContextMenuSeparator }),
                                             React__default["default"].createElement("div", { className: deckyFrontendLib.gamepadContextMenuClasses.MenuSectionHeader }, t("Other languages")),
-                                            OTHER_LANGUAGE_OPTIONS.map(option => React__default["default"].createElement(deckyFrontendLib.MenuItem, { key: String(option.data), selected: option.data === transcriptionLanguage, onSelected: () => { void chooseLanguage(String(option.data)); } }, languageName(String(option.data), String(option.label))))), languageMenuAnchorRef.current || event.currentTarget || undefined);
+                                            OTHER_LANGUAGE_OPTIONS.map(option => React__default["default"].createElement(deckyFrontendLib.MenuItem, { key: String(option.data), selected: option.data === effectiveTranscriptionLanguage, onSelected: () => { void chooseLanguage(String(option.data)); } }, languageName(String(option.data), String(option.label))))), languageMenuAnchorRef.current || event.currentTarget || undefined);
                                     } },
                                     t("Language"),
                                     ": ",
-                                    languageName(transcriptionLanguage, String(WHISPER_LANGUAGE_OPTIONS.find(option => option.data === transcriptionLanguage)?.label || transcriptionLanguage))))),
+                                    languageName(effectiveTranscriptionLanguage, String(WHISPER_LANGUAGE_OPTIONS.find(option => option.data === effectiveTranscriptionLanguage)?.label || effectiveTranscriptionLanguage))),
+                                parakeetSelected && React__default["default"].createElement("div", { style: { fontSize: "12px" } }, t("Parakeet automatically detects the spoken language.")))),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement("div", null,
                                 t("Binding"),

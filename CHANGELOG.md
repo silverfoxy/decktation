@@ -21,6 +21,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Fixed
 
+- Parakeet displays Auto Detect and disables manual language selection.
 - Show the correct CPU engine for Parakeet and keep model selection in sync
   with the backend after reopening the panel.
 

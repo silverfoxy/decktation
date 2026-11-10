@@ -477,6 +477,8 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [modelTypeView, setModelTypeView] = useState<ModelType["data"]>("whisper");
 	useEffect(() => { setModelTypeView(modelTypeOf(modelSize)); }, [modelSize]);
 	const [transcriptionLanguage, setTranscriptionLanguage] = useState<string>("auto");
+	const parakeetSelected = modelTypeOf(modelSize) === "parakeet";
+	const effectiveTranscriptionLanguage = parakeetSelected ? "auto" : transcriptionLanguage;
 	const [spokenPunctuation, setSpokenPunctuation] = useState<boolean>(false);
 	const [lastTranscription, setLastTranscription] = useState<string>("");
 	const [lastTranscriptionTime, setLastTranscriptionTime] = useState<string>("");
@@ -786,6 +788,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	};
 	const goBack = () => setPage(page === "microphone-help" ? "diagnostics" : page === "updates" || page === "diagnostics" || page === "help" || page === "model" ? "advanced" : "main");
 	const chooseLanguage = async (language: string) => {
+		if (parakeetSelected) return;
 		const result = await setTranscriptionOptionsRpc(language);
 		if (result.success) {
 			setTranscriptionLanguage(language);
@@ -1014,22 +1017,24 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 						</ButtonItem></PanelSectionRow>}
 						<PanelSectionRow><div style={{ position: 'relative', width: '100%' }}>
 							<span ref={languageMenuAnchorRef} aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, width: '1px', height: '1px', pointerEvents: 'none' }} />
-							<ButtonItem layout="below" onClick={(event) => {
+							<ButtonItem layout="below" disabled={parakeetSelected} onClick={(event) => {
+								if (parakeetSelected) return;
 							showContextMenu(
 								<Menu label={t("Language")}>
-									<MenuItem selected={transcriptionLanguage === "auto"} onSelected={() => { void chooseLanguage("auto"); }}>{t("Auto Detect")}</MenuItem>
+									<MenuItem selected={effectiveTranscriptionLanguage === "auto"} onSelected={() => { void chooseLanguage("auto"); }}>{t("Auto Detect")}</MenuItem>
 									<div className={gamepadContextMenuClasses.ContextMenuSeparator} />
 									<div className={gamepadContextMenuClasses.MenuSectionHeader}>{t("Popular Steam languages")}</div>
-									{POPULAR_LANGUAGE_OPTIONS.map(option => <MenuItem key={String(option.data)} selected={option.data === transcriptionLanguage}
+									{POPULAR_LANGUAGE_OPTIONS.map(option => <MenuItem key={String(option.data)} selected={option.data === effectiveTranscriptionLanguage}
 										onSelected={() => { void chooseLanguage(String(option.data)); }}>{languageName(String(option.data), String(option.label))}</MenuItem>)}
 									<div className={gamepadContextMenuClasses.ContextMenuSeparator} />
 									<div className={gamepadContextMenuClasses.MenuSectionHeader}>{t("Other languages")}</div>
-									{OTHER_LANGUAGE_OPTIONS.map(option => <MenuItem key={String(option.data)} selected={option.data === transcriptionLanguage}
+									{OTHER_LANGUAGE_OPTIONS.map(option => <MenuItem key={String(option.data)} selected={option.data === effectiveTranscriptionLanguage}
 											onSelected={() => { void chooseLanguage(String(option.data)); }}>{languageName(String(option.data), String(option.label))}</MenuItem>)}
 								</Menu>,
 								languageMenuAnchorRef.current || event.currentTarget || undefined,
 							);
-							}}>{t("Language")}: {languageName(transcriptionLanguage, String(WHISPER_LANGUAGE_OPTIONS.find(option => option.data === transcriptionLanguage)?.label || transcriptionLanguage))}</ButtonItem>
+							}}>{t("Language")}: {languageName(effectiveTranscriptionLanguage, String(WHISPER_LANGUAGE_OPTIONS.find(option => option.data === effectiveTranscriptionLanguage)?.label || effectiveTranscriptionLanguage))}</ButtonItem>
+							{parakeetSelected && <div style={{ fontSize: "12px" }}>{t("Parakeet automatically detects the spoken language.")}</div>}
 						</div></PanelSectionRow>
 						<PanelSectionRow><div>{t("Binding")}: <strong>{buttons.join(' + ')}</strong></div></PanelSectionRow>
 						<PanelSectionRow><ButtonItem layout="below" disabled={!controllerReady || recording || !!pendingDraft || testPhase !== "idle"} onClick={beginCapture}>{t("Change binding")}</ButtonItem></PanelSectionRow>
