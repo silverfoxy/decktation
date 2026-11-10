@@ -17,7 +17,7 @@ test('Cancel requests download interruption and restores the previous model choi
   });
   await page.goto('/');
   await page.getByText('Advanced settings', {exact: true}).click();
-  await page.getByRole('button', {name: /Model: Base/}).click();
+  await page.getByRole('button', {name: /Model: Whisper · Base/}).click();
   await page.getByRole('button', {name: /Medium/}).click();
   await page.evaluate(() => (window as any).fixture.control('model_download', {stage: 'downloading'}));
   await expect(page.getByRole('button', {name: 'Cancel download'})).toBeVisible();
@@ -77,7 +77,7 @@ test('an in-flight model download stays visible and blocks test dictation', asyn
   });
   await page.goto('/');
   await page.getByText('Advanced settings', { exact: true }).click();
-  await page.getByRole('button', { name: /Model: Base/ }).click();
+  await page.getByRole('button', { name: /Model: Whisper · Base/ }).click();
   await page.getByRole('button', { name: /Medium/ }).click();
   await page.evaluate(() => (window as any).fixture.control('model_download', {stage: 'downloading'}));
   await expect(page.getByRole('status').filter({hasText: 'Downloading transcription model'})).toBeVisible();
@@ -85,10 +85,26 @@ test('an in-flight model download stays visible and blocks test dictation', asyn
   await page.getByRole('button', {name: 'Back'}).click();
   await page.getByRole('button', {name: 'Back'}).click();
   await expect(page.getByRole('button', {name: /Test Dictation/})).toBeDisabled();
-  await page.evaluate(() => (window as any).fixture.control('model_download', {stage: 'idle'}));
+  await page.evaluate(() => (window as any).fixture.control('model_download', {stage: 'idle', modelSize: 'medium'}));
   finishSelection();
   await expect(page.getByText('Downloading transcription model')).toHaveCount(0);
   await expect(page.getByText('Advanced settings', {exact: true})).toBeVisible();
   await page.getByText('Advanced settings', {exact: true}).click();
-  await expect(page.getByRole('button', {name: /Model: Medium/})).toBeVisible();
+  await expect(page.getByRole('button', {name: /Model: Whisper · Medium/})).toBeVisible();
+});
+
+
+test('Parakeet shows automatic language detection instead of a saved Whisper language', async ({ page }) => {
+  await page.route('**/api/rpc', async route => {
+    const method = JSON.parse(route.request().postData() || '{}').method;
+    if (method === 'get_button_config') {
+      await route.fulfill({json: {success: true, config: {enabled: false, modelSize: 'parakeet-v3', transcriptionLanguage: 'en'}}});
+    } else await route.continue();
+  });
+  await page.goto('/');
+  await page.evaluate(() => (window as any).fixture.control('model_download', {stage: 'idle', modelSize: 'parakeet-v3'}));
+  await expect(page.getByRole('button', {name: 'Language: Auto Detect'})).toBeDisabled();
+  await expect(page.getByText('Parakeet automatically detects the spoken language.')).toBeVisible();
+  await page.evaluate(() => (window as any).fixture.control('model_download', {stage: 'idle', modelSize: 'base'}));
+  await expect(page.getByRole('button', {name: 'Language: English'})).toBeEnabled();
 });

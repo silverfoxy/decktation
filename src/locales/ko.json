@@ -257,5 +257,16 @@
   "Save or discard your changes before creating a profile.": "프로필을 만들기 전에 변경 사항을 저장하거나 취소하세요.",
   "Delete profile": "프로필 삭제",
   "Delete profile \"{name}\" and all its settings? Unsaved changes will also be lost.": "프로필 \"{name}\" 및 모든 설정을 삭제할까요? 저장하지 않은 변경 사항도 사라집니다.",
-  "Switch to another active profile in Mode before deleting this profile.": "이 프로필을 삭제하기 전에 모드에서 다른 프로필을 활성화하세요."
+  "Switch to another active profile in Mode before deleting this profile.": "이 프로필을 삭제하기 전에 모드에서 다른 프로필을 활성화하세요.",
+  "Model type": "Model type",
+  "Model variant": "Model variant",
+  "Parakeet": "Parakeet",
+  "Whisper": "Whisper",
+  "V3": "V3",
+  "Ultra · More accurate": "Ultra · More accurate",
+  "Waiting for download data...": "Waiting for download data...",
+  "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
+  "Receiving download data...": "Receiving download data...",
+  "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
+  "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
 }

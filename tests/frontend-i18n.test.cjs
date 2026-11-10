@@ -96,7 +96,7 @@ test('all Steam language names map to an available catalog',()=>{
 
 test('every supported dictation code has a native display name',()=>{
  const source=fs.readFileSync(path.resolve(__dirname,'../src/index.tsx'),'utf8');
- const options=source.slice(source.indexOf('const WHISPER_LANGUAGE_OPTIONS'),source.indexOf('const MODEL_SIZE_OPTIONS'));
+ const options=source.slice(source.indexOf('const WHISPER_LANGUAGE_OPTIONS'),source.indexOf('const MODEL_TYPES'));
  const names=require('../src/locales/language-names.json');
  const codes=[...options.matchAll(/data: "([^"]+)", label:/g)].map(m=>m[1]).filter(x=>x!=='auto');
  assert.deepEqual(Object.keys(names).sort(),codes.sort());

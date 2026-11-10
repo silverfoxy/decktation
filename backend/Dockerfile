@@ -2,6 +2,7 @@ FROM ghcr.io/steamdeckhomebrew/holo-base:latest
 
 ARG YDOTOOL_COMMIT=57ba7d0af525e82da2de0e275d169477f293b197
 ARG WHISPER_CPP_COMMIT=f24588a272ae8e23280d9c220536437164e6ed28
+ARG TRANSCRIBE_CPP_COMMIT=4d7c1ccefd39e5a9ea36cca5f8fefc6dcc14b99b
 
 # holo-base already ships glslc, shaderc, the Vulkan headers, and binutils.
 # Reinstalling those packages fails because their files are untracked by pacman.
@@ -87,5 +88,27 @@ RUN git init /whisper.cpp \
         -DWHISPER_BUILD_TESTS=OFF \
         -DWHISPER_BUILD_SERVER=ON \
     && cmake --build /whisper.cpp/build --config Release --target whisper-server -j2
+
+# Optional Parakeet engine: transcribe.cpp v0.4.1 as a shared CPU library for
+# the pure-Python transcribe-cpp binding (same version, ABI checked at import).
+# x86-64-v3 SIMD (AVX2/FMA/F16C/BMI2) is enabled because the SIGILL-safe
+# baseline ran Parakeet at about 1x real time on a Steam Deck while a game was
+# running; with AVX2 an 11 s clip takes about 2.4 s on 4 threads.
+RUN git init /transcribe.cpp \
+    && git -C /transcribe.cpp remote add origin https://github.com/handy-computer/transcribe.cpp.git \
+    && git -C /transcribe.cpp fetch --depth 1 origin "${TRANSCRIBE_CPP_COMMIT}" \
+    && git -C /transcribe.cpp checkout --detach FETCH_HEAD \
+    && cmake -S /transcribe.cpp -B /transcribe.cpp/build \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DTRANSCRIBE_BUILD_SHARED=ON \
+        -DTRANSCRIBE_VULKAN=OFF \
+        -DTRANSCRIBE_USE_SYSTEM_BLAS=OFF \
+        -DTRANSCRIBE_X86_CONSERVATIVE=OFF \
+        -DGGML_NATIVE=OFF -DGGML_AVX=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON -DGGML_BMI2=ON \
+        -DTRANSCRIBE_BUILD_TESTS=OFF \
+        -DTRANSCRIBE_BUILD_EXAMPLES=OFF \
+        -DTRANSCRIBE_INSTALL=OFF \
+        -DCMAKE_BUILD_RPATH_USE_ORIGIN=ON \
+    && cmake --build /transcribe.cpp/build --config Release -j2
 
 ENTRYPOINT ["/backend/entrypoint.sh"]
