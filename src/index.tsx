@@ -39,6 +39,23 @@ import { t, getInterfacePreference, setInterfacePreference, languageName, initia
 
 type RpcResponse = { success: boolean; error?: string; [key: string]: any };
 
+type ModelDownload = { received: number; total: number | null; seconds_since_data: number };
+const ModelDownloadProgress = ({ progress }: { progress: ModelDownload | null }) => {
+    const total = progress?.total && progress.total > 0 ? progress.total : undefined;
+    const received = progress?.received || 0;
+    const percent = total ? Math.min(100, Math.floor(received / total * 100)) : null;
+    const mib = (bytes: number) => (bytes / 1048576).toFixed(1);
+    return <div role="status" aria-live="polite" style={{ width: "100%" }}>
+        <progress aria-label={t("Downloading transcription model...")} max={total || 1}
+            value={total ? Math.min(received, total) : undefined} style={{ width: "100%" }} />
+        <div>{percent !== null ? `${percent}% · ${mib(received)} / ${mib(total!)} MiB` : `${mib(received)} MiB`}</div>
+        <div>{!progress || received === 0 ? t("Waiting for download data...")
+            : progress.seconds_since_data >= 10
+                ? t("No download data received for {seconds} seconds.", { seconds: progress.seconds_since_data })
+                : t("Receiving download data...")}</div>
+    </div>;
+};
+
 const setOverlayLabel = callable<[label: string], RpcResponse>("set_overlay_transcribing_label");
 const syncOverlayLanguage = () => setOverlayLabel(t("Transcribing...")).catch(() => {});
 const getPluginUpdate = callable<[force: boolean], RpcResponse>("get_plugin_update");
@@ -363,6 +380,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [modelReady, setModelReady] = useState<boolean>(false);
 	const [inferenceDevice, setInferenceDevice] = useState<"cpu" | "gpu" | null>(null);
 	const [modelLoading, setModelLoading] = useState<boolean>(false);
+	const [modelDownload, setModelDownload] = useState<ModelDownload | null>(null);
 	const [modelStage, setModelStage] = useState<"idle" | "downloading" | "loading">("idle");
 	const [modelCancelling, setModelCancelling] = useState(false);
 	const modelChangeInFlight = useRef(false);
@@ -646,6 +664,8 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 							: null,
 					);
 					setModelLoading(result.model_loading === true || modelChangeInFlight.current);
+					setModelDownload(result.model_download || null);
+					if (result.model_size) setModelSize(result.model_size);
 					setModelStage(result.model_stage === "downloading" ? "downloading" : result.model_loading ? "loading" : "idle");
                     setTranscribing(result.transcribing === true);
 					setInputReady(result.input_ready !== false);
@@ -984,7 +1004,8 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 								{statusMessage}
 							</div>
 						</PanelSectionRow>
-						{modelStage === "downloading" && <PanelSectionRow><ButtonItem layout="below" disabled={modelCancelling} onClick={cancelDownload}>{modelCancelling ? t("Cancelling model download...") : t("Cancel download")}</ButtonItem></PanelSectionRow>}
+						{modelStage === "downloading" && <PanelSectionRow><ModelDownloadProgress progress={modelDownload} /></PanelSectionRow>}
+					{modelStage === "downloading" && <PanelSectionRow><ButtonItem layout="below" disabled={modelCancelling} onClick={cancelDownload}>{modelCancelling ? t("Cancelling model download...") : t("Cancel download")}</ButtonItem></PanelSectionRow>}
 					</PanelSection>
 					<PanelSection title={t("Quick settings")}>
 
@@ -1059,12 +1080,14 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 						</ButtonItem></div></PanelSectionRow>
 						{modelReady && !modelLoading && inferenceDevice && (
 							<PanelSectionRow><div>
-								{inferenceDevice === "gpu"
+								{modelTypeOf(modelSize) === "parakeet"
+									? t("Parakeet runs on the CPU via transcribe.cpp.")
+									: inferenceDevice === "gpu"
 									? t("whisper.cpp runs on the GPU via Vulkan.")
 									: t("whisper.cpp runs on the CPU.")}
 							</div></PanelSectionRow>
 						)}
-						<PanelSectionRow><div style={{ fontSize: '12px' }}>{t("Base is fastest. Small balances speed and accuracy. Medium is more accurate but slower and may download on first use.")}</div></PanelSectionRow>
+						<PanelSectionRow><div style={{ fontSize: '12px' }}>{modelTypeOf(modelSize) === "parakeet" ? t("Parakeet automatically detects the spoken language.") : t("Base is fastest. Small balances speed and accuracy. Medium is more accurate but slower and may download on first use.")}</div></PanelSectionRow>
 					</PanelSection>
 					<PanelSection title={t("Sending")}>
 						<PanelSectionRow><DropdownItem label={t("Transcription sending")} menuLabel={t("Transcription sending")} rgOptions={[{data:"immediate",label:t("Send immediately")},{data:"review",label:t("Review before sending")},{data:"countdown",label:t("Send after countdown")}]} selectedOption={sendingMode} onChange={async (option) => {
@@ -1207,16 +1230,18 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 				<PanelSection title={t("Model variant")}>
 					{rpcError && <PanelSectionRow><div role="alert">{rpcError}</div></PanelSectionRow>}
 					{modelLoading && <PanelSectionRow><div role="status" aria-live="polite">{modelCancelling ? t("Cancelling model download...") : modelStage === "downloading" ? t("Downloading transcription model...") : t("Loading transcription model...")}</div></PanelSectionRow>}
+					{modelStage === "downloading" && <PanelSectionRow><ModelDownloadProgress progress={modelDownload} /></PanelSectionRow>}
 					{modelStage === "downloading" && <PanelSectionRow><ButtonItem layout="below" disabled={modelCancelling} onClick={cancelDownload}>{modelCancelling ? t("Cancelling model download...") : t("Cancel download")}</ButtonItem></PanelSectionRow>}
 					{(MODEL_TYPES.find(type => type.data === modelTypeView)?.variants || []).map(option => <PanelSectionRow key={String(option.data)}><ButtonItem layout="below" disabled={modelLoading || modelChangeInFlight.current} onClick={async () => {
 						if (modelLoading || modelChangeInFlight.current) return;
 						modelChangeInFlight.current = true;
 						const next = option.data as string;
 						setRpcError("");
-						if (enabled && modelReady) setModelLoading(true);
+						setModelLoading(true);
+						setModelDownload(null);
 						try {
 							const result = await setModelSizeRpc(next);
-							if (result.success) { setModelSize(next); if (pageRef.current === "model") setPage("advanced"); }
+							if (result.success) { setModelSize(next); }
 							else if (result.cancelled) {
 								setModelSize(result.modelSize || modelSize);
 								setRpcError(t(result.error || "Model download cancelled."));

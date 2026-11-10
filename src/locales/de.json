@@ -263,5 +263,10 @@
   "Parakeet": "Parakeet",
   "Whisper": "Whisper",
   "V3": "V3",
-  "Ultra · More accurate": "Ultra · Genauer"
+  "Ultra · More accurate": "Ultra · Genauer",
+  "Waiting for download data...": "Waiting for download data...",
+  "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
+  "Receiving download data...": "Receiving download data...",
+  "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
+  "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
 }

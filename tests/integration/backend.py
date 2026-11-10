@@ -41,6 +41,9 @@ class VoiceFixture:
         self.pending_text = ''
         self.confirm_delay = 0
 
+    def model_download_status(self):
+        return None
+
     def pending_snapshot(self):
         return None
 

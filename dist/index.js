@@ -387,7 +387,12 @@
       Parakeet: Parakeet$9,
       Whisper: Whisper$9,
       V3: V3$9,
-      "Ultra · More accurate": "Ultra · More accurate"
+      "Ultra · More accurate": "Ultra · More accurate",
+      "Waiting for download data...": "Waiting for download data...",
+      "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
+      "Receiving download data...": "Receiving download data...",
+      "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
+      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
     };
 
     var af = "Afrikaans";
@@ -899,7 +904,12 @@
       Parakeet: Parakeet$8,
       Whisper: Whisper$8,
       V3: V3$8,
-      "Ultra · More accurate": "Ultra · Más preciso"
+      "Ultra · More accurate": "Ultra · Más preciso",
+      "Waiting for download data...": "Waiting for download data...",
+      "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
+      "Receiving download data...": "Receiving download data...",
+      "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
+      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
     };
 
     var Back$7 = "Назад";
@@ -1208,7 +1218,12 @@
       Parakeet: Parakeet$7,
       Whisper: Whisper$7,
       V3: V3$7,
-      "Ultra · More accurate": "Ultra · More accurate"
+      "Ultra · More accurate": "Ultra · More accurate",
+      "Waiting for download data...": "Waiting for download data...",
+      "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
+      "Receiving download data...": "Receiving download data...",
+      "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
+      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
     };
 
     var Back$6 = "Voltar";
@@ -1517,7 +1532,12 @@
       Parakeet: Parakeet$6,
       Whisper: Whisper$6,
       V3: V3$6,
-      "Ultra · More accurate": "Ultra · Mais preciso"
+      "Ultra · More accurate": "Ultra · Mais preciso",
+      "Waiting for download data...": "Waiting for download data...",
+      "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
+      "Receiving download data...": "Receiving download data...",
+      "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
+      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
     };
 
     var Back$5 = "Wstecz";
@@ -1826,7 +1846,12 @@
       Parakeet: Parakeet$5,
       Whisper: Whisper$5,
       V3: V3$5,
-      "Ultra · More accurate": "Ultra · More accurate"
+      "Ultra · More accurate": "Ultra · More accurate",
+      "Waiting for download data...": "Waiting for download data...",
+      "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
+      "Receiving download data...": "Receiving download data...",
+      "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
+      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
     };
 
     var Back$4 = "뒤로";
@@ -2135,7 +2160,12 @@
       Parakeet: Parakeet$4,
       Whisper: Whisper$4,
       V3: V3$4,
-      "Ultra · More accurate": "Ultra · More accurate"
+      "Ultra · More accurate": "Ultra · More accurate",
+      "Waiting for download data...": "Waiting for download data...",
+      "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
+      "Receiving download data...": "Receiving download data...",
+      "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
+      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
     };
 
     var Back$3 = "戻る";
@@ -2444,7 +2474,12 @@
       Parakeet: Parakeet$3,
       Whisper: Whisper$3,
       V3: V3$3,
-      "Ultra · More accurate": "Ultra · More accurate"
+      "Ultra · More accurate": "Ultra · More accurate",
+      "Waiting for download data...": "Waiting for download data...",
+      "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
+      "Receiving download data...": "Receiving download data...",
+      "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
+      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
     };
 
     var Back$2 = "Zurück";
@@ -2753,7 +2788,12 @@
       Parakeet: Parakeet$2,
       Whisper: Whisper$2,
       V3: V3$2,
-      "Ultra · More accurate": "Ultra · Genauer"
+      "Ultra · More accurate": "Ultra · Genauer",
+      "Waiting for download data...": "Waiting for download data...",
+      "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
+      "Receiving download data...": "Receiving download data...",
+      "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
+      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
     };
 
     var Back$1 = "Retour";
@@ -3062,7 +3102,12 @@
       Parakeet: Parakeet$1,
       Whisper: Whisper$1,
       V3: V3$1,
-      "Ultra · More accurate": "Ultra · Plus précis"
+      "Ultra · More accurate": "Ultra · Plus précis",
+      "Waiting for download data...": "Waiting for download data...",
+      "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
+      "Receiving download data...": "Receiving download data...",
+      "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
+      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
     };
 
     var Back = "返回";
@@ -3371,7 +3416,12 @@
       Parakeet: Parakeet,
       Whisper: Whisper,
       V3: V3,
-      "Ultra · More accurate": "Ultra · More accurate"
+      "Ultra · More accurate": "Ultra · More accurate",
+      "Waiting for download data...": "Waiting for download data...",
+      "No download data received for {seconds} seconds.": "No download data received for {seconds} seconds.",
+      "Receiving download data...": "Receiving download data...",
+      "Parakeet runs on the CPU via transcribe.cpp.": "Parakeet runs on the CPU via transcribe.cpp.",
+      "Parakeet automatically detects the spoken language.": "Parakeet automatically detects the spoken language."
     };
 
     const catalogs = { en: en$1, es, ru, pt, pl, ko, ja, de, fr, zh };
@@ -4340,6 +4390,19 @@
       return GenIcon({"tag":"svg","attr":{"viewBox":"0 0 352 512"},"child":[{"tag":"path","attr":{"d":"M176 352c53.02 0 96-42.98 96-96V96c0-53.02-42.98-96-96-96S80 42.98 80 96v160c0 53.02 42.98 96 96 96zm160-160h-16c-8.84 0-16 7.16-16 16v48c0 74.8-64.49 134.82-140.79 127.38C96.71 376.89 48 317.11 48 250.3V208c0-8.84-7.16-16-16-16H16c-8.84 0-16 7.16-16 16v40.16c0 89.64 63.97 169.55 152 181.69V464H96c-8.84 0-16 7.16-16 16v16c0 8.84 7.16 16 16 16h160c8.84 0 16-7.16 16-16v-16c0-8.84-7.16-16-16-16h-56v-33.77C285.71 418.47 352 344.9 352 256v-48c0-8.84-7.16-16-16-16z"}}]})(props);
     }
 
+    const ModelDownloadProgress = ({ progress }) => {
+        const total = progress?.total && progress.total > 0 ? progress.total : undefined;
+        const received = progress?.received || 0;
+        const percent = total ? Math.min(100, Math.floor(received / total * 100)) : null;
+        const mib = (bytes) => (bytes / 1048576).toFixed(1);
+        return React__default["default"].createElement("div", { role: "status", "aria-live": "polite", style: { width: "100%" } },
+            React__default["default"].createElement("progress", { "aria-label": t("Downloading transcription model..."), max: total || 1, value: total ? Math.min(received, total) : undefined, style: { width: "100%" } }),
+            React__default["default"].createElement("div", null, percent !== null ? `${percent}% · ${mib(received)} / ${mib(total)} MiB` : `${mib(received)} MiB`),
+            React__default["default"].createElement("div", null, !progress || received === 0 ? t("Waiting for download data...")
+                : progress.seconds_since_data >= 10
+                    ? t("No download data received for {seconds} seconds.", { seconds: progress.seconds_since_data })
+                    : t("Receiving download data...")));
+    };
     const setOverlayLabel = callable("set_overlay_transcribing_label");
     const syncOverlayLanguage = () => setOverlayLabel(t("Transcribing...")).catch(() => { });
     const getPluginUpdate = callable("get_plugin_update");
@@ -4648,6 +4711,7 @@
         const [modelReady, setModelReady] = React.useState(false);
         const [inferenceDevice, setInferenceDevice] = React.useState(null);
         const [modelLoading, setModelLoading] = React.useState(false);
+        const [modelDownload, setModelDownload] = React.useState(null);
         const [modelStage, setModelStage] = React.useState("idle");
         const [modelCancelling, setModelCancelling] = React.useState(false);
         const modelChangeInFlight = React.useRef(false);
@@ -4947,6 +5011,9 @@
                             ? result.inference_device
                             : null);
                         setModelLoading(result.model_loading === true || modelChangeInFlight.current);
+                        setModelDownload(result.model_download || null);
+                        if (result.model_size)
+                            setModelSize(result.model_size);
                         setModelStage(result.model_stage === "downloading" ? "downloading" : result.model_loading ? "loading" : "idle");
                         setTranscribing(result.transcribing === true);
                         setInputReady(result.input_ready !== false);
@@ -5360,6 +5427,8 @@
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement("div", { role: "status", style: { padding: statusProblem ? '10px' : '4px 0', borderRadius: '6px', backgroundColor: statusProblem ? '#713030' : undefined } }, statusMessage)),
                         modelStage === "downloading" && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement(ModelDownloadProgress, { progress: modelDownload })),
+                        modelStage === "downloading" && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: modelCancelling, onClick: cancelDownload }, modelCancelling ? t("Cancelling model download...") : t("Cancel download")))),
                     React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Quick settings") },
                         presets.length > 0 && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
@@ -5444,11 +5513,13 @@
                                     ": ",
                                     modelLabel(modelSize, t)))),
                         modelReady && !modelLoading && inferenceDevice && (React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                            React__default["default"].createElement("div", null, inferenceDevice === "gpu"
-                                ? t("whisper.cpp runs on the GPU via Vulkan.")
-                                : t("whisper.cpp runs on the CPU.")))),
+                            React__default["default"].createElement("div", null, modelTypeOf(modelSize) === "parakeet"
+                                ? t("Parakeet runs on the CPU via transcribe.cpp.")
+                                : inferenceDevice === "gpu"
+                                    ? t("whisper.cpp runs on the GPU via Vulkan.")
+                                    : t("whisper.cpp runs on the CPU.")))),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                            React__default["default"].createElement("div", { style: { fontSize: '12px' } }, t("Base is fastest. Small balances speed and accuracy. Medium is more accurate but slower and may download on first use.")))),
+                            React__default["default"].createElement("div", { style: { fontSize: '12px' } }, modelTypeOf(modelSize) === "parakeet" ? t("Parakeet automatically detects the spoken language.") : t("Base is fastest. Small balances speed and accuracy. Medium is more accurate but slower and may download on first use.")))),
                     React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Sending") },
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: t("Transcription sending"), menuLabel: t("Transcription sending"), rgOptions: [{ data: "immediate", label: t("Send immediately") }, { data: "review", label: t("Review before sending") }, { data: "countdown", label: t("Send after countdown") }], selectedOption: sendingMode, onChange: async (option) => {
@@ -5687,6 +5758,8 @@
                         modelLoading && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement("div", { role: "status", "aria-live": "polite" }, modelCancelling ? t("Cancelling model download...") : modelStage === "downloading" ? t("Downloading transcription model...") : t("Loading transcription model..."))),
                         modelStage === "downloading" && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement(ModelDownloadProgress, { progress: modelDownload })),
+                        modelStage === "downloading" && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: modelCancelling, onClick: cancelDownload }, modelCancelling ? t("Cancelling model download...") : t("Cancel download"))),
                         (MODEL_TYPES.find(type => type.data === modelTypeView)?.variants || []).map(option => React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, { key: String(option.data) },
                             React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: modelLoading || modelChangeInFlight.current, onClick: async () => {
@@ -5695,14 +5768,12 @@
                                     modelChangeInFlight.current = true;
                                     const next = option.data;
                                     setRpcError("");
-                                    if (enabled && modelReady)
-                                        setModelLoading(true);
+                                    setModelLoading(true);
+                                    setModelDownload(null);
                                     try {
                                         const result = await setModelSizeRpc(next);
                                         if (result.success) {
                                             setModelSize(next);
-                                            if (pageRef.current === "model")
-                                                setPage("advanced");
                                         }
                                         else if (result.cancelled) {
                                             setModelSize(result.modelSize || modelSize);

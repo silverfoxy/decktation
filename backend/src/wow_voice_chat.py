@@ -147,13 +147,20 @@ class ModelDownloadCancelled(Exception):
     """The selected model was not installed because its download was cancelled."""
 
 
-def _download_vulkan_model(url, destination, cancel_event=None):
+def _download_vulkan_model(url, destination, cancel_event=None, progress=None):
     # Decky's frozen runtime needs an explicitly bundled CA store.
     context = ssl.create_default_context(cafile=certifi.where())
     # A pending network read cannot be interrupted by a threading.Event.
     # Bound each read so cancellation does not wait for the old 60s timeout.
     timeout = 15 if cancel_event is not None else 60
     with urllib.request.urlopen(url, context=context, timeout=timeout) as response:
+        try:
+            total = max(0, int(response.headers.get("Content-Length", 0))) or None
+        except (AttributeError, TypeError, ValueError):
+            total = None
+        received = 0
+        if progress:
+            progress(received, total)
         with destination.open("wb") as output:
             while True:
                 if cancel_event is not None and cancel_event.is_set():
@@ -164,6 +171,11 @@ def _download_vulkan_model(url, destination, cancel_event=None):
                 if not chunk:
                     break
                 output.write(chunk)
+                received += len(chunk)
+                if progress:
+                    progress(received, total)
+            if total is not None and received != total:
+                raise IOError("Model download ended before the expected size was received")
 
 
 def _vulkan_environment():
@@ -288,6 +300,7 @@ class WoWVoiceChat:
         self.inference_device = None
         self.model_loading = False
         self.model_stage = "idle"  # idle, downloading, or loading; not a percent estimate
+        self.model_download = None
         self.model_stage_lock = threading.Lock()
         self.model_cancel_event = threading.Event()
         self.model_download_cancelled = False
@@ -457,6 +470,24 @@ class WoWVoiceChat:
                 if self._closing.is_set():
                     self._stop_whisper_worker()
 
+    def _update_model_download(self, received, total):
+        # Publish a complete snapshot for the status RPC's other thread.
+        previous = self.model_download
+        now = time.monotonic()
+        self.model_download = {
+            "received": received, "total": total,
+            "updated": now if not previous or received != previous["received"] else previous["updated"],
+        }
+
+    def model_download_status(self):
+        progress = self.model_download
+        if self.model_stage != "downloading" or progress is None:
+            return None
+        return {
+            "received": progress["received"], "total": progress["total"],
+            "seconds_since_data": max(0, int(time.monotonic() - progress["updated"])),
+        }
+
     def cancel_model_download(self):
         """Request cancellation without waiting for the model lock or network read."""
         with self.model_stage_lock:
@@ -523,9 +554,10 @@ class WoWVoiceChat:
             temporary = model.with_suffix(".download")
             logger.info("Downloading Whisper model %s to %s", self.model_size, model)
             url = f"https://huggingface.co/ggerganov/whisper.cpp/resolve/main/{filename}"
+            self.model_download = None
             self.model_stage = "downloading"
             try:
-                _download_vulkan_model(url, temporary, self.model_cancel_event)
+                _download_vulkan_model(url, temporary, self.model_cancel_event, self._update_model_download)
                 with self.model_stage_lock:
                     if self.model_cancel_event.is_set():
                         raise ModelDownloadCancelled()
@@ -556,9 +588,10 @@ class WoWVoiceChat:
         cache_dir.mkdir(parents=True, exist_ok=True)
         temporary = model.with_suffix(".download")
         logger.info("Downloading Parakeet model %s to %s", self.model_size, model)
+        self.model_download = None
         self.model_stage = "downloading"
         try:
-            _download_vulkan_model(spec["url"], temporary, self.model_cancel_event)
+            _download_vulkan_model(spec["url"], temporary, self.model_cancel_event, self._update_model_download)
             with self.model_stage_lock:
                 if self.model_cancel_event.is_set():
                     raise ModelDownloadCancelled()

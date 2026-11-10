@@ -9,6 +9,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- Model downloads show a progress bar, downloaded size, and activity status for
+  both Whisper and Parakeet.
+
 - Optional Parakeet speech engine (transcribe.cpp, CPU) with V3 and Ultra
   variants. Parakeet covers 25 European languages with automatic language
   detection and leaves the GPU to the game. Whisper stays the default.
@@ -17,6 +20,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   the tagged changelog notes and installable download links.
 
 ### Fixed
+
+- Show the correct CPU engine for Parakeet and keep model selection in sync
+  with the backend after reopening the panel.
 
 - Upload a single canonical GitHub release ZIP to avoid collisions between
   differently capitalized download names.

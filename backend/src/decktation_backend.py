@@ -1829,6 +1829,8 @@ class Plugin:
                     Plugin.voice_service.model_stage
                     if Plugin.voice_service and model_loading else "idle"
                 ),
+                "model_download": (Plugin.voice_service.model_download_status()
+                                   if Plugin.voice_service and model_loading else None),
                 "model_size": Plugin.voice_service.model_size if Plugin.voice_service else None,
                 "transcribing": bool(Plugin.voice_service and getattr(Plugin.voice_service, "is_transcribing", False)),
                 "recording": Plugin.voice_service.is_recording if Plugin.voice_service else False,
