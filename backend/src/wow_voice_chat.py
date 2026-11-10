@@ -829,7 +829,7 @@ class WoWVoiceChat:
             draft_id = uuid.uuid4().hex
             delay = self._confirm_delay_for(message) if not self.review_mode else 0
             typing_only = self.manual_send or channel == "type" or (
-                channel == "command" and self.preset.get("chat_send_key", "enter") is None
+                self.preset.get("chat_send_key", "enter") is None
             )
             self.pending_text = message
             self.pending_draft = {
@@ -1242,6 +1242,11 @@ class WoWVoiceChat:
             if self.manual_send:
                 send_key = None
 
+        if send_key not in (None, "enter", "controller_a"):
+            logger.error("Unsupported chat submission input")
+            self._report_diagnostic("text_injection.failed")
+            return False
+
         chat_open_delay = float(self.preset.get("chat_open_delay", 0))
         chat_send_delay = float(self.preset.get("chat_send_delay", 0))
 
@@ -1300,9 +1305,13 @@ class WoWVoiceChat:
 
             # Only submit after text insertion succeeds. This records command
             # success, not confirmation that the game displayed the text.
-            if send_key == "enter":
+            if send_key is not None:
+                # BTN_SOUTH (304) is controller A, not the keyboard letter A.
+                # Hold across several game frames so polling games see the press.
+                submit = (["key", "-d", "80", "304:1", "304:0"]
+                          if send_key == "controller_a" else ["key", "28:1", "28:0"])
                 result = subprocess.run(
-                    [ydotool, "key", "28:1", "28:0"],
+                    [ydotool, *submit],
                     capture_output=True,
                     text=True,
                     env=env,

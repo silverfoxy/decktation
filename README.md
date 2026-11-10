@@ -52,7 +52,7 @@ If you are running an older version without the updater, or the in-plugin instal
 ## Quick start
 
 1. Open the Steam Deck **Quick Access Menu** (`...`) and open **Decktation**.
-2. Under **Mode**, choose **WoW**, **GW2**, or **Generic**. Use **Mode → Edit game profile** to customize channel commands, spoken triggers, and recognition keywords.
+2. Under **Mode**, choose **WoW**, **WoW Forever**, **GW2**, or **Generic**. Use **Mode → Edit game profile** to customize channel commands, spoken triggers, recognition keywords, and the chat submission input. WoW Forever submits with controller A by default; regular WoW uses Enter.
 3. Turn **Enable** on and wait for the status to show **Ready**. The first use of a model may need an internet connection to download it.
 4. Select **Test Dictation (3s)**, speak, and check the **Result** in the panel. The test displays the transcript without typing it into the active app.
 5. Focus the game or text field. Hold **L1 + R1**, speak, then release to transcribe and enter the text. Use **Change binding** on the main page to choose another button combination.

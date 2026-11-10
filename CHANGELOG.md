@@ -9,6 +9,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- Per-profile chat submission with Enter or controller A, plus a separate WoW
+  Forever preset that submits with A by default. Regular WoW keeps Enter.
+
 - Model downloads show a progress bar, downloaded size, and activity status for
   both Whisper and Parakeet.
 
