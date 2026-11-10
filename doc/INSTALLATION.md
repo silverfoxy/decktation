@@ -33,47 +33,18 @@ For an older installation without the updater, or if Decky's in-plugin installer
 
 Keep the filename `Decktation.zip` so Decky recognizes the existing plugin and unloads its code before extracting the new build. Leave Decktation settings and downloaded Whisper model files alone; deleting them is not part of a normal update.
 
-## Branch builds
+## PR test builds
 
-For repeated Deck testing, configure the [opt-in testing catalog](TESTING_STORE.md) once at `https://decktation.com/testing/plugins.json`. It lists successful builds of **open PRs, including forks, without approval**; select a PR version deliberately. The direct branch ZIP URLs below remain useful for one-off installs. A PR listed in the testing store has **not** been reviewed for safety.
+Configure the [opt-in testing catalog](TESTING_STORE.md) at `https://decktation.com/testing/plugins.json`. It lists successful builds of **open PRs, including forks, without approval**; select a PR version deliberately. These packages have not been reviewed for safety. Master and branch builds are not included.
 
-When GitHub Pages is enabled for a repository, branch packages use this URL pattern:
+PR packages stay in Actions artifacts for 30 days. Their public URLs use the Worker, so Decky does not need a GitHub login. Expired builds require a new successful build. Stable ZIPs stay in GitHub Releases; Pages stores no plugin packages.
 
-```text
-https://<owner>.github.io/decktation/branches/<branch-slug>/Decktation.zip
-```
-
-Branch names use readable ASCII slugs. For example, `feat/haptic-feedback` uses `feat-haptic-feedback`. Names containing other punctuation or Unicode also receive a stable hash suffix. Prefer the exact URL shown in the workflow run summary or branch page.
-
-Every GitHub Actions build also uploads a `decktation.zip` artifact. Open the run for the branch or pull request and use the download link in its summary. This works without GitHub Pages, but downloading the artifact requires signing in and is subject to GitHub’s artifact retention period.
-
-To publish public branch ZIPs from a fork, enable **Settings → Pages → Build and deployment → Source → GitHub Actions** in that fork. The workflow deploys through the `decktation-previews` environment.
+For manual testing, CI still uploads `decktation.zip` artifacts for builds. Open the run and use its summary download link. Direct Actions downloads require signing in and are subject to artifact retention. Old public `/branches/…/Decktation.zip` URLs are retired.
 
 ## Install a local development build
 
 See [Development](DEVELOPMENT.md) for the source build and contributor workflow. For a local plugin package, use the Decky plugin builder and install the resulting ZIP through **Install Plugin from ZIP**.
 
-## Consistent branch installs
+## Consistent test installs
 
-Use the branch download ending in **`Decktation.zip`**, with that capitalization.
-For example, the `feat/transcription-review` branch uses:
-
-```text
-https://silverfoxy.github.io/decktation/branches/feat-transcription-review/Decktation.zip
-```
-
-Paste that URL into Decky Settings → Developer → Install Plugin from URL.
-Use the same route to switch to another branch or return to the stable
-`https://decktation.com/Decktation.zip` build. Branch builds do
-not need a store entry. Their commit/version remains in the manifest and download
-metadata; their install identity always stays `Decktation`.
-
-Decky derives the initial plugin name from the URL filename before reading the
-ZIP manifest. Matching `Decktation` lets it recognize an existing installation
-and unload it before extracting the replacement. If downloading a ZIP locally (including the lowercase GitHub release asset),
-rename it to `Decktation.zip` before importing it. Avoid query strings on install URLs, since
-Decky includes them when deriving this name.
-
-The lowercase `decktation.zip` and `latest.zip` addresses remain compatibility
-downloads, but should not be used for Decky's URL installer. If an earlier install
-has already stalled, restart Decky before trying the matching-name URL.
+Select the intended PR version in Decky's testing-store dropdown. For a manual ZIP install, keep the filename `Decktation.zip` so Decky recognizes and unloads the existing plugin. Return to the latest stable release at `https://decktation.com/Decktation.zip` when finished.

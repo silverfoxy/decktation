@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Keep Pages metadata and a bounded set of branch downloads, not release ZIPs."""
+"""Keep Pages metadata only; all plugin ZIPs live in Releases or Actions."""
 
 import argparse
 import json
@@ -8,7 +8,7 @@ import re
 import shutil
 
 
-def compact(root, repository, current_branch="", budget=512 * 1024 * 1024):
+def compact(root, repository, current_branch="", budget=8 * 1024 * 1024):
     release_base = f"https://github.com/{repository}/releases"
     for metadata in (root / "releases").glob("*/metadata.json"):
         data = json.loads(metadata.read_text())
@@ -32,35 +32,27 @@ def compact(root, repository, current_branch="", budget=512 * 1024 * 1024):
     if catalog.exists():
         data = json.loads(catalog.read_text())
         for plugin in data:
+            plugin["versions"] = [version for version in plugin["versions"]
+                                  if re.fullmatch(r"\d+\.\d+\.\d+", version["name"])]
             for version in plugin["versions"]:
-                if re.fullmatch(r"\d+\.\d+\.\d+", version["name"]):
-                    version["artifact"] = f"{release_base}/download/v{version['name']}/decktation.zip"
+                version["artifact"] = f"{release_base}/download/v{version['name']}/decktation.zip"
         catalog.write_text(json.dumps(data, indent=2) + "\n")
 
-    branches = []
-    for metadata in (root / "branches").glob("*/metadata.json"):
-        directory = metadata.parent
-        old = directory / "decktation.zip"
-        canonical = directory / "Decktation.zip"
-        if old.exists():
-            if not canonical.exists():
-                old.rename(canonical)
-            else:
-                old.unlink()
-        data = json.loads(metadata.read_text())
-        protected = data["ref"] in ("master", current_branch)
-        size = sum(p.stat().st_size for p in directory.rglob("*") if p.is_file())
-        branches.append((protected, data.get("generated_at", ""), directory, size))
-    used = 0
-    for protected, _, directory, size in sorted(branches, reverse=True):
-        if used + size <= budget:
-            used += size
-        elif protected:
-            raise ValueError("Current/master branch downloads exceed the Pages budget")
-        else:
-            print(f"Expiring branch preview: {directory.name}")
-            shutil.rmtree(directory)
-    print(f"Pages branch downloads: {used} bytes (budget {budget})")
+    # Branch previews are no longer published. Stable ZIPs live in Releases;
+    # only PR Actions artifact metadata belongs in the testing catalog.
+    if (root / "branches").exists():
+        shutil.rmtree(root / "branches")
+    for metadata in (root / "pulls").glob("*/*/*/metadata.json"):
+        if 'artifact_id' not in json.loads(metadata.read_text()):
+            shutil.rmtree(metadata.parent)
+    for directory in (root / "branches", root / "pulls"):
+        for archive in directory.rglob("*.zip"):
+            archive.unlink()
+    used = sum(p.stat().st_size for p in root.rglob("*")
+               if p.is_file() and ".git" not in p.relative_to(root).parts)
+    if used > budget:
+        raise ValueError("Pages metadata exceeds the budget")
+    print(f"Pages metadata: {used} bytes (budget {budget}); no plugin ZIP copies")
 
 
 if __name__ == "__main__":

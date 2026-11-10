@@ -6,19 +6,33 @@ import subprocess
 REPO = Path(__file__).resolve().parents[1]
 
 
-def test_publisher_uses_build_sha_instead_of_workflow_run_master_sha(tmp_path):
+def record_pr_metadata(tmp_path, monkeypatch, number=94):
+    import importlib.util
+    import sys
+    import zipfile
+    spec = importlib.util.spec_from_file_location('record_pr', REPO / 'scripts/record-pr-artifact.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
     artifact = tmp_path / 'candidate.zip'
-    artifact.write_bytes(b'candidate bytes')
-    script = (REPO / 'scripts/publish-pages.sh').read_text().split('\nfor attempt in 1 2 3;')[0]
-    script += '\nPAGES_DIR="$TEST_PAGES_DIR"\nZIP_SOURCE="$TEST_ARTIFACT"\nrender_pr_content\n'
-    env = dict(os.environ, GITHUB_TOKEN='unused', GITHUB_REPOSITORY='silverfoxy/decktation',
-               CLEANUP_ONLY='true', PAGES_BASE_URL='https://decktation.com',
-               TEST_PAGES_DIR=str(tmp_path / 'pages'), TEST_ARTIFACT=str(artifact),
-               PR_NUMBER='94', PR_RUN_ID='123', PR_RUN_ATTEMPT='1',
-               PR_HEAD_REPO='silverfoxy/decktation', GITHUB_SHA='a' * 40, BUILD_SHA='b' * 40)
-    subprocess.run(['bash', '-c', script], cwd=REPO, env=env, check=True, capture_output=True)
-    metadata = json.loads((tmp_path / 'pages/pulls/94/123/1/metadata.json').read_text())
-    assert metadata['commit'] == 'b' * 40
+    with zipfile.ZipFile(artifact, 'w') as archive:
+        archive.writestr('decktation/plugin.json', json.dumps({
+            'name': 'Decktation', 'version': f'0.3.22-dev.pr-{number}.bbbbbbb'}))
+    output = tmp_path / f'pages/pulls/{number}/123/1/metadata.json'
+    for key, value in dict(GITHUB_TOKEN='unused', GITHUB_REPOSITORY='silverfoxy/decktation',
+                           PAGES_BASE_URL='https://decktation.com', PR_NUMBER=str(number),
+                           PR_RUN_ID='123', PR_RUN_ATTEMPT='1', PR_HEAD_REPO='contributor/decktation',
+                           GITHUB_SHA='a' * 40, BUILD_SHA='b' * 40).items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setattr(module, 'artifact_metadata', lambda *args: {
+        'id': 987, 'expires_at': '2099-01-01T00:00:00Z', 'size_in_bytes': artifact.stat().st_size})
+    monkeypatch.setattr(sys, 'argv', ['record-pr-artifact.py', '--artifact', str(artifact), '--output', str(output)])
+    module.main()
+    return output, artifact
+
+
+def test_publisher_uses_build_sha_instead_of_workflow_run_master_sha(tmp_path, monkeypatch):
+    output, _ = record_pr_metadata(tmp_path, monkeypatch)
+    assert json.loads(output.read_text())['commit'] == 'b' * 40
     workflow = (REPO / '.github/workflows/publish.yml').read_text()
     assert workflow.count('BUILD_SHA: ${{ github.event.workflow_run.head_sha }}') == 2
     assert 'GITHUB_SHA:' not in workflow
@@ -88,61 +102,22 @@ def test_older_tag_cannot_roll_back_latest_release(tmp_path):
     assert b'older release' in result.stderr.lower()
 
 
-def test_pr_package_is_written_under_immutable_run_id(tmp_path):
-    pages = tmp_path / 'pages'
-    artifact = tmp_path / 'candidate.zip'
-    artifact.write_bytes(b'candidate bytes')
-    script = (REPO / 'scripts/publish-pages.sh').read_text().split('\nfor attempt in 1 2 3;')[0]
-    script += '\nPAGES_DIR="$TEST_PAGES_DIR"\nZIP_SOURCE="$TEST_ARTIFACT"\nrender_pr_content\n'
-    env = dict(os.environ, GITHUB_TOKEN='unused', GITHUB_REPOSITORY='silverfoxy/decktation',
-               CLEANUP_ONLY='true', PAGES_BASE_URL='https://decktation.com',
-               TEST_PAGES_DIR=str(pages), TEST_ARTIFACT=str(artifact), PR_NUMBER='81',
-               PR_RUN_ID='123', PR_RUN_ATTEMPT='1', PR_HEAD_REPO='contributor/decktation', GITHUB_SHA='a' * 40)
-    subprocess.run(['bash', '-c', script], cwd=REPO, env=env, check=True, capture_output=True)
-    folder = pages / 'pulls/81/123/1'
-    assert (folder / 'Decktation.zip').read_bytes() == b'candidate bytes'
-    data = json.loads((folder / 'metadata.json').read_text())
+def test_pr_metadata_is_written_without_copying_zip_to_pages(tmp_path, monkeypatch):
+    output, artifact = record_pr_metadata(tmp_path, monkeypatch, number=81)
+    assert not list((tmp_path / 'pages').rglob('*.zip'))
+    data = json.loads(output.read_text())
     assert data['zip_url'] == 'https://decktation.com/pulls/81/123/1/Decktation.zip'
     assert data['run_attempt'] == 1
-    assert data['sha256'] == __import__('hashlib').sha256(b'candidate bytes').hexdigest()
+    assert data['artifact_id'] == 987
+    assert data['sha256'] == __import__('hashlib').sha256(artifact.read_bytes()).hexdigest()
     assert data['head_repository'] == 'contributor/decktation'
 
 
-def test_branch_publish_uses_manifest_name_and_migrates_existing_downloads(tmp_path):
-    pages = tmp_path / 'pages'
-    old = pages / 'branches' / 'old-branch'
-    old.mkdir(parents=True)
-    (old / 'decktation.zip').write_bytes(b'old branch')
-    (old / 'metadata.json').write_text(json.dumps({'ref': 'old/branch'}))
-    (pages / 'latest.zip').write_bytes(b'stable release')
-    artifact = tmp_path / 'build.zip'
-    artifact.write_bytes(b'new branch')
-    # Execute the real publisher functions locally, excluding Git/network work.
-    script = (REPO / 'scripts/publish-pages.sh').read_text().split('\nfor attempt in 1 2 3;')[0]
-    script += '''
-PAGES_DIR="$TEST_PAGES_DIR"
-ZIP_SOURCE="$TEST_ARTIFACT"
-CLEANUP_ONLY=false
-REF_NAME=feat/transcription-review
-REF_TYPE=branch
-migrate_branch_dirs() { :; }
-cleanup_deleted_branch_dirs() { :; }
-render_pages_content
-'''
-    env = dict(os.environ, GITHUB_TOKEN='unused', GITHUB_REPOSITORY='silverfoxy/decktation',
-               GITHUB_SHA='abc123', CLEANUP_ONLY='true',
-               PAGES_BASE_URL='https://example.com', TEST_PAGES_DIR=str(pages),
-               TEST_ARTIFACT=str(artifact))
-    subprocess.run(['bash', '-c', script], cwd=REPO, env=env, check=True, capture_output=True)
-    branch = pages / 'branches' / 'feat-transcription-review'
-    assert (branch / 'Decktation.zip').read_bytes() == b'new branch'
-    assert not (branch / 'decktation.zip').exists()
-    metadata = json.loads((branch / 'metadata.json').read_text())
-    assert metadata['zip_url'] == 'https://example.com/branches/feat-transcription-review/Decktation.zip'
-    assert metadata['commit'] == 'abc123'
-    assert 'Decktation.zip' in (branch / 'index.html').read_text()
-    assert (old / 'Decktation.zip').read_bytes() == b'old branch'
-    assert json.loads((old / 'metadata.json').read_text())['zip_url'].endswith('/Decktation.zip')
-    assert not (pages / 'Decktation.zip').exists()
-    assert not (pages / 'latest.zip').exists()
-    assert not (old / 'decktation.zip').exists()
+def test_publisher_does_not_publish_branch_packages():
+    script = (REPO / 'scripts/publish-pages.sh').read_text()
+    assert 'Only releases and PR builds are published' in script
+    assert 'cp "$ZIP_SOURCE" "$PAGES_DIR/branches/' not in script
+    assert 'Branch ZIP pattern' not in script
+    workflow = (REPO / '.github/workflows/publish.yml').read_text()
+    assert "startsWith(github.event.workflow_run.head_branch, 'v')" in workflow
+    assert "elif bash scripts/verify-current-ref.sh \"$remote\" branch" not in workflow

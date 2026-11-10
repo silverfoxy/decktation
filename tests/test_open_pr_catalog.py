@@ -82,7 +82,7 @@ def test_newest_valid_run_for_current_head_is_selected(tmp_path):
     assert '/pulls/81/124/1/' in versions[0]['artifact']
 
 
-def test_master_preselected_before_any_pr(tmp_path):
+def test_testing_store_lists_prs_only_even_if_legacy_master_zip_exists(tmp_path):
     sha = 'a' * 40
     package(tmp_path, 81, 123, sha)
     master = tmp_path / 'branches/master'
@@ -93,7 +93,7 @@ def test_master_preselected_before_any_pr(tmp_path):
         'channel': 'branch', 'ref': 'master', 'commit': 'b' * 40,
         'zip_url': 'https://decktation.com/branches/master/Decktation.zip'}))
     result = catalog(tmp_path, [pr(81, sha)], {'master': 'b' * 40})
-    assert [v['name'] for v in result[0]['versions']] == ['0.3.20-dev.bbbbbbb', '0.3.20-dev.pr-81.aaaaaaa']
+    assert [v['name'] for v in result[0]['versions']] == ['0.3.20-dev.pr-81.aaaaaaa']
 
 
 def test_closed_pr_artifacts_are_pruned_but_open_prs_remain(tmp_path):
@@ -114,3 +114,19 @@ def test_workflow_has_separate_read_only_pr_build_and_trusted_publisher():
     assert 'actions/download-artifact@v8' in publish
     assert 'ref: master' in publish
     assert 'pull_request_target:' in publish or 'schedule:' in publish
+
+
+def test_actions_metadata_lists_verified_build_without_pages_zip_and_expires(tmp_path):
+    sha = 'a' * 40
+    folder = package(tmp_path, 81, 123, sha)
+    metadata = folder / 'metadata.json'
+    data = json.loads(metadata.read_text())
+    data.update(artifact_id=987, expires_at='2099-01-01T00:00:00Z',
+                size_in_bytes=(folder / 'Decktation.zip').stat().st_size,
+                version='0.3.20-dev.pr-81.aaaaaaa')
+    metadata.write_text(json.dumps(data))
+    (folder / 'Decktation.zip').unlink()
+    assert catalog(tmp_path, [pr(81, sha)])[0]['versions'][0]['hash'] == data['sha256']
+    data['expires_at'] = '2020-01-01T00:00:00Z'
+    metadata.write_text(json.dumps(data))
+    assert catalog(tmp_path, [pr(81, sha)])[0]['versions'] == []

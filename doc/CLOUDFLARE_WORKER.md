@@ -5,10 +5,11 @@ The existing `decktation` Worker serves the public site at
 `https://decktation.com/plugins.json`, and handles public download URLs.
 
 Astro builds `site/` into static landing assets bundled with the Worker.
-The Worker fetches the download list at `/downloads/`, branch/release pages,
-metadata, and catalogs from the existing GitHub Pages origin. Stable ZIP URLs
-redirect to GitHub Releases; branch ZIPs redirect to Pages. Pages retains at most
-512 MiB of branch previews and removes release ZIP copies.
+The Worker fetches the download list, release metadata, and catalogs from the
+existing GitHub Pages origin. Stable ZIP URLs redirect to GitHub Releases; PR
+ZIPs use Actions artifacts through the [download route](#pr-artifact-downloads).
+Pages contains only small metadata and HTML files (an 8 MiB budget), with no
+plugin ZIP copies. Branch/master previews are no longer publicly published.
 The GitHub Pages custom-domain setting must remain empty to prevent redirects
 back to the Worker. Cloudflare Pages is not required. See the complete
 [domain setup and deployment order](DOMAIN_SETUP.md).
@@ -116,3 +117,55 @@ The homepage should return `200`; the ZIP should redirect to the original
 GitHub Pages host and then return the download. Test a branch page and its
 ZIP as well. A `502` for download pages or catalogs can indicate an unreachable origin
 or a misconfigured GitHub Pages custom domain.
+
+## PR artifact downloads
+
+PR ZIPs remain in GitHub Actions (30-day retention). The trusted publisher checks
+package structure, PR/head identity, raw ZIP SHA-256, artifact digest, source run,
+size and expiration, then writes only metadata to Pages. Stable packages remain in GitHub Releases; branch previews are retired. The public PR URL redirects to a short-lived signed
+GitHub blob URL, so download bytes, HEAD and Range requests go directly to GitHub.
+The Worker never forwards its GitHub token to the blob host.
+
+Create a **fine-grained personal access token**, restricted to
+`silverfoxy/decktation`, with only **Actions: read** (and GitHub's mandatory
+Metadata: read). Give it an expiration and rotate it before expiration. No
+repository write permission, classic `repo` scope, or pull-request permission is
+needed. Store it as a Worker **secret**, not a plaintext variable, repository
+file, URL, or frontend setting:
+
+```sh
+cd cloudflare
+npx wrangler secret put GITHUB_ARTIFACT_TOKEN
+```
+
+Enter the token at Wrangler's prompt; do not paste it into chat. Alternatively,
+use the Worker's dashboard Settings → Variables and Secrets → Add → Secret.
+The website deployment credential `CLOUDFLARE_API_TOKEN` is separate; the download
+token does not need to be a GitHub Actions secret. Deploy the Worker with this
+secret before merging the publisher change. During this deployment order, the
+Worker continues to redirect catalog-pinned legacy PR packages to Pages until
+the publisher replaces them with Actions-backed metadata. Until configured, PR downloads fail
+closed with 503; stable downloads and the website keep working.
+
+The Worker only resolves paths in the trusted testing catalog, verifies the
+matching Pages metadata, and checks GitHub's artifact identity/digest before
+requesting its download URL. Closed/moved PRs leave the catalog, expired builds
+are omitted during the daily catalog refresh, and deleted/expired artifacts
+return an unavailable response. A successful new build restores the listing.
+Initial migration retires old Pages-hosted PR ZIPs; rerun each desired PR build
+to publish Actions-backed metadata. Pages retains no PR ZIP copies.
+
+Abuse is still possible: anonymous visitors can repeatedly download public
+packages, consume Worker requests and GitHub API quota, or cause temporary
+unavailability. Downloads allow 20 requests/minute per IP, and uncached GitHub
+lookups allow 20/minute per Cloudflare location across all visitors. These are
+approximate regional limits, **not a global spending cap**; distributed traffic
+can exceed them. Public metadata caches for 60 seconds and signed links for 30
+seconds. Signed links are bearer links usable by anyone holding them until
+GitHub expires them; revoking catalog access is therefore not instantaneous.
+Use Cloudflare traffic controls if abuse appears, and revoke the GitHub token to
+disable the route. Never reuse a credential granting access to private projects.
+
+References: [GitHub artifact API](https://docs.github.com/en/rest/actions/artifacts),
+[Worker secrets](https://developers.cloudflare.com/workers/configuration/secrets/),
+[Worker rate limits](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/).

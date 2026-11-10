@@ -24,6 +24,14 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Parakeet displays Auto Detect and disables manual language selection.
 - Show the correct CPU engine for Parakeet and keep model selection in sync
   with the backend after reopening the panel.
+- Remove branch/master packages from Pages and publish PR test builds only.
+  Pages uploads now contain metadata and download pages, with no plugin ZIPs.
+- Preserve each build publication when deployments queue, while coalescing only
+  Pages deployments after metadata has been committed.
+
+- Keep PR test packages in GitHub Actions artifacts instead of duplicating them
+  on Pages, with public downloads through the Worker and expiry-aware listings.
+- Deploy the exact uploaded Pages artifact when rerunning a publisher workflow.
 
 - Upload a single canonical GitHub release ZIP to avoid collisions between
   differently capitalized download names.
