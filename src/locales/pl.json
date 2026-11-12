@@ -279,5 +279,9 @@
   "Could not update recording volume": "Nie udało się zmienić głośności nagrywania",
   "Exact binding only": "Tylko dokładna kombinacja",
   "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Czeka 150 ms. Jeśli zostanie naciśnięty kolejny przycisk, jest to inna kombinacja i dyktowanie się nie rozpocznie.",
-  "Could not update exact binding": "Nie udało się zaktualizować dokładnej kombinacji"
+  "Could not update exact binding": "Nie udało się zaktualizować dokładnej kombinacji",
+  "Casual chat formatting": "Swobodne formatowanie czatu",
+  "Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.": "Zmienia pierwszą literę na małą i usuwa automatyczne kropki końcowe. Wyłącz, aby zachować wielkie litery i interpunkcję transkrypcji.",
+  "On": "Włączone",
+  "Off": "Wyłączone"
 }

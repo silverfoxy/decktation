@@ -124,6 +124,8 @@
     var V3$9 = "V3";
     var Unchanged$9 = "Unchanged";
     var Mute$9 = "Mute";
+    var On$9 = "On";
+    var Off$9 = "Off";
     var en$1 = {
       Back: Back$9,
       Enable: Enable$9,
@@ -405,7 +407,11 @@
       "Could not update recording volume": "Could not update recording volume",
       "Exact binding only": "Exact binding only",
       "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.",
-      "Could not update exact binding": "Could not update exact binding"
+      "Could not update exact binding": "Could not update exact binding",
+      "Casual chat formatting": "Casual chat formatting",
+      "Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.": "Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.",
+      On: On$9,
+      Off: Off$9
     };
 
     var af = "Afrikaans";
@@ -654,6 +660,8 @@
     var V3$8 = "V3";
     var Unchanged$8 = "Sin cambios";
     var Mute$8 = "Silenciar";
+    var On$8 = "Activado";
+    var Off$8 = "Desactivado";
     var es = {
       Back: Back$8,
       Enable: Enable$8,
@@ -935,7 +943,11 @@
       "Could not update recording volume": "No se pudo actualizar el volumen de grabación",
       "Exact binding only": "Solo combinación exacta",
       "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Espera 150 ms. Si se pulsa otro botón, se considera una combinación diferente y el dictado no se inicia.",
-      "Could not update exact binding": "No se pudo actualizar la combinación exacta"
+      "Could not update exact binding": "No se pudo actualizar la combinación exacta",
+      "Casual chat formatting": "Formato de chat informal",
+      "Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.": "Convierte la primera letra a minúscula y elimina los puntos finales automáticos. Desactívalo para conservar las mayúsculas y la puntuación de la transcripción.",
+      On: On$8,
+      Off: Off$8
     };
 
     var Back$7 = "Назад";
@@ -981,6 +993,8 @@
     var V3$7 = "V3";
     var Unchanged$7 = "Без изменений";
     var Mute$7 = "Без звука";
+    var On$7 = "Вкл.";
+    var Off$7 = "Выкл.";
     var ru = {
       Back: Back$7,
       Enable: Enable$7,
@@ -1262,7 +1276,11 @@
       "Could not update recording volume": "Не удалось изменить громкость при записи",
       "Exact binding only": "Только точная комбинация",
       "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Ожидает 150 мс. Если нажата ещё одна кнопка, это считается другой комбинацией и диктовка не начинается.",
-      "Could not update exact binding": "Не удалось обновить настройку точной комбинации"
+      "Could not update exact binding": "Не удалось обновить настройку точной комбинации",
+      "Casual chat formatting": "Неформальное оформление чата",
+      "Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.": "Делает первую букву строчной и удаляет автоматические точки в конце. Отключите, чтобы сохранить регистр и пунктуацию расшифровки.",
+      On: On$7,
+      Off: Off$7
     };
 
     var Back$6 = "Voltar";
@@ -1308,6 +1326,8 @@
     var V3$6 = "V3";
     var Unchanged$6 = "Sem alteração";
     var Mute$6 = "Silenciar";
+    var On$6 = "Ativado";
+    var Off$6 = "Desativado";
     var pt = {
       Back: Back$6,
       Enable: Enable$6,
@@ -1589,7 +1609,11 @@
       "Could not update recording volume": "Não foi possível atualizar o volume de gravação",
       "Exact binding only": "Apenas combinação exata",
       "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Aguarda 150 ms. Se outro botão for pressionado, a combinação é diferente e o ditado não inicia.",
-      "Could not update exact binding": "Não foi possível atualizar a combinação exata"
+      "Could not update exact binding": "Não foi possível atualizar a combinação exata",
+      "Casual chat formatting": "Formatação de chat informal",
+      "Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.": "Converte a primeira letra em minúscula e remove os pontos finais automáticos. Desative para preservar as maiúsculas e a pontuação da transcrição.",
+      On: On$6,
+      Off: Off$6
     };
 
     var Back$5 = "Wstecz";
@@ -1635,6 +1659,8 @@
     var V3$5 = "V3";
     var Unchanged$5 = "Bez zmian";
     var Mute$5 = "Wycisz";
+    var On$5 = "Włączone";
+    var Off$5 = "Wyłączone";
     var pl = {
       Back: Back$5,
       Enable: Enable$5,
@@ -1916,7 +1942,11 @@
       "Could not update recording volume": "Nie udało się zmienić głośności nagrywania",
       "Exact binding only": "Tylko dokładna kombinacja",
       "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Czeka 150 ms. Jeśli zostanie naciśnięty kolejny przycisk, jest to inna kombinacja i dyktowanie się nie rozpocznie.",
-      "Could not update exact binding": "Nie udało się zaktualizować dokładnej kombinacji"
+      "Could not update exact binding": "Nie udało się zaktualizować dokładnej kombinacji",
+      "Casual chat formatting": "Swobodne formatowanie czatu",
+      "Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.": "Zmienia pierwszą literę na małą i usuwa automatyczne kropki końcowe. Wyłącz, aby zachować wielkie litery i interpunkcję transkrypcji.",
+      On: On$5,
+      Off: Off$5
     };
 
     var Back$4 = "뒤로";
@@ -1962,6 +1992,8 @@
     var V3$4 = "V3";
     var Unchanged$4 = "변경 없음";
     var Mute$4 = "음소거";
+    var On$4 = "켜짐";
+    var Off$4 = "꺼짐";
     var ko = {
       Back: Back$4,
       Enable: Enable$4,
@@ -2243,7 +2275,11 @@
       "Could not update recording volume": "녹음 중 볼륨을 변경하지 못했습니다",
       "Exact binding only": "정확히 일치하는 버튼 조합만",
       "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "150ms 동안 기다립니다. 다른 버튼이 추가로 눌리면 다른 조합으로 간주되어 받아쓰기가 시작되지 않습니다.",
-      "Could not update exact binding": "정확한 버튼 조합 설정을 업데이트하지 못했습니다"
+      "Could not update exact binding": "정확한 버튼 조합 설정을 업데이트하지 못했습니다",
+      "Casual chat formatting": "일상적인 채팅 서식",
+      "Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.": "첫 글자를 소문자로 바꾸고 자동으로 추가된 끝 마침표를 제거합니다. 끄면 받아쓰기의 대소문자와 문장 부호를 유지합니다.",
+      On: On$4,
+      Off: Off$4
     };
 
     var Back$3 = "戻る";
@@ -2289,6 +2325,8 @@
     var V3$3 = "V3";
     var Unchanged$3 = "変更しない";
     var Mute$3 = "ミュート";
+    var On$3 = "オン";
+    var Off$3 = "オフ";
     var ja = {
       Back: Back$3,
       Enable: Enable$3,
@@ -2570,7 +2608,11 @@
       "Could not update recording volume": "録音中の音量を更新できませんでした",
       "Exact binding only": "完全一致のボタン組み合わせのみ",
       "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "150ミリ秒待機します。別のボタンが押されると異なる組み合わせとみなされ、音声入力は開始されません。",
-      "Could not update exact binding": "完全一致のボタン組み合わせ設定を更新できませんでした"
+      "Could not update exact binding": "完全一致のボタン組み合わせ設定を更新できませんでした",
+      "Casual chat formatting": "カジュアルなチャット書式",
+      "Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.": "先頭の文字を小文字にし、自動で付いた末尾のピリオドを削除します。オフにすると、文字起こしの大文字・小文字と句読点を保持します。",
+      On: On$3,
+      Off: Off$3
     };
 
     var Back$2 = "Zurück";
@@ -2616,6 +2658,8 @@
     var V3$2 = "V3";
     var Unchanged$2 = "Unverändert";
     var Mute$2 = "Stumm";
+    var On$2 = "Ein";
+    var Off$2 = "Aus";
     var de = {
       Back: Back$2,
       Enable: Enable$2,
@@ -2897,7 +2941,11 @@
       "Could not update recording volume": "Aufnahmelautstärke konnte nicht aktualisiert werden",
       "Exact binding only": "Nur exakte Tastenkombination",
       "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Wartet 150 ms. Wird eine weitere Taste gedrückt, gilt dies als andere Tastenkombination und das Diktat startet nicht.",
-      "Could not update exact binding": "Die exakte Tastenkombination konnte nicht aktualisiert werden"
+      "Could not update exact binding": "Die exakte Tastenkombination konnte nicht aktualisiert werden",
+      "Casual chat formatting": "Lockere Chatformatierung",
+      "Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.": "Schreibt den ersten Buchstaben klein und entfernt automatische Schlusspunkte. Ausschalten, um Großschreibung und Zeichensetzung der Transkription beizubehalten.",
+      On: On$2,
+      Off: Off$2
     };
 
     var Back$1 = "Retour";
@@ -2943,6 +2991,8 @@
     var V3$1 = "V3";
     var Unchanged$1 = "Inchangé";
     var Mute$1 = "Couper le son";
+    var On$1 = "Activé";
+    var Off$1 = "Désactivé";
     var fr = {
       Back: Back$1,
       Enable: Enable$1,
@@ -3224,7 +3274,11 @@
       "Could not update recording volume": "Impossible de modifier le volume pendant l’enregistrement",
       "Exact binding only": "Combinaison exacte uniquement",
       "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Attend 150 ms. Si un autre bouton est enfoncé, la combinaison est différente et la dictée ne démarre pas.",
-      "Could not update exact binding": "Impossible de modifier la combinaison exacte"
+      "Could not update exact binding": "Impossible de modifier la combinaison exacte",
+      "Casual chat formatting": "Mise en forme du chat informel",
+      "Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.": "Met la première lettre en minuscule et supprime les points finaux automatiques. Désactivez pour conserver les majuscules et la ponctuation de la transcription.",
+      On: On$1,
+      Off: Off$1
     };
 
     var Back = "返回";
@@ -3270,6 +3324,8 @@
     var V3 = "V3";
     var Unchanged = "保持不变";
     var Mute = "静音";
+    var On = "开启";
+    var Off = "关闭";
     var zh = {
       Back: Back,
       Enable: Enable,
@@ -3551,7 +3607,11 @@
       "Could not update recording volume": "无法更新录音音量",
       "Exact binding only": "仅限完全匹配的按键组合",
       "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "等待 150 毫秒。如果又按下其他按键，则视为不同的组合，不会开始听写。",
-      "Could not update exact binding": "无法更新精确按键组合设置"
+      "Could not update exact binding": "无法更新精确按键组合设置",
+      "Casual chat formatting": "休闲聊天格式",
+      "Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.": "将首字母转为小写并移除自动添加的句末句点。关闭以保留转录的大小写和标点。",
+      On: On,
+      Off: Off
     };
 
     const catalogs = { en: en$1, es, ru, pt, pl, ko, ja, de, fr, zh };
@@ -4124,7 +4184,11 @@
                 React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "inline", "flow-children": "row", "data-nav-row": true },
                     React__default["default"].createElement("span", null, t("Submit chat with")),
                     React__default["default"].createElement(deckyFrontendLib.Dropdown, { menuLabel: t("Submit chat with"), disabled: disabled, selectedOption: profile.chat_send_key === null ? "none" : profile.chat_send_key || "enter", rgOptions: [{ data: "enter", label: t("Enter") }, { data: "controller_a", label: t("Controller A") }, { data: "none", label: t("Do not submit") }], onChange: option => update({ ...profile, chat_send_key: option.data === "none" ? null : option.data }) })),
-                React__default["default"].createElement("p", { className: "hint" }, t("Applies to this profile. Manual send still leaves chat unsent."))),
+                React__default["default"].createElement("p", { className: "hint" }, t("Applies to this profile. Manual send still leaves chat unsent.")),
+                React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "inline", "flow-children": "row", "data-nav-row": true },
+                    React__default["default"].createElement("span", null, t("Casual chat formatting")),
+                    React__default["default"].createElement(deckyFrontendLib.Dropdown, { menuLabel: t("Casual chat formatting"), disabled: disabled, selectedOption: profile.casual_case ? "on" : "off", rgOptions: [{ data: "on", label: t("On") }, { data: "off", label: t("Off") }], onChange: option => update({ ...profile, casual_case: option.data === "on" }) })),
+                React__default["default"].createElement("p", { className: "hint" }, t("Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation."))),
             profile && tab === "channels" && React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "workspace", "flow-children": "row" },
                 React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "channel-list", "flow-children": "column", onGamepadDirection: navigate },
                     React__default["default"].createElement(EditorTextField, { label: t("Search channels"), value: search, disabled: disabled, onChange: event => setSearch(event.target.value) }),
@@ -5616,14 +5680,6 @@
                                 React__default["default"].createElement("strong", null, buttons.join(' + ')))),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: !controllerReady || recording || !!pendingDraft || testPhase !== "idle", onClick: beginCapture }, t("Change binding"))),
-                        React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                            React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: t("Exact binding only"), description: t("Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start."), checked: exactBinding, disabled: recording, onChange: async (next) => {
-                                    const result = await setExactBindingRpc(next);
-                                    if (result.success)
-                                        setExactBinding(next);
-                                    else
-                                        setRpcError(result.error || t("Could not update exact binding"));
-                                } })),
                         bindingMessage && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement("div", { role: "status" }, bindingMessage))),
                     React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Try it") },
@@ -5686,6 +5742,14 @@
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement("div", { style: { fontSize: '12px' } }, modelTypeOf(modelSize) === "parakeet" ? t("Parakeet automatically detects the spoken language.") : t("Base is fastest. Small balances speed and accuracy. Medium is more accurate but slower and may download on first use.")))),
                     React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Sending") },
+                        React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: t("Exact binding only"), description: t("Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start."), checked: exactBinding, disabled: recording, onChange: async (next) => {
+                                    const result = await setExactBindingRpc(next);
+                                    if (result.success)
+                                        setExactBinding(next);
+                                    else
+                                        setRpcError(result.error || t("Could not update exact binding"));
+                                } })),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: t("Transcription sending"), menuLabel: t("Transcription sending"), rgOptions: [{ data: "immediate", label: t("Send immediately") }, { data: "review", label: t("Review before sending") }, { data: "countdown", label: t("Send after countdown") }], selectedOption: sendingMode, onChange: async (option) => {
                                     const next = option.data;

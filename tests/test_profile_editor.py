@@ -122,3 +122,21 @@ def test_legacy_editor_save_preserves_forever_submission(editor):
     presets = backend._load_game_presets()
     assert presets["wow_forever"]["chat_send_key"] == "controller_a"
     assert presets["wow"]["chat_send_key"] == "enter"
+
+
+@pytest.mark.parametrize("enabled", [False, True])
+def test_casual_formatting_save_applies_to_review_and_round_trips(editor, monkeypatch, enabled):
+    voice = WoWVoiceChat(lazy_load=True, preset=backend._load_game_presets()["wow"], review_mode=True)
+    monkeypatch.setattr(backend.Plugin, "voice_service", voice)
+    monkeypatch.setattr(backend.Plugin, "active_preset", "wow")
+    assert asyncio.run(editor.save_profile_editor("wow", {**profile(), "casual_case": enabled}))["success"]
+    assert asyncio.run(editor.get_profile_editor("wow"))["profile"]["casual_case"] is enabled
+    voice.queue_transcription("Nice day for fishing.")
+    assert voice.pending_snapshot()["text"] == ("nice day for fishing" if enabled else "Nice day for fishing.")
+    assert asyncio.run(editor.get_profile_editor("generic"))["profile"]["casual_case"] is False
+
+
+@pytest.mark.parametrize("value", ["false", 0, None])
+def test_casual_formatting_rejects_non_boolean(editor, tmp_path, value):
+    assert not asyncio.run(editor.save_profile_editor("wow", {**profile(), "casual_case": value}))["success"]
+    assert not (tmp_path / "profiles.json").exists()

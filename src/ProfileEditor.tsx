@@ -14,6 +14,7 @@ type Profile = {
     channels: Record<string, string>;
     channel_triggers: Record<string, string>;
     default_channel: string;
+    casual_case: boolean;
     chat_send_key?: "enter" | "controller_a" | null;
 };
 type Preset = { id: string; name: string };
@@ -319,6 +320,14 @@ export function ProfileEditor() {
                 onChange={option => update({ ...profile, chat_send_key:option.data === "none" ? null : option.data as "enter" | "controller_a" })} />
             </Focusable>
             <p className="hint">{t("Applies to this profile. Manual send still leaves chat unsent.")}</p>
+            <Focusable className="inline" flow-children="row" data-nav-row>
+                <span>{t("Casual chat formatting")}</span>
+                <Dropdown menuLabel={t("Casual chat formatting")} disabled={disabled}
+                    selectedOption={profile.casual_case ? "on" : "off"}
+                    rgOptions={[{ data:"on", label:t("On") }, { data:"off", label:t("Off") }]}
+                    onChange={option => update({ ...profile, casual_case:option.data === "on" })} />
+            </Focusable>
+            <p className="hint">{t("Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.")}</p>
         </Focusable>}
         {profile && tab === "channels" && <Focusable className="workspace" flow-children="row">
             <Focusable className="channel-list" flow-children="column" onGamepadDirection={navigate}><EditorTextField label={t("Search channels")} value={search} disabled={disabled} onChange={event => setSearch(event.target.value)} />

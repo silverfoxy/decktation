@@ -279,5 +279,9 @@
   "Could not update recording volume": "녹음 중 볼륨을 변경하지 못했습니다",
   "Exact binding only": "정확히 일치하는 버튼 조합만",
   "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "150ms 동안 기다립니다. 다른 버튼이 추가로 눌리면 다른 조합으로 간주되어 받아쓰기가 시작되지 않습니다.",
-  "Could not update exact binding": "정확한 버튼 조합 설정을 업데이트하지 못했습니다"
+  "Could not update exact binding": "정확한 버튼 조합 설정을 업데이트하지 못했습니다",
+  "Casual chat formatting": "일상적인 채팅 서식",
+  "Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.": "첫 글자를 소문자로 바꾸고 자동으로 추가된 끝 마침표를 제거합니다. 끄면 받아쓰기의 대소문자와 문장 부호를 유지합니다.",
+  "On": "켜짐",
+  "Off": "꺼짐"
 }
