@@ -14,6 +14,7 @@ test('production panel navigates to diagnostics and captures a real IPC report',
   await page.goto('/');
   await page.getByRole('button', { name: 'Advanced settings', exact: true }).click();
   await page.getByRole('button', { name: 'Diagnostics', exact: true }).click();
+  await expect(page.getByLabel('Controller input (test build)')).toHaveValue('legacy');
   await page.getByRole('button', { name: 'Start 30-second capture', exact: true }).click();
   await expect(page.getByText('Starting controller capture…', { exact: true })).toBeVisible();
   await expect(page.getByText('Recording controller input', { exact: true })).toBeVisible();

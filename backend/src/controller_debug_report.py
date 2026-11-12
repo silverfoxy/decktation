@@ -3,6 +3,9 @@ import json
 import platform
 import re
 import shlex
+import subprocess
+
+from controller_sdl_diagnostics import ERRORS, sanitize_sdl
 
 from controller_profiles import PROFILES_BY_KIND
 
@@ -26,12 +29,12 @@ BUTTONS = {'A', 'B', 'X', 'Y', 'L1', 'R1', 'L2', 'R2', 'L3', 'R3',
            'D-pad Left', 'D-pad Right', 'Left Trackpad', 'Right Trackpad'}
 CONTROLLER_TYPES = {'evdev_gamepad', 'sdl_gamepad', *PROFILES_BY_KIND}
 REJECTION_REASONS = {'missing_gamepad_buttons', 'missing_stick_axes',
-                     'missing_gamepad_buttons_and_stick_axes'}
+                     'missing_gamepad_buttons_and_stick_axes', 'not_sdl_gamepad'}
 METADATA_FIELDS = ('decktation_version', 'os_id', 'os_version', 'os_build',
                    'os_pretty_name', 'kernel_release', 'architecture',
                    'device_vendor', 'device_model', 'device_product_version',
                    'board_name', 'board_version', 'device_sku', 'bios_version', 'bios_date',
-                   'cpu_model')
+                   'cpu_model', 'inputplumber_version')
 
 
 def collect_runtime_metadata(decktation_version, reader=None):
@@ -81,6 +84,16 @@ def collect_runtime_metadata(decktation_version, reader=None):
                                for line in read('/proc/cpuinfo').splitlines()
                                if line.lower().startswith(('model name', 'hardware'))), '')),
     }
+    if reader is None:
+        try:
+            version = subprocess.run(['inputplumber', '--version'], capture_output=True,
+                                     text=True, errors='replace', timeout=1, check=False)
+            match = re.fullmatch(r'inputplumber\s+(v?\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?)',
+                                 version.stdout.strip(), re.IGNORECASE)
+            if version.returncode == 0 and match:
+                values['inputplumber_version'] = match[1][:80]
+        except (OSError, subprocess.TimeoutExpired):
+            pass
     return {key: value for key, value in values.items() if value}
 
 
@@ -129,6 +142,10 @@ def sanitize_report(report):
                                      if isinstance(b, str) and b in BUTTONS]
               if isinstance(report.get('configured_buttons'), list) else [],
               'devices': [], 'events': []}
+    if report.get('input_backend') in ('sdl', 'legacy'):
+        result['input_backend'] = report['input_backend']
+    if report.get('input_backend') == 'sdl':
+        result['sdl'] = sanitize_sdl(report.get('sdl'))
     duration = _number(report.get('duration_ms'), 30000)
     if duration is not None:
         result['duration_ms'] = duration
@@ -154,7 +171,7 @@ def sanitize_report(report):
                              ('rejection_reason', REJECTION_REASONS)):
             if isinstance(device.get(key), str) and device[key] in allowed:
                 safe[key] = device[key]
-        for key in ('bindings_accepted', 'diagnostic_observed', 'input_dropped', 'capabilities_truncated'):
+        for key in ('bindings_accepted', 'diagnostic_observed', 'input_dropped', 'capabilities_truncated', 'sdl_is_gamepad'):
             if type(device.get(key)) is bool:
                 safe[key] = device[key]
         for key in ('bus', 'vendor_id', 'product_id', 'hardware_version', 'errno', 'resync_count'):
@@ -164,6 +181,8 @@ def sanitize_report(report):
             number = _number(device.get(key), maximum)
             if number is not None:
                 safe[key] = number
+        if isinstance(device.get('sdl_error'), str) and device['sdl_error'] in ERRORS:
+            safe['sdl_error'] = device['sdl_error']
         buttons = device.get('supported_buttons')
         if isinstance(buttons, list):
             safe['supported_buttons'] = [b for b in buttons[:32] if isinstance(b, str) and b in BUTTONS]
@@ -231,6 +250,8 @@ class InputReport:
         self.started = started
         self.buttons = buttons
         self.metadata = _safe_metadata(metadata)
+        self.input_backend = None
+        self.sdl = {}
         self.devices = []
         self.events = []
         self.sources = {}
@@ -270,8 +291,12 @@ class InputReport:
                  'keys': keys[:48], 'axes': axes[:48], 'errno': errno,
                  'capabilities_truncated': len(keys) > 48 or len(axes) > 48}
         current = next((d for d in self.devices if d['source'] == source), None)
-        if current: current.update(entry)
-        else: self.devices.append(entry)
+        if current:
+            for field in ('rejection_reason', 'sdl_error'):
+                current.pop(field, None)
+            current.update(entry)
+        else:
+            self.devices.append(entry)
 
     def event(self, path, kind, now, **extra):
         capture_until = self.drain_until or self.started + DURATION
@@ -340,6 +365,7 @@ class InputReport:
         ended = self.ended if self.ended is not None else now
         duration_ms = min(DURATION * 1000, max(0, int((ended - self.started) * 1000)))
         return sanitize_report({'phase': phase, 'metadata': self.metadata,
+                                'input_backend': self.input_backend, 'sdl': self.sdl,
                                 'configured_buttons': self.buttons,
                                 'duration_ms': duration_ms,
                                 'stop_reason': 'stop_requested' if self.stopped else

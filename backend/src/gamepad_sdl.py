@@ -10,6 +10,7 @@ import time
 import uuid
 
 from binding_capture import read_json
+from controller_sdl_diagnostics import HINTS, error_category, hint_evidence
 
 HAPTIC_REQUEST_FILE = '/tmp/decktation_sdl_haptic.json'
 
@@ -48,6 +49,12 @@ def load_sdl(path=None):
         path = bundled if os.path.isdir(os.path.dirname(bundled)) else 'libSDL3.so.0'
     lib = c.CDLL(path)
     signatures = {
+        'SDL_GetHint': (c.c_char_p, [c.c_char_p]),
+        'SDL_GetJoysticks': (c.POINTER(c.c_uint32), [c.POINTER(c.c_int)]),
+        'SDL_IsGamepad': (c.c_bool, [c.c_uint32]),
+        'SDL_GetJoystickVendorForID': (c.c_uint16, [c.c_uint32]),
+        'SDL_GetJoystickProductForID': (c.c_uint16, [c.c_uint32]),
+        'SDL_GetJoystickProductVersionForID': (c.c_uint16, [c.c_uint32]),
         'SDL_SetHint': (c.c_bool, [c.c_char_p, c.c_char_p]),
         'SDL_Init': (c.c_bool, [c.c_uint32]),
         'SDL_Quit': (None, []), 'SDL_GetVersion': (c.c_int, []),
@@ -80,7 +87,8 @@ class SdlGamepad:
         self.lib, self.instance = lib, instance
         self.handle = lib.SDL_OpenGamepad(instance)
         if not self.handle:
-            raise RuntimeError('SDL could not open gamepad')
+            error = lib.SDL_GetError()
+            raise RuntimeError(error.decode('utf-8', 'replace') if error else 'SDL could not open gamepad')
         self.supported_buttons = {name for button, name in BUTTONS.items()
                                   if name and lib.SDL_GamepadHasButton(self.handle, button)}
         self.supported_buttons.update(name for axis, name in TRIGGERS.items()
@@ -89,6 +97,7 @@ class SdlGamepad:
             'vendor_id': lib.SDL_GetGamepadVendor(self.handle),
             'product_id': lib.SDL_GetGamepadProduct(self.handle),
             'hardware_version': lib.SDL_GetGamepadProductVersion(self.handle),
+            'sdl_is_gamepad': True,
             'sdl_version': lib.SDL_GetVersion(),
             'sdl_gamepad_type': lib.SDL_GetGamepadType(self.handle),
         }
@@ -115,6 +124,8 @@ class SdlInput:
         self.lib = lib if lib is not None else load_sdl()
         self.devices = {}
         self.open_failed = set()
+        self.open_errors = {}
+        self.diagnostic_devices = {}
         # Instance IDs can be reused after a listener restart. Never replay a
         # request from an earlier listener against a different controller.
         self.session = uuid.uuid4().hex
@@ -122,8 +133,9 @@ class SdlInput:
         self.lib.SDL_SetHint(b'SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS', b'1')
         # No window or video initialization. Joystick is implied by GAMEPAD.
         if not self.lib.SDL_Init(0x00002000):
+            error = self.lib.SDL_GetError()
             self.lib.SDL_Quit()
-            raise RuntimeError('SDL gamepad initialization failed')
+            raise RuntimeError(f'SDL gamepad initialization failed: {error!r}')
         print(f'SDL controller backend ready: version={self.lib.SDL_GetVersion()} background_events=1', flush=True)
 
     def poll(self):
@@ -131,7 +143,7 @@ class SdlInput:
         count = c.c_int()
         ids = self.lib.SDL_GetGamepads(c.byref(count))
         if not ids:
-            raise RuntimeError('SDL gamepad enumeration failed')
+            raise RuntimeError(f'SDL gamepad enumeration failed: {self.lib.SDL_GetError()!r}')
         try:
             connected = {ids[i] for i in range(count.value)}
         finally:
@@ -150,14 +162,17 @@ class SdlInput:
                 try:
                     self.devices[path] = SdlGamepad(self.lib, instance)
                     self.open_failed.discard(instance)
-                except RuntimeError:
+                    self.open_errors.pop(instance, None)
+                except RuntimeError as error:
+                    self.open_errors[instance] = error_category(error)
                     if instance not in self.open_failed:
-                        print(f'SDL gamepad open failed: instance={instance}', flush=True)
+                        print(f'SDL gamepad open failed: instance={instance} error={str(error)!r}', flush=True)
                         self.open_failed.add(instance)
                     continue
                 new.add(path)
                 frames.append((path, self.devices[path].states()))
         self.open_failed.intersection_update(connected)
+        self.open_errors = {i: error for i, error in self.open_errors.items() if i in connected}
         event = Event()
         while self.lib.SDL_PollEvent(c.byref(event)):
             path = f'sdl:{event.button.which}'
@@ -177,6 +192,46 @@ class SdlInput:
                 pad._states[name] = down
                 frames.append((path, pad.states()))
         return frames
+
+    def diagnostics(self):
+        """Inspect unrecognized joysticks only during an explicit debug capture."""
+        hints = {}
+        for name in HINTS:
+            raw = self.lib.SDL_GetHint(name.encode())
+            hints[name] = hint_evidence(name, raw.decode('utf-8', 'replace') if raw else None)
+        count = c.c_int()
+        ids = self.lib.SDL_GetJoysticks(c.byref(count))
+        context = {'version': self.lib.SDL_GetVersion(), 'hints': hints,
+                   'enumeration_failed': not bool(ids)}
+        if not ids:
+            print(f'SDL joystick enumeration failed: {self.lib.SDL_GetError()!r}', flush=True)
+            return context
+        try:
+            instances = [ids[i] for i in range(count.value)]
+        finally:
+            self.lib.SDL_free(ids)
+        gamepads = {i for i in instances if self.lib.SDL_IsGamepad(i)}
+        context.update(joystick_count=len(instances), gamepad_count=len(gamepads))
+        observations = {}
+        # Give usable and failed gamepads priority over unrelated joysticks.
+        for instance in sorted(instances, key=lambda i: (i not in gamepads, i))[:16]:
+            path = f'sdl:{instance}'
+            identity = {
+                'input_backend': 'sdl', 'controller_type': 'sdl_gamepad',
+                'sdl_is_gamepad': instance in gamepads, 'diagnostic_observed': True,
+                'bindings_accepted': path in self.devices,
+                'vendor_id': self.lib.SDL_GetJoystickVendorForID(instance),
+                'product_id': self.lib.SDL_GetJoystickProductForID(instance),
+                'hardware_version': self.lib.SDL_GetJoystickProductVersionForID(instance),
+            }
+            status = 'accepted' if path in self.devices else 'open_failed' if instance in gamepads else 'rejected'
+            if instance not in gamepads:
+                identity['rejection_reason'] = 'not_sdl_gamepad'
+            if instance in self.open_errors:
+                identity['sdl_error'] = self.open_errors[instance]
+            observations[path] = (status, identity)
+        self.diagnostic_devices = observations
+        return context
 
     def update_haptics(self, request_file=HAPTIC_REQUEST_FILE):
         request = read_json(request_file)

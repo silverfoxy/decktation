@@ -195,3 +195,65 @@ def test_listener_sdl_combo_release_and_disconnect(sdl, monkeypatch, tmp_path):
             pass
     monkeypatch.setattr(listener.selectors, 'DefaultSelector', Selector)
     listener.main()
+
+
+def test_debug_capture_reports_unmapped_joystick_without_enabling_bindings(sdl):
+    from controller_listener import ControllerDebug
+    from controller_debug_report import InputReport
+    desc = VirtualDesc(version=c.sizeof(VirtualDesc), type=0, vendor=0x1234,
+                       product=0x9876, axes=2, buttons=3, name=b'PRIVATE controller name')
+    instance = sdl.lib.SDL_AttachVirtualJoystick(c.byref(desc))
+    assert instance
+    sdl.poll()
+    assert f'sdl:{instance}' not in sdl.devices
+    debug = ControllerDebug(clock=lambda: 0)
+    debug.report = InputReport('capture', 0, ['L1', 'R1'])
+    debug.observe_sdl(sdl)
+    report = debug.report.snapshot(1)
+    device = next(d for d in report['devices'] if d['product_id'] == 0x9876)
+    assert device['status'] == 'rejected'
+    assert device['rejection_reason'] == 'not_sdl_gamepad'
+    assert device['sdl_is_gamepad'] is False
+    assert device['bindings_accepted'] is False
+    assert report['input_backend'] == 'sdl'
+    assert report['sdl']['joystick_count'] >= 1
+    assert report['sdl']['hints']['SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS']['state'] == '1'
+    import json
+    assert 'PRIVATE' not in json.dumps(report) and 'sdl:' not in json.dumps(report)
+    assert sdl.lib.SDL_DetachVirtualJoystick(instance)
+    sdl.poll()
+    debug.observe_sdl(sdl)
+    assert debug.report.snapshot(2)['devices'][0]['status'] == 'disconnected'
+
+
+def test_debug_capture_reports_open_failure_and_logs_actual_sdl_error(sdl, monkeypatch, capsys):
+    from controller_listener import ControllerDebug
+    from controller_debug_report import InputReport
+    path, pad = attach(sdl)
+    sdl.remove(path)
+    with monkeypatch.context() as patch:
+        patch.setattr(sdl.lib, 'SDL_OpenGamepad', lambda instance: None)
+        patch.setattr(sdl.lib, 'SDL_GetError', lambda: b'Permission denied: /dev/hidraw99 PRIVATE')
+        assert sdl.poll() == []
+        debug = ControllerDebug(clock=lambda: 0)
+        debug.report = InputReport('capture', 0, ['L1', 'R1'])
+        debug.observe_sdl(sdl)
+        report = debug.report.snapshot(1)
+        assert report['devices'][0]['status'] == 'open_failed'
+        assert report['devices'][0]['sdl_is_gamepad'] is True
+        assert report['devices'][0]['sdl_error'] == 'permission_denied'
+        assert '/dev/hidraw99' in capsys.readouterr().out
+        import json
+        assert 'PRIVATE' not in json.dumps(report) and '/dev/' not in json.dumps(report)
+    sdl.poll()
+    debug.observe_sdl(sdl)
+    assert debug.report.snapshot(2)['devices'][0]['status'] == 'accepted'
+    assert 'sdl_error' not in debug.report.snapshot(2)['devices'][0]
+
+
+def test_diagnostics_includes_hints_with_zero_controllers(sdl):
+    diagnostic = sdl.diagnostics()
+    assert diagnostic['enumeration_failed'] is False
+    assert diagnostic['joystick_count'] >= 0
+    assert diagnostic['version'] == sdl.lib.SDL_GetVersion()
+    assert diagnostic['hints']['SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS']['state'] == '1'

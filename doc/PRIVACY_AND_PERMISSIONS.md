@@ -19,8 +19,15 @@ SDL library version, gamepad type and connection state, and allowlisted supporte
 button names in the reviewed controller report. It does not add device names,
 mapping strings, serials, addresses, input paths, or raw HID payloads. SDL gamepad
 events use the same bounded press/release capture and per-report upload consent.
-Selecting SDL observes SDL-visible gamepads; selecting Legacy observes the
-existing evdev and supported raw HID sources.
+Selecting SDL also inventories SDL-visible joysticks that lack gamepad mappings
+or could not be opened, without enabling them for bindings. Reviewed reports
+include numeric joystick/gamepad counts, gamepad recognition, bounded SDL hint
+values, numeric vendor/product filter pairs, and open-failure categories. Filter
+files and custom mappings are recorded only as present, never with their paths
+or contents. Full SDL errors stay in local logs and are not copied into reports.
+The metadata includes the InputPlumber CLI version when available; no service
+configuration is changed. Selecting Legacy observes the existing evdev and
+supported raw HID sources. Legacy is the default; SDL requires explicit opt-in.
 
 The backend owns one session with explicit starting, recording, stopping, ready, and failed states. The 30-second recording window starts when the controller listener acknowledges that session, not when the user clicks Start or from the browser clock. The countdown is reported by the backend. A missing or dead listener produces an error instead of an apparently completed empty report. Reopening the panel reconnects to the existing session; closing the panel does not stop or upload it.
 

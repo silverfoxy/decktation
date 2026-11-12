@@ -21,7 +21,7 @@ def setting(monkeypatch, tmp_path):
 def test_switch_preserves_binding_and_rolls_back_failure(setting):
     _, restart = setting
     config = backend._read_button_config()
-    assert config['controllerBackend'] == 'sdl'
+    assert config['controllerBackend'] == 'legacy'
     config['buttons'] = ['L4']
     backend._write_button_config(config)
     assert asyncio.run(backend.Plugin.set_controller_backend(None, 'legacy'))['success']
@@ -42,3 +42,38 @@ def test_switch_rejects_active_capture_recording_and_invalid_input(setting, monk
     for value in ('unknown', [], None):
         assert not asyncio.run(backend.Plugin.set_controller_backend(None, value))['success']
     restart.assert_not_called()
+
+
+def test_old_sdl_default_migrates_once_and_explicit_opt_in_survives(setting):
+    import json
+    from pathlib import Path
+    Path(backend.BUTTON_CONFIG_FILE).write_text(json.dumps({
+        'controllerBackend': 'sdl', 'buttons': ['L4'], 'manualSend': True}))
+    config = backend._read_button_config()
+    assert config['controllerBackend'] == 'legacy'
+    assert config['buttons'] == ['L4'] and config['manualSend'] is True
+    assert asyncio.run(backend.Plugin.set_controller_backend(None, 'sdl'))['success']
+    assert backend._read_button_config()['controllerBackend'] == 'sdl'
+    assert backend._read_button_config()['controllerBackendOptIn'] is True
+    # Any unrelated settings save must retain the deliberate choice.
+    config = backend._read_button_config()
+    config['manualSend'] = False
+    backend._write_button_config(config)
+    assert backend._read_button_config()['controllerBackend'] == 'sdl'
+
+
+def test_failed_switch_restores_sdl_opt_in(setting):
+    _, restart = setting
+    assert asyncio.run(backend.Plugin.set_controller_backend(None, 'sdl'))['success']
+    restart.side_effect = [False, True]
+    assert not asyncio.run(backend.Plugin.set_controller_backend(None, 'legacy'))['success']
+    config = backend._read_button_config()
+    assert config['controllerBackend'] == 'sdl' and config['controllerBackendOptIn'] is True
+
+
+@pytest.mark.parametrize('value', ['broken', None, [], 'sdl'])
+def test_invalid_or_unconfirmed_backend_uses_legacy(setting, value):
+    import json
+    from pathlib import Path
+    Path(backend.BUTTON_CONFIG_FILE).write_text(json.dumps({'controllerBackend': value}))
+    assert backend._read_button_config()['controllerBackend'] == 'legacy'
