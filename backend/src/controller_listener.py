@@ -273,7 +273,7 @@ class ComboTracker:
         self.window = window
         self.clock = clock
         self.sources = {}
-        self._pressed_at = {}  # source -> {button: when it went down}
+        self._pressed_at = {}  # source -> {button: most recent button-down time}
         self._press = {}       # source -> the binding press being formed or held
 
     def update(self, source, states):
@@ -291,14 +291,12 @@ class ComboTracker:
     def _observe(self, source, states):
         now = self.clock()
         previous = self.sources.get(source, {})
-        # When each held button went down: that's what tells a button pressed
-        # together with the binding from one that was already held.
+        # Keep the last press even after release, so a tap just before the
+        # binding still counts. One timestamp per button bounds this history.
         pressed_at = self._pressed_at.setdefault(source, {})
         for name, down in states.items():
             if down and not previous.get(name, False):
                 pressed_at[name] = now
-            elif not down:
-                pressed_at.pop(name, None)
         held = [button for button in self.buttons if states.get(button, False)]
         if not held:
             self._press.pop(source, None)
@@ -342,8 +340,9 @@ class ComboTracker:
         now, left = self.clock(), None
         for press in self._press.values():
             if press["complete"] is not None and not press["spoiled"]:
-                remaining = max(0.0, press["complete"] + self.window - now)
-                left = remaining if left is None else min(left, remaining)
+                remaining = press["complete"] + self.window - now
+                if remaining > 0:
+                    left = remaining if left is None else min(left, remaining)
         return left
 
 def main():

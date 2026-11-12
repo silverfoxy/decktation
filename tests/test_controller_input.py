@@ -180,6 +180,34 @@ def test_exact_binding_is_per_controller(listener):
     assert tracker.active
 
 
+def test_exact_binding_stops_scheduling_wakeups_at_deadline(listener):
+    tracker, clock = exact_tracker(listener)
+    tracker.update('deck', {'L4': True, 'R4': True})
+    clock.now += 0.15
+    assert tracker.active
+    assert tracker.time_to_active() is None
+    clock.now += 1.0
+    assert tracker.active
+    assert tracker.time_to_active() is None
+    # An active controller must not hide another controller's pending timer.
+    tracker.update('other', {'L4': True, 'R4': True})
+    assert abs(tracker.time_to_active() - 0.15) < 1e-9
+
+
+@pytest.mark.parametrize('binding_delay,expected', [(0.06, False), (0.3, True)])
+def test_exact_binding_remembers_released_extra_button(listener, binding_delay, expected):
+    tracker, clock = exact_tracker(listener)
+    started = clock.now
+    tracker.update('deck', {'L5': True})
+    clock.now += 0.03
+    tracker.update('deck', {'L5': False})
+    clock.now = started + binding_delay
+    tracker.update('deck', {'L4': True, 'R4': True, 'L5': False})
+    clock.now += 0.2
+    assert tracker.active is expected
+    assert tracker.time_to_active() is None
+
+
 def test_exact_binding_window_comes_from_the_config(listener, monkeypatch, tmp_path):
     config = tmp_path / 'button_config.json'
     monkeypatch.setattr(listener, 'CONFIG_FILE', str(config))
