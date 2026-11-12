@@ -61,7 +61,7 @@ If you are running an older version without the updater, or the in-plugin instal
 
 Under **Advanced settings → Sending → Text insertion**, choose **Paste** or **Type (only English keyboard)**. Type requires an English (US) keyboard layout and ASCII text. Under **Transcription sending**, choose immediate sending, review before sending, or a countdown. See [advanced configuration](doc/ADVANCED_CONFIGURATION.md) for the sending options and [typing research](doc/gamescope-typing-research.md) for the Gamescope work.
 
-WoW and GW2 presets normally open game chat, add the selected channel command, and send the message; the spoken **type** channel enters text without opening chat. **Generic** also enters text directly in the focused field. See [channel and preset configuration](doc/ADVANCED_CONFIGURATION.md) for details.
+WoW and GW2 presets normally open game chat, add the selected channel command, and send the message; the spoken **type** channel enters text without opening chat. **Generic** also enters text directly in the focused field. See the [commands available in each profile](doc/ADVANCED_CONFIGURATION.md#commands-by-profile) for spoken triggers and their game commands, or the [website profile reference](https://decktation.com/walkthrough/#profile-commands).
 
 If your microphone crackles or transcription is poor, see [microphone troubleshooting](doc/TROUBLESHOOTING.md#microphone-crackles-pops-or-cuts-out) for Steam Voice settings to try, including a workaround reported by a Steam Deck LCD user.
 

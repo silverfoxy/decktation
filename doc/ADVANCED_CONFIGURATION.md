@@ -30,6 +30,51 @@ In WoW or GW2, start a message with a spoken channel name to route it. For examp
 
 Built-in WoW channels include `say`, `party`, `raid`, `guild`, `officer`, `yell`, `instance`, `whisper`, `reply`, `type`, and `alert` (raid warning). GW2 includes `say`, `map`, `party`, `squad` (also `raid`), `team`, `guild`, `guild one` through `guild six`, `whisper`, and `type`.
 
+### Commands by profile
+
+This table lists one English spoken trigger per command and the command prepended to your message. Alternate spellings and digit forms are also accepted. Start with the trigger, then say the message. Customize mappings and triggers in **Mode → Edit game profile**. Numbered and named WoW channels shipped in v0.3.22. WoW Forever is available in v0.3.23 and later; check your installed profile for availability.
+
+Without a prefix, both WoW profiles and GW2 default to Say; Generic defaults to Type. **Remember channel** can reuse your last spoken channel. Unavailable channel triggers remain ordinary message text.
+
+“Type only” means no prefix and no chat open or submission. A dash means the trigger is unavailable in that profile.
+
+| Spoken trigger | WoW / WoW Forever | Guild Wars 2 | Generic |
+| --- | --- | --- | --- |
+| `say` | `/s` | `/s` | — |
+| `party` | `/p` | `/p` | — |
+| `raid` | `/raid` | `/d` | — |
+| `guild` | `/g` | `/g` | — |
+| `officer` | `/o` | — | — |
+| `yell` | `/y` | — | — |
+| `instance` | `/i` | — | — |
+| `whisper` | `/w` | `/w` | — |
+| `reply` | `/r` | — | — |
+| `type` | Type only | Type only | Type only |
+| `alert` | `/rw` | — | — |
+| `channel one` | `/1` | — | — |
+| `channel two` | `/2` | — | — |
+| `channel three` | `/3` | — | — |
+| `channel four` | `/4` | — | — |
+| `channel five` | `/5` | — | — |
+| `general chat` | `/1` | — | — |
+| `trade chat` | `/2` | — | — |
+| `local defense chat` | `/3` | — | — |
+| `services chat` | `/4` | — | — |
+| `looking for group chat` | `/5` | — | — |
+| `map` | — | `/m` | — |
+| `squad` | — | `/d` | — |
+| `team` | — | `/t` | — |
+| `guild one` | — | `/g1` | — |
+| `guild two` | — | `/g2` | — |
+| `guild three` | — | `/g3` | — |
+| `guild four` | — | `/g4` | — |
+| `guild five` | — | `/g5` | — |
+| `guild six` | — | `/g6` | — |
+
+Whisper requires the recipient before the message, for example “whisper Thrall hello”. WoW reply uses the last incoming whisper. Numbered and named WoW routes depend on your joined channels; verify with `/chatlist` and adjust the mappings below. Both WoW profiles share commands but use different default submission inputs, as described above.
+
+All four profiles also support the English **command** prefix described below. It enters any dictated slash command; the target game determines whether that command exists.
+
 ### Spoken slash commands
 
 With **English** or **Auto Detect** selected, begin with **command**:

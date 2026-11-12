@@ -1,6 +1,15 @@
 ---
 import Guide from '../layouts/Guide.astro';
 import { tutorials } from '../data/tutorials';
+import presets from '../../../defaults/game_presets.json';
+import channelLanguages from '../../../defaults/channel_languages.json';
+const englishTriggers = channelLanguages.languages.en.channels;
+const profiles = [
+  { ...presets.wow, name: 'WoW / WoW Forever' },
+  presets.guildwars2,
+  presets.generic,
+];
+const channels = [...new Set(profiles.flatMap(profile => Object.keys(profile.channels)))];
 import overlays from '../../public/assets/app-overlays/manifest.json';
 ---
 <Guide title="Walkthrough" description="Learn Decktation with interactive examples of push-to-talk, channel prefixes, game commands, punctuation, and transcript review." path="/walkthrough/">
@@ -32,6 +41,19 @@ import overlays from '../../public/assets/app-overlays/manifest.json';
       <tr><td>GW2</td><td>Map anyone for the event</td><td><code>/m anyone for the event</code></td></tr>
       <tr><td>WoW / GW2</td><td>Type hello everyone</td><td><code>hello everyone</code> (no chat open or send)</td></tr>
     </tbody></table></div><p class="tutorial-note">Channel availability depends on your game, group membership, and chat permissions. Set your transcription language for the language you speak. Generic mode inserts text directly and does not use game chat channels.</p>
+  </div></section>
+  <section id="profile-commands"><div class="wrap"><p class="section-label">PROFILE COMMAND REFERENCE</p><h2>What you can say in each profile.</h2>
+    <p class="lead">Start your message with one of these English triggers. Each row shows one spoken phrase; alternate spellings and digit forms are also accepted. Decktation replaces it with the command shown, then adds your message. These are bundled defaults; Mode → Edit game profile lets you customize them.</p>
+    <p class="tutorial-note">Numbered and named WoW channels shipped in v0.3.22. WoW Forever is available in v0.3.23 and later. Check your installed profile for availability. Both WoW profiles share channel commands; WoW sends with Enter and WoW Forever with controller A by default.</p>
+    <p>Without a prefix, WoW and GW2 default to Say unless Remember channel is enabled. Generic types into the focused field. “Type” never opens or submits chat. A dash means the trigger is unavailable in that profile and stays ordinary message text.</p>
+    <div class="prefix-table-scroll" tabindex="0" role="region" aria-label="Commands by profile"><table class="prefix-table"><thead><tr><th scope="col">Spoken trigger</th>{profiles.map(profile => <th scope="col">{profile.name}</th>)}</tr></thead><tbody>
+      {channels.map(channel => <tr><th scope="row">{englishTriggers[channel as keyof typeof englishTriggers][0]}</th>{profiles.map(profile => {
+        const command = (profile.channels as Record<string, string>)[channel];
+        return <td>{command === undefined ? <span aria-label="Unavailable">—</span> : command ? <code>{command.trim()}</code> : 'Type only'}</td>;
+      })}</tr>)}
+    </tbody></table></div>
+    <p class="tutorial-note">Whisper needs a player name before the message, for example “whisper Thrall hello”. WoW reply targets the last incoming whisper. WoW numbered channels depend on your joined channels: check /chatlist. Named routes initially map General to /1, Trade to /2, Local Defense to /3, Services to /4, and Looking for Group to /5; Classic and custom channel orders may differ. Edit these mappings to match your game.</p>
+    <p>With English or Auto Detect selected, every profile also accepts “command” followed by a slash-command name: “command gg” enters <code>/gg</code>. This bypasses channel prefixes; your game must support the command. Generic only types it into the focused field. Spoken punctuation is a separate optional setting.</p>
   </div></section>
   <section><div class="wrap guide-next"><div><p class="section-label">MAKE IT YOURS</p><h2>One binding. Your setup.</h2><p>Pick WoW, GW2, or Generic under Mode. Choose your model and transcription language, change your recording binding, and adjust sending behavior in Advanced settings.</p><p>In v0.3.22 and later, open Mode → Edit game profile to customize spoken triggers, channel commands, and recognition keywords for each game.</p><p>In v0.3.23 and later, choose the WoW Forever profile that submits chat with controller A. Use Sending → Submit chat with in the profile editor to choose Enter, Controller A, or no submission; regular WoW keeps Enter. This needs in-game testing with your Steam Input/Proton setup.</p><p>Version 0.3.23 also adds optional output muting during recording and the CPU-based Parakeet speech engine. Choose the model type and variant on the Model page; Parakeet detects its supported languages automatically. SDL 3 controller input is included as an experimental default; Diagnostics offers the legacy input backend if needed.</p></div><div class="guide-link-cards"><a href="/#install"><strong>Get Decktation <span aria-hidden="true">↗</span></strong><span>Install it on your Deck.</span></a><a href="/changelog/"><strong>What’s new <span aria-hidden="true">→</span></strong><span>Release notes, version by version.</span></a><a href="https://github.com/silverfoxy/decktation/blob/master/doc/ADVANCED_CONFIGURATION.md"><strong>Advanced configuration <span aria-hidden="true">↗</span></strong><span>Profiles, channels, and sending options.</span></a></div></div></section>
 </Guide>
