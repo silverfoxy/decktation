@@ -91,6 +91,7 @@ const setShareDiagnosticsRpc = callable<[enabled: boolean], RpcResponse>("set_sh
 const setRecordingIndicatorRpc = callable<[mode: string], RpcResponse>("set_recording_indicator");
 const setRecordingVolumeRpc = callable<[mode: string], RpcResponse>("set_recording_volume");
 const setHapticFeedbackRpc = callable<[enabled: boolean], RpcResponse>("set_haptic_feedback");
+const setExactBindingRpc = callable<[enabled: boolean], RpcResponse>("set_exact_binding");
 const setActivePresetRpc = callable<[game: string], RpcResponse>("set_active_preset");
 const setModelSizeRpc = callable<[modelSize: string], RpcResponse>("set_model_size");
 const cancelModelDownloadRpc = callable<[], RpcResponse>("cancel_model_download");
@@ -396,6 +397,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [recordingIndicator, setRecordingIndicator] = useState<string>("toast");
 	const [recordingVolume, setRecordingVolume] = useState<string>("off");
 	const [hapticFeedback, setHapticFeedback] = useState<boolean>(false);
+	const [exactBinding, setExactBinding] = useState<boolean>(false);
 	const [activePreset, setActivePreset] = useState<string>("wow");
 	const [presets, setPresets] = useState<DropdownOption[]>([]);
 	const [sendingMode, setSendingMode] = useState<string>("immediate");
@@ -585,6 +587,9 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					setRecordingIndicator(indicator);
                     setRecordingVolume(config.recordingVolume === "mute" ? "mute" : "off");
 					logic.recordingIndicator = indicator;
+					if (config.exactBindingMs !== undefined) {
+						setExactBinding(config.exactBindingMs > 0);
+					}
 					if (config.hapticFeedback !== undefined) {
 						setHapticFeedback(config.hapticFeedback);
 					}
@@ -1044,6 +1049,12 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 						</div></PanelSectionRow>
 						<PanelSectionRow><div>{t("Binding")}: <strong>{buttons.join(' + ')}</strong></div></PanelSectionRow>
 						<PanelSectionRow><ButtonItem layout="below" disabled={!controllerReady || recording || !!pendingDraft || testPhase !== "idle"} onClick={beginCapture}>{t("Change binding")}</ButtonItem></PanelSectionRow>
+						<PanelSectionRow><ToggleField label={t("Exact binding only")} description={t("Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.")}
+							checked={exactBinding} disabled={recording} onChange={async (next) => {
+								const result = await setExactBindingRpc(next);
+								if (result.success) setExactBinding(next);
+								else setRpcError(result.error || t("Could not update exact binding"));
+							}} /></PanelSectionRow>
                         {bindingMessage && <PanelSectionRow><div role="status">{bindingMessage}</div></PanelSectionRow>}
 					</PanelSection>
 					<PanelSection title={t("Try it")}>

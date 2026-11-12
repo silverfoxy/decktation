@@ -7,6 +7,12 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- "Exact binding only" (off by default): dictation waits 150 ms after the
+  binding is pressed and doesn't start if another button joins, so bigger
+  button combos that include the binding can be used for other things.
+
 ## [0.3.23] - 2026-11-10
 
 ### Added
