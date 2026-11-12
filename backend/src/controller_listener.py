@@ -110,6 +110,15 @@ def load_button_config():
     # Default to L1+R1
     return ["L1", "R1"]
 
+def load_exact_binding_ms():
+    """The "Exact binding only" window in milliseconds, 0 when it's off."""
+    try:
+        with open(CONFIG_FILE, 'r') as f:
+            value = json.load(f).get("exactBindingMs", 0)
+        return max(0, min(500, int(value)))
+    except Exception:
+        return 0
+
 class ControllerDebug:
     """Monotonic protocol-v2 producer, bound to one listener incarnation."""
     def __init__(self, buttons=None, clock=None):
@@ -250,23 +259,92 @@ class ControllerDebug:
 
 
 class ComboTracker:
-    """Evaluate each source independently; never combine separate gamepads."""
-    def __init__(self, buttons):
+    """Evaluate each source independently; never combine separate gamepads.
+
+    With a window (seconds, from "Exact binding only"), the binding only counts
+    when no other button went down from the window before its first button to
+    the window after it was complete, and it becomes active once that window
+    has passed. Another button in that span makes it a different binding: the
+    press doesn't count until every binding button is up. Buttons held from
+    earlier, or pressed after the window, don't matter.
+    """
+    def __init__(self, buttons, window=0.0, clock=time.monotonic):
         self.buttons = buttons
+        self.window = window
+        self.clock = clock
         self.sources = {}
+        self._pressed_at = {}  # source -> {button: when it went down}
+        self._press = {}       # source -> the binding press being formed or held
 
     def update(self, source, states):
+        if self.window:
+            self._observe(source, states)
         self.sources[source] = states
         return self.active
 
     def remove(self, source):
         self.sources.pop(source, None)
+        self._pressed_at.pop(source, None)
+        self._press.pop(source, None)
         return self.active
+
+    def _observe(self, source, states):
+        now = self.clock()
+        previous = self.sources.get(source, {})
+        # When each held button went down: that's what tells a button pressed
+        # together with the binding from one that was already held.
+        pressed_at = self._pressed_at.setdefault(source, {})
+        for name, down in states.items():
+            if down and not previous.get(name, False):
+                pressed_at[name] = now
+            elif not down:
+                pressed_at.pop(name, None)
+        held = [button for button in self.buttons if states.get(button, False)]
+        if not held:
+            self._press.pop(source, None)
+            return
+        press = self._press.get(source)
+        if press is None:
+            first = min(pressed_at.get(button, now) for button in held)
+            press = self._press[source] = {"first": first, "complete": None, "spoiled": False}
+        # Letting go of one binding button and pressing it again restarts the wait.
+        if len(held) < len(self.buttons):
+            press["complete"] = None
+        elif press["complete"] is None:
+            press["complete"] = now
+        # Another button from the window before the binding until the window
+        # after it's complete (or any time while it's still being pressed)
+        # makes this a bigger chord. That sticks until the binding is let go,
+        # so releasing the extra button doesn't turn the chord into dictation.
+        end = now if press["complete"] is None else press["complete"] + self.window
+        if any(name not in self.buttons and press["first"] - self.window <= when <= end
+               for name, when in pressed_at.items()):
+            press["spoiled"] = True
+
+    def _qualifies(self, source, states):
+        if not all(states.get(button, False) for button in self.buttons):
+            return False
+        if not self.window:
+            return True
+        press = self._press.get(source)
+        # A microsecond of slack, so a wake-up timed to the window isn't lost to rounding.
+        return bool(press and not press["spoiled"] and press["complete"] is not None
+                    and self.clock() - press["complete"] >= self.window - 1e-6)
 
     @property
     def active(self):
-        return any(all(states.get(button, False) for button in self.buttons)
-                   for states in self.sources.values())
+        return any(self._qualifies(source, states) for source, states in self.sources.items())
+
+    def time_to_active(self):
+        """Seconds until a press waiting out its window becomes active, or None."""
+        if not self.window:
+            return None
+        now, left = self.clock(), None
+        for press in self._press.values():
+            if press["complete"] is not None and not press["spoiled"]:
+                remaining = max(0.0, press["complete"] + self.window - now)
+                left = remaining if left is None else min(left, remaining)
+        return left
 
 def main():
     # Write PID file
@@ -299,7 +377,10 @@ def main():
             sys.exit(1)
     combo_str = "+".join(button_names)
     print(f"Button combo: {combo_str}", flush=True)
-    tracker = ComboTracker(button_names)
+    exact_binding_ms = load_exact_binding_ms()
+    if exact_binding_ms:
+        print(f"Exact binding only: {exact_binding_ms} ms", flush=True)
+    tracker = ComboTracker(button_names, exact_binding_ms / 1000)
     selector = selectors.DefaultSelector()
     devices = {}
     details = {}
@@ -568,7 +649,13 @@ def main():
                     diagnostic('waiting')
                 waiting = not devices
                 next_scan = time.monotonic() + 2
-            ready_events = selector.select(timeout=0 if debug.terminal_pending else 0.008 if sdl is not None else 0.25)
+            timeout = 0 if debug.terminal_pending else 0.008 if sdl is not None else 0.25
+            # A held binding sends no new input, so nothing would check it again
+            # when its "Exact binding only" window ends. Wake up then instead.
+            waiting_binding = tracker.time_to_active()
+            if waiting_binding is not None:
+                timeout = min(timeout, waiting_binding)
+            ready_events = selector.select(timeout=timeout)
             for key, _ in ready_events:
                 path = key.data
                 if path in rejected:
@@ -599,6 +686,8 @@ def main():
                 except OSError as e:
                     print(f"Controller disconnected {path}: {e}", flush=True)
                     remove(path, e)
+            if waiting_binding is not None:
+                update_combo()  # even if the wake-up brought no input
             debug.finish_if_drained(time.monotonic(), pending=bool(ready_events))
     except KeyboardInterrupt:
         pass

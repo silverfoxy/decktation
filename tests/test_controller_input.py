@@ -101,6 +101,97 @@ def test_grip_combo_still_works_with_standard_button(listener):
     assert not tracker.update('deck', {'L4': False, 'R1': True})
 
 
+class FakeClock:
+    def __init__(self):
+        self.now = 100.0
+
+    def __call__(self):
+        return self.now
+
+
+def exact_tracker(listener, buttons=('L4', 'R4'), window=0.15):
+    clock = FakeClock()
+    return listener.ComboTracker(list(buttons), window, clock=clock), clock
+
+
+def test_exact_binding_off_by_default_keeps_other_buttons_allowed(listener):
+    tracker = listener.ComboTracker(['L4', 'R4'])
+    assert not tracker.update('deck', {'L5': True})
+    assert tracker.update('deck', {'L5': True, 'L4': True, 'R4': True})
+    assert tracker.time_to_active() is None
+
+
+def test_exact_binding_waits_out_the_window(listener):
+    tracker, clock = exact_tracker(listener)
+    assert not tracker.update('deck', {'L4': True})
+    clock.now += 0.02
+    assert not tracker.update('deck', {'L4': True, 'R4': True})
+    assert abs(tracker.time_to_active() - 0.15) < 1e-9
+    clock.now += 0.1
+    assert not tracker.active
+    clock.now += 0.05
+    assert tracker.active
+    assert not tracker.update('deck', {'L4': False, 'R4': True})
+
+
+@pytest.mark.parametrize('events', [
+    [(0.0, 'L5'), (0.1, 'L4'), (0.12, 'R4')],   # just before the binding
+    [(0.0, 'L4'), (0.3, 'L5'), (0.6, 'R4')],    # while it forms, however slowly
+    [(0.0, 'L4'), (0.02, 'R4'), (0.12, 'L5')],  # just after it's complete
+], ids=['before', 'forming', 'after'])
+def test_another_button_near_the_binding_makes_it_a_different_binding(listener, events):
+    tracker, clock = exact_tracker(listener)
+    held = {}
+    for at, name in events:
+        clock.now = 100.0 + at
+        held[name] = True
+        tracker.update('deck', dict(held))
+    clock.now += 1.0
+    assert not tracker.active
+    assert tracker.time_to_active() is None
+    # Letting go of the extra button doesn't bring the binding back...
+    held['L5'] = False
+    tracker.update('deck', dict(held))
+    clock.now += 1.0
+    assert not tracker.active
+    # ...releasing the binding does, for the next press.
+    tracker.update('deck', {'L4': False, 'R4': False, 'L5': False})
+    tracker.update('deck', {'L4': True, 'R4': True, 'L5': False})
+    clock.now += 0.2
+    assert tracker.active
+
+
+def test_buttons_held_well_before_or_pressed_after_the_window_are_ignored(listener):
+    tracker, clock = exact_tracker(listener)
+    tracker.update('deck', {'L2': True})
+    clock.now += 0.5
+    tracker.update('deck', {'L2': True, 'L4': True, 'R4': True})
+    clock.now += 0.15
+    assert tracker.active
+    clock.now += 0.1
+    assert tracker.update('deck', {'L2': True, 'L4': True, 'R4': True, 'L5': True})
+
+
+def test_exact_binding_is_per_controller(listener):
+    tracker, clock = exact_tracker(listener)
+    tracker.update('xbox', {'A': True})
+    tracker.update('deck', {'L4': True, 'R4': True})
+    clock.now += 0.15
+    assert tracker.active
+
+
+def test_exact_binding_window_comes_from_the_config(listener, monkeypatch, tmp_path):
+    config = tmp_path / 'button_config.json'
+    monkeypatch.setattr(listener, 'CONFIG_FILE', str(config))
+    assert listener.load_exact_binding_ms() == 0
+    config.write_text('{"buttons": ["L4", "R4"], "exactBindingMs": 150}')
+    assert listener.load_exact_binding_ms() == 150
+    config.write_text('{"exactBindingMs": 9000}')
+    assert listener.load_exact_binding_ms() == 500
+    config.write_text('{"exactBindingMs": "nonsense"}')
+    assert listener.load_exact_binding_ms() == 0
+
+
 @pytest.mark.parametrize('code,name', KEY_BUTTONS.items())
 def test_evdev_buttons_press_repeat_release(code, name):
     device = gamepad()

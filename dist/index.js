@@ -402,7 +402,10 @@
       "Output volume while recording": "Output volume while recording",
       Unchanged: Unchanged$9,
       Mute: Mute$9,
-      "Could not update recording volume": "Could not update recording volume"
+      "Could not update recording volume": "Could not update recording volume",
+      "Exact binding only": "Exact binding only",
+      "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.",
+      "Could not update exact binding": "Could not update exact binding"
     };
 
     var af = "Afrikaans";
@@ -4545,6 +4548,7 @@
     const setRecordingIndicatorRpc = callable("set_recording_indicator");
     const setRecordingVolumeRpc = callable("set_recording_volume");
     const setHapticFeedbackRpc = callable("set_haptic_feedback");
+    const setExactBindingRpc = callable("set_exact_binding");
     const setActivePresetRpc = callable("set_active_preset");
     const setModelSizeRpc = callable("set_model_size");
     const cancelModelDownloadRpc = callable("cancel_model_download");
@@ -4836,6 +4840,7 @@
         const [recordingIndicator, setRecordingIndicator] = React.useState("toast");
         const [recordingVolume, setRecordingVolume] = React.useState("off");
         const [hapticFeedback, setHapticFeedback] = React.useState(false);
+        const [exactBinding, setExactBinding] = React.useState(false);
         const [activePreset, setActivePreset] = React.useState("wow");
         const [presets, setPresets] = React.useState([]);
         const [sendingMode, setSendingMode] = React.useState("immediate");
@@ -5041,6 +5046,9 @@
                         setRecordingIndicator(indicator);
                         setRecordingVolume(config.recordingVolume === "mute" ? "mute" : "off");
                         logic.recordingIndicator = indicator;
+                        if (config.exactBindingMs !== undefined) {
+                            setExactBinding(config.exactBindingMs > 0);
+                        }
                         if (config.hapticFeedback !== undefined) {
                             setHapticFeedback(config.hapticFeedback);
                         }
@@ -5581,6 +5589,14 @@
                                 React__default["default"].createElement("strong", null, buttons.join(' + ')))),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement(deckyFrontendLib.ButtonItem, { layout: "below", disabled: !controllerReady || recording || !!pendingDraft || testPhase !== "idle", onClick: beginCapture }, t("Change binding"))),
+                        React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
+                            React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: t("Exact binding only"), description: t("Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start."), checked: exactBinding, disabled: recording, onChange: async (next) => {
+                                    const result = await setExactBindingRpc(next);
+                                    if (result.success)
+                                        setExactBinding(next);
+                                    else
+                                        setRpcError(result.error || t("Could not update exact binding"));
+                                } })),
                         bindingMessage && React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement("div", { role: "status" }, bindingMessage))),
                     React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Try it") },

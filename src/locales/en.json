@@ -276,5 +276,8 @@
   "Output volume while recording": "Output volume while recording",
   "Unchanged": "Unchanged",
   "Mute": "Mute",
-  "Could not update recording volume": "Could not update recording volume"
+  "Could not update recording volume": "Could not update recording volume",
+  "Exact binding only": "Exact binding only",
+  "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.",
+  "Could not update exact binding": "Could not update exact binding"
 }
