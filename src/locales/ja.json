@@ -276,5 +276,8 @@
   "Output volume while recording": "録音中の出力音量",
   "Unchanged": "変更しない",
   "Mute": "ミュート",
-  "Could not update recording volume": "録音中の音量を更新できませんでした"
+  "Could not update recording volume": "録音中の音量を更新できませんでした",
+  "Exact binding only": "完全一致のボタン組み合わせのみ",
+  "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "150ミリ秒待機します。別のボタンが押されると異なる組み合わせとみなされ、音声入力は開始されません。",
+  "Could not update exact binding": "完全一致のボタン組み合わせ設定を更新できませんでした"
 }

@@ -932,7 +932,10 @@
       "Output volume while recording": "Volumen de salida al grabar",
       Unchanged: Unchanged$8,
       Mute: Mute$8,
-      "Could not update recording volume": "No se pudo actualizar el volumen de grabación"
+      "Could not update recording volume": "No se pudo actualizar el volumen de grabación",
+      "Exact binding only": "Solo combinación exacta",
+      "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Espera 150 ms. Si se pulsa otro botón, se considera una combinación diferente y el dictado no se inicia.",
+      "Could not update exact binding": "No se pudo actualizar la combinación exacta"
     };
 
     var Back$7 = "Назад";
@@ -1256,7 +1259,10 @@
       "Output volume while recording": "Громкость вывода при записи",
       Unchanged: Unchanged$7,
       Mute: Mute$7,
-      "Could not update recording volume": "Не удалось изменить громкость при записи"
+      "Could not update recording volume": "Не удалось изменить громкость при записи",
+      "Exact binding only": "Только точная комбинация",
+      "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Ожидает 150 мс. Если нажата ещё одна кнопка, это считается другой комбинацией и диктовка не начинается.",
+      "Could not update exact binding": "Не удалось обновить настройку точной комбинации"
     };
 
     var Back$6 = "Voltar";
@@ -1580,7 +1586,10 @@
       "Output volume while recording": "Volume de saída durante a gravação",
       Unchanged: Unchanged$6,
       Mute: Mute$6,
-      "Could not update recording volume": "Não foi possível atualizar o volume de gravação"
+      "Could not update recording volume": "Não foi possível atualizar o volume de gravação",
+      "Exact binding only": "Apenas combinação exata",
+      "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Aguarda 150 ms. Se outro botão for pressionado, a combinação é diferente e o ditado não inicia.",
+      "Could not update exact binding": "Não foi possível atualizar a combinação exata"
     };
 
     var Back$5 = "Wstecz";
@@ -1904,7 +1913,10 @@
       "Output volume while recording": "Głośność wyjścia podczas nagrywania",
       Unchanged: Unchanged$5,
       Mute: Mute$5,
-      "Could not update recording volume": "Nie udało się zmienić głośności nagrywania"
+      "Could not update recording volume": "Nie udało się zmienić głośności nagrywania",
+      "Exact binding only": "Tylko dokładna kombinacja",
+      "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Czeka 150 ms. Jeśli zostanie naciśnięty kolejny przycisk, jest to inna kombinacja i dyktowanie się nie rozpocznie.",
+      "Could not update exact binding": "Nie udało się zaktualizować dokładnej kombinacji"
     };
 
     var Back$4 = "뒤로";
@@ -2228,7 +2240,10 @@
       "Output volume while recording": "녹음 중 출력 볼륨",
       Unchanged: Unchanged$4,
       Mute: Mute$4,
-      "Could not update recording volume": "녹음 중 볼륨을 변경하지 못했습니다"
+      "Could not update recording volume": "녹음 중 볼륨을 변경하지 못했습니다",
+      "Exact binding only": "정확히 일치하는 버튼 조합만",
+      "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "150ms 동안 기다립니다. 다른 버튼이 추가로 눌리면 다른 조합으로 간주되어 받아쓰기가 시작되지 않습니다.",
+      "Could not update exact binding": "정확한 버튼 조합 설정을 업데이트하지 못했습니다"
     };
 
     var Back$3 = "戻る";
@@ -2552,7 +2567,10 @@
       "Output volume while recording": "録音中の出力音量",
       Unchanged: Unchanged$3,
       Mute: Mute$3,
-      "Could not update recording volume": "録音中の音量を更新できませんでした"
+      "Could not update recording volume": "録音中の音量を更新できませんでした",
+      "Exact binding only": "完全一致のボタン組み合わせのみ",
+      "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "150ミリ秒待機します。別のボタンが押されると異なる組み合わせとみなされ、音声入力は開始されません。",
+      "Could not update exact binding": "完全一致のボタン組み合わせ設定を更新できませんでした"
     };
 
     var Back$2 = "Zurück";
@@ -2876,7 +2894,10 @@
       "Output volume while recording": "Ausgabelautstärke während der Aufnahme",
       Unchanged: Unchanged$2,
       Mute: Mute$2,
-      "Could not update recording volume": "Aufnahmelautstärke konnte nicht aktualisiert werden"
+      "Could not update recording volume": "Aufnahmelautstärke konnte nicht aktualisiert werden",
+      "Exact binding only": "Nur exakte Tastenkombination",
+      "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Wartet 150 ms. Wird eine weitere Taste gedrückt, gilt dies als andere Tastenkombination und das Diktat startet nicht.",
+      "Could not update exact binding": "Die exakte Tastenkombination konnte nicht aktualisiert werden"
     };
 
     var Back$1 = "Retour";
@@ -3200,7 +3221,10 @@
       "Output volume while recording": "Volume de sortie pendant l’enregistrement",
       Unchanged: Unchanged$1,
       Mute: Mute$1,
-      "Could not update recording volume": "Impossible de modifier le volume pendant l’enregistrement"
+      "Could not update recording volume": "Impossible de modifier le volume pendant l’enregistrement",
+      "Exact binding only": "Combinaison exacte uniquement",
+      "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Attend 150 ms. Si un autre bouton est enfoncé, la combinaison est différente et la dictée ne démarre pas.",
+      "Could not update exact binding": "Impossible de modifier la combinaison exacte"
     };
 
     var Back = "返回";
@@ -3524,7 +3548,10 @@
       "Output volume while recording": "录音时的输出音量",
       Unchanged: Unchanged,
       Mute: Mute,
-      "Could not update recording volume": "无法更新录音音量"
+      "Could not update recording volume": "无法更新录音音量",
+      "Exact binding only": "仅限完全匹配的按键组合",
+      "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "等待 150 毫秒。如果又按下其他按键，则视为不同的组合，不会开始听写。",
+      "Could not update exact binding": "无法更新精确按键组合设置"
     };
 
     const catalogs = { en: en$1, es, ru, pt, pl, ko, ja, de, fr, zh };

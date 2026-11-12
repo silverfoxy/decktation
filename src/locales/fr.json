@@ -276,5 +276,8 @@
   "Output volume while recording": "Volume de sortie pendant l’enregistrement",
   "Unchanged": "Inchangé",
   "Mute": "Couper le son",
-  "Could not update recording volume": "Impossible de modifier le volume pendant l’enregistrement"
+  "Could not update recording volume": "Impossible de modifier le volume pendant l’enregistrement",
+  "Exact binding only": "Combinaison exacte uniquement",
+  "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Attend 150 ms. Si un autre bouton est enfoncé, la combinaison est différente et la dictée ne démarre pas.",
+  "Could not update exact binding": "Impossible de modifier la combinaison exacte"
 }

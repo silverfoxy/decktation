@@ -276,5 +276,8 @@
   "Output volume while recording": "Громкость вывода при записи",
   "Unchanged": "Без изменений",
   "Mute": "Без звука",
-  "Could not update recording volume": "Не удалось изменить громкость при записи"
+  "Could not update recording volume": "Не удалось изменить громкость при записи",
+  "Exact binding only": "Только точная комбинация",
+  "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Ожидает 150 мс. Если нажата ещё одна кнопка, это считается другой комбинацией и диктовка не начинается.",
+  "Could not update exact binding": "Не удалось обновить настройку точной комбинации"
 }
