@@ -15,7 +15,7 @@ Most settings can be changed in the Decktation panel. The source configuration f
 
 ## Controller input
 
-Upcoming/test builds use **Legacy (evdev / HID)** by default. To investigate
+Version 0.3.24 and later use **Legacy (evdev / HID)** by default. To investigate
 controller compatibility, select **Diagnostics → Input and service → Controller
 input → SDL 3 (experimental)**. Existing SDL settings reset to legacy once on
 upgrade, because earlier builds saved SDL as the default without distinguishing
@@ -32,7 +32,7 @@ not upload anything; sending each report remains a separate explicit action.
 
 ## Game presets
 
-In upcoming/test builds, **Edit game profile → Sending → Casual chat formatting** controls whether the first letter is lowercased and automatic trailing periods are removed. Turn it off to preserve transcription capitalization and punctuation. The setting applies per profile immediately after saving; WoW, WoW Forever, and Guild Wars 2 default to On, while Generic defaults to Off.
+In v0.3.24 and later, **Edit game profile → Sending → Casual chat formatting** controls whether the first letter is lowercased and automatic trailing periods are removed. Turn it off to preserve transcription capitalization and punctuation. The setting applies per profile immediately after saving; WoW, WoW Forever, and Guild Wars 2 default to On, while Generic defaults to Off.
 
 Decktation includes four presets defined in [`defaults/game_presets.json`](../defaults/game_presets.json):
 

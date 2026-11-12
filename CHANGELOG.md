@@ -7,6 +7,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.3.24] - 2026-11-12
+
 ### Changed
 
 - Restore legacy controller input as the default following Legion Go compatibility
@@ -27,8 +29,12 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   desktop user in the background with a three-second timeout.
 
 - "Exact binding only" in Advanced settings → Sending (off by default): dictation
-  waits 150 ms after the binding is pressed and doesn't start if another button joins, so bigger
-  button combos that include the binding can be used for other things.
+  waits 150 ms after the binding is pressed and does not start if another button
+  joins, so larger combos that include the binding can be used for other things.
+
+### Documentation
+
+- Walkthrough comparison of game profiles and their spoken chat commands.
 
 ## [0.3.23] - 2026-11-10
 

@@ -29,7 +29,7 @@ export const tutorials = [
     description: 'Turn on Spoken punctuation in Advanced settings to replace English punctuation phrases with symbols. This example uses Generic mode in a focused text field.',
     spoken: 'Ready comma let’s go exclamation mark', output: 'Ready, let’s go!', target: 'Generic · Focused text field',
     steps: ['Enable Spoken punctuation in Advanced settings.', 'Choose Generic, focus a text field, and dictate the example.', 'Release to insert text. Generic mode does not press Enter to send it.'],
-    note: 'Punctuation commands are English-only. “Comma”, “period”, “question mark”, and “exclamation mark” are supported examples. Capitalization can vary with transcription and the game profile.',
+    note: 'Punctuation commands are English-only. “Comma”, “period”, “question mark”, and “exclamation mark” are supported examples. In v0.3.24 and later, turn off Edit game profile → Sending → Casual chat formatting to preserve transcription capitalization and trailing periods.',
   },
   {
     id: 'review', label: 'Review before sending', category: 'TAKE A SECOND LOOK',
