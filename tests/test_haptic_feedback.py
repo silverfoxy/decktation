@@ -126,7 +126,7 @@ def test_recording_transitions_emit_once_and_before_processing(monkeypatch):
     monkeypatch.setattr(voice, "transcribe_audio", lambda _: events.append("transcribing"))
     voice.stop_recording(send=False)
     voice.stop_recording(send=False)
-    assert events == ["started", "stopped", "transcribing"]
+    assert events == ["started", "stopped", "transcribing", "transcribed"]
     stream.stop.assert_called_once()
 
 
@@ -136,7 +136,7 @@ def test_test_mode_uses_same_transitions_without_sending():
                          recording_state_callback=events.append)
     voice.start_recording()
     voice.stop_recording(send=False)
-    assert events == ["started", "stopped"]
+    assert events == ["started", "stopped", "transcribed"]
 
 
 def test_failed_start_and_feedback_errors_do_not_affect_recording(monkeypatch):

@@ -127,7 +127,10 @@ Linux evdev gamepads provide their exposed buttons; Steam Deck raw HID input pre
 
 ## Status hook
 
-Other tools can follow dictation (for example an in-game indicator, an overlay, or lights) by setting `statusHookCommand` in `button_config.json` in the plugin settings directory, normally `/home/deck/homebrew/settings/decktation/`. It is empty (off) by default and has no panel setting.
+Set `statusHookCommand` in `button_config.json` in the plugin settings directory
+(normally `/home/deck/homebrew/settings/decktation/`) to notify an external tool
+when dictation changes state. The default is empty (disabled); there is no panel
+setting. For example, add this key to your existing configuration:
 
 ```json
 {
@@ -135,16 +138,28 @@ Other tools can follow dictation (for example an in-game indicator, an overlay, 
 }
 ```
 
-Decktation runs the command in the background at each recording status change, with the event in the `DECKTATION_EVENT` environment variable:
+The command receives the event in the `DECKTATION_EVENT` environment variable:
 
 | Event | When |
 | --- | --- |
-| `record_start` | Recording started. |
-| `record_stop` | Recording stopped; transcription is starting. |
-| `transcription_done` | Transcription finished. |
+| `record_start` | Audio capture started. |
+| `record_stop` | Capture stopped; audio processing is starting. |
+| `transcription_done` | Processing finished, including empty recordings. Text may still await review or sending. |
+| `record_abort` | Capture was cancelled, including disabling or shutting down Decktation. No transcription follows. |
 | `error` | Starting, stopping, or transcribing failed. |
 
-The command is split like a shell command line but not run through a shell, so use a script for pipes or redirection. It runs as the plugin's user, detached, with its output discarded. Decktation does not wait for it, and a missing or failing command is logged and never interrupts dictation.
+Hooks run sequentially on a background worker in event order, without blocking
+dictation. Each command has three seconds to finish; on timeout its process group
+is killed before the next hook runs. Keep scripts short and avoid launching
+background children that update state after the script exits.
+
+Commands are split with shell-style quoting but run without a shell; use a script
+for pipes or redirection. Hooks run as the desktop user, never root, with cleared
+supplementary groups and a minimal environment containing the user's home,
+runtime directory, session bus address, and available display variables. The
+plugin's privileged environment is not inherited. If the desktop account cannot
+be resolved, the hook is skipped and logged. Output is discarded; launch errors,
+nonzero exits, and timeouts are logged and do not interrupt dictation.
 
 ## Custom controller mappings
 
