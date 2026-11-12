@@ -279,5 +279,9 @@
   "Could not update recording volume": "録音中の音量を更新できませんでした",
   "Exact binding only": "完全一致のボタン組み合わせのみ",
   "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "150ミリ秒待機します。別のボタンが押されると異なる組み合わせとみなされ、音声入力は開始されません。",
-  "Could not update exact binding": "完全一致のボタン組み合わせ設定を更新できませんでした"
+  "Could not update exact binding": "完全一致のボタン組み合わせ設定を更新できませんでした",
+  "Casual chat formatting": "カジュアルなチャット書式",
+  "Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.": "先頭の文字を小文字にし、自動で付いた末尾のピリオドを削除します。オフにすると、文字起こしの大文字・小文字と句読点を保持します。",
+  "On": "オン",
+  "Off": "オフ"
 }

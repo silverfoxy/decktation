@@ -279,5 +279,9 @@
   "Could not update recording volume": "Не удалось изменить громкость при записи",
   "Exact binding only": "Только точная комбинация",
   "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Ожидает 150 мс. Если нажата ещё одна кнопка, это считается другой комбинацией и диктовка не начинается.",
-  "Could not update exact binding": "Не удалось обновить настройку точной комбинации"
+  "Could not update exact binding": "Не удалось обновить настройку точной комбинации",
+  "Casual chat formatting": "Неформальное оформление чата",
+  "Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.": "Делает первую букву строчной и удаляет автоматические точки в конце. Отключите, чтобы сохранить регистр и пунктуацию расшифровки.",
+  "On": "Вкл.",
+  "Off": "Выкл."
 }

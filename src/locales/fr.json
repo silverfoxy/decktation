@@ -279,5 +279,9 @@
   "Could not update recording volume": "Impossible de modifier le volume pendant l’enregistrement",
   "Exact binding only": "Combinaison exacte uniquement",
   "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Attend 150 ms. Si un autre bouton est enfoncé, la combinaison est différente et la dictée ne démarre pas.",
-  "Could not update exact binding": "Impossible de modifier la combinaison exacte"
+  "Could not update exact binding": "Impossible de modifier la combinaison exacte",
+  "Casual chat formatting": "Mise en forme du chat informel",
+  "Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.": "Met la première lettre en minuscule et supprime les points finaux automatiques. Désactivez pour conserver les majuscules et la ponctuation de la transcription.",
+  "On": "Activé",
+  "Off": "Désactivé"
 }

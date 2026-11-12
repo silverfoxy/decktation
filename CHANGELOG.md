@@ -9,6 +9,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- Per-profile Casual chat formatting control in Edit game profile → Sending.
+  Turn it off to preserve transcription capitalization and trailing periods (#118).
+
 - Optional `statusHookCommand` setting for ordered recording, transcription,
   cancellation, and error notifications to external tools. Hooks run as the
   desktop user in the background with a three-second timeout.

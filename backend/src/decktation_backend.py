@@ -1618,6 +1618,7 @@ class Plugin:
             "channel_triggers": profile.get("channel_triggers", {}),
             "default_channel": profile.get("default_channel", "type"),
             "chat_send_key": profile.get("chat_send_key", "enter"),
+            "casual_case": bool(profile.get("casual_case", False)),
         }}
 
     async def save_profile_editor(self, game: str, profile: dict):
@@ -1654,6 +1655,9 @@ class Plugin:
             send_key = profile.get("chat_send_key", presets[game].get("chat_send_key", "enter"))
             if send_key not in (None, "enter", "controller_a"):
                 raise ValueError("Choose Enter, Controller A, or no chat submission.")
+            casual_case = profile.get("casual_case", presets[game].get("casual_case", False))
+            if type(casual_case) is not bool:
+                raise ValueError("Casual chat formatting must be a boolean.")
             # Preserve overrides from whichever legacy profile file is active.
             existing = {}
             for name in ("profiles.json", "custom_presets.json", "game_presets.json"):
@@ -1668,6 +1672,7 @@ class Plugin:
             override.update({key: profile[key] for key in (
                 "hotwords", "channels", "channel_triggers", "default_channel")})
             override["chat_send_key"] = send_key
+            override["casual_case"] = casual_case
             existing[game] = override
             path = os.path.join(CONFIG_DIR, "profiles.json")
             temporary = path + ".tmp"

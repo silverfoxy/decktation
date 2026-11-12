@@ -345,3 +345,24 @@ test('submission input persists per profile and WoW Forever defaults to A', asyn
   expect((await harness.rpc('get_profile_editor', ['wow_forever'])).profile.chat_send_key).toBeNull();
   expect((await harness.rpc('get_profile_editor', ['wow'])).profile.chat_send_key).toBe('controller_a');
 });
+
+
+test('casual formatting persists independently for each game profile', async ({ page, harness }) => {
+  await openEditor(page);
+  await page.getByRole('button', { name: 'Sending', exact: true }).click();
+  await expect(page.getByLabel('Casual chat formatting')).toHaveValue('on');
+  await page.getByLabel('Casual chat formatting').selectOption('off');
+  await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(page.getByRole('status')).toHaveText('Saved');
+  expect((await harness.rpc('get_profile_editor', ['wow'])).profile.casual_case).toBe(false);
+  await page.getByLabel('Game profile').selectOption('wow_forever');
+  await expect(page.getByLabel('Casual chat formatting')).toHaveValue('on');
+  await page.getByLabel('Game profile').selectOption('generic');
+  await expect(page.getByLabel('Casual chat formatting')).toHaveValue('off');
+  await page.getByLabel('Casual chat formatting').selectOption('on');
+  await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(page.getByRole('status')).toHaveText('Saved');
+  await page.getByLabel('Game profile').selectOption('wow');
+  await expect(page.getByLabel('Casual chat formatting')).toHaveValue('off');
+  expect((await harness.rpc('get_profile_editor', ['generic'])).profile.casual_case).toBe(true);
+});

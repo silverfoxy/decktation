@@ -279,5 +279,9 @@
   "Could not update recording volume": "Não foi possível atualizar o volume de gravação",
   "Exact binding only": "Apenas combinação exata",
   "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Aguarda 150 ms. Se outro botão for pressionado, a combinação é diferente e o ditado não inicia.",
-  "Could not update exact binding": "Não foi possível atualizar a combinação exata"
+  "Could not update exact binding": "Não foi possível atualizar a combinação exata",
+  "Casual chat formatting": "Formatação de chat informal",
+  "Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.": "Converte a primeira letra em minúscula e remove os pontos finais automáticos. Desative para preservar as maiúsculas e a pontuação da transcrição.",
+  "On": "Ativado",
+  "Off": "Desativado"
 }

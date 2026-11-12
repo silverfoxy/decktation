@@ -15,6 +15,8 @@ Most settings can be changed in the Decktation panel. The source configuration f
 
 ## Game presets
 
+In upcoming/test builds, **Edit game profile → Sending → Casual chat formatting** controls whether the first letter is lowercased and automatic trailing periods are removed. Turn it off to preserve transcription capitalization and punctuation. The setting applies per profile immediately after saving; WoW, WoW Forever, and Guild Wars 2 default to On, while Generic defaults to Off.
+
 Decktation includes four presets defined in [`defaults/game_presets.json`](../defaults/game_presets.json):
 
 | Preset | Behavior |
