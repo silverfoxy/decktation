@@ -170,6 +170,42 @@ The default push-to-talk combination is **L1 + R1**. Use **Input → Add Button*
 
 Linux evdev gamepads provide their exposed buttons; Steam Deck raw HID input preserves the physical Deck controls and rear grips independently of Steam Input layouts. Original Steam Controllers expose L5/R5 grip input on wired or USB-receiver connections. A keyboard-and-mouse-only Steam Input layout may not expose gamepad buttons, and third-party paddles are not guaranteed to appear as separate inputs. Face-button names follow Xbox positions.
 
+## Status hook
+
+Set `statusHookCommand` in `button_config.json` in the plugin settings directory
+(normally `/home/deck/homebrew/settings/decktation/`) to notify an external tool
+when dictation changes state. The default is empty (disabled); there is no panel
+setting. For example, add this key to your existing configuration:
+
+```json
+{
+  "statusHookCommand": "/home/deck/.local/bin/on-dictation"
+}
+```
+
+The command receives the event in the `DECKTATION_EVENT` environment variable:
+
+| Event | When |
+| --- | --- |
+| `record_start` | Audio capture started. |
+| `record_stop` | Capture stopped; audio processing is starting. |
+| `transcription_done` | Processing finished, including empty recordings. Text may still await review or sending. |
+| `record_abort` | Capture was cancelled, including disabling or shutting down Decktation. No transcription follows. |
+| `error` | Starting, stopping, or transcribing failed. |
+
+Hooks run sequentially on a background worker in event order, without blocking
+dictation. Each command has three seconds to finish; on timeout its process group
+is killed before the next hook runs. Keep scripts short and avoid launching
+background children that update state after the script exits.
+
+Commands are split with shell-style quoting but run without a shell; use a script
+for pipes or redirection. Hooks run as the desktop user, never root, with cleared
+supplementary groups and a minimal environment containing the user's home,
+runtime directory, session bus address, and available display variables. The
+plugin's privileged environment is not inherited. If the desktop account cannot
+be resolved, the hook is skipped and logged. Output is discarded; launch errors,
+nonzero exits, and timeouts are logged and do not interrupt dictation.
+
 ## Custom controller mappings
 
 Create `controller_mappings.json` in the plugin settings directory, normally `/home/deck/homebrew/settings/decktation/`. Each key is a lowercase hexadecimal `bus:vendor:product` identifier, with four digits per component. For example, this maps X/Y for a Bluetooth Xbox controller (`045e:02fd`):

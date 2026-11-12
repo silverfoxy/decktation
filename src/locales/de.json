@@ -276,5 +276,8 @@
   "Output volume while recording": "Ausgabelautstärke während der Aufnahme",
   "Unchanged": "Unverändert",
   "Mute": "Stumm",
-  "Could not update recording volume": "Aufnahmelautstärke konnte nicht aktualisiert werden"
+  "Could not update recording volume": "Aufnahmelautstärke konnte nicht aktualisiert werden",
+  "Exact binding only": "Nur exakte Tastenkombination",
+  "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Wartet 150 ms. Wird eine weitere Taste gedrückt, gilt dies als andere Tastenkombination und das Diktat startet nicht.",
+  "Could not update exact binding": "Die exakte Tastenkombination konnte nicht aktualisiert werden"
 }

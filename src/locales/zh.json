@@ -276,5 +276,8 @@
   "Output volume while recording": "录音时的输出音量",
   "Unchanged": "保持不变",
   "Mute": "静音",
-  "Could not update recording volume": "无法更新录音音量"
+  "Could not update recording volume": "无法更新录音音量",
+  "Exact binding only": "仅限完全匹配的按键组合",
+  "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "等待 150 毫秒。如果又按下其他按键，则视为不同的组合，不会开始听写。",
+  "Could not update exact binding": "无法更新精确按键组合设置"
 }

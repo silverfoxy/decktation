@@ -1401,6 +1401,7 @@ class WoWVoiceChat:
                 return
 
             self.is_transcribing = True
+            completion_state = "transcribed"
             try:
                 self.is_recording = False
                 with self._pending_lock:
@@ -1420,6 +1421,7 @@ class WoWVoiceChat:
                             if text and send:
                                 self.queue_transcription(text, generation)
                         except Exception as e:
+                            completion_state = "error"
                             print(f"[TEST MODE] Error: {e}")
                             self._report_diagnostic("transcription.failed", e)
                     else:
@@ -1458,8 +1460,12 @@ class WoWVoiceChat:
 
                 if text and send:
                     self.queue_transcription(text, generation)
+            except BaseException:
+                completion_state = "error"
+                raise
             finally:
                 self.is_transcribing = False
+                self._recording_transition(completion_state)
 
     def abort_recording(self):
         """Stop recording and discard audio instead of transcribing or sending it."""
@@ -1467,7 +1473,8 @@ class WoWVoiceChat:
         with self.recording_lock:
             was_recording = self.is_recording
             self.is_recording = False
-            self._recording_transition("aborted")
+            if was_recording:
+                self._recording_transition("aborted")
 
             stream = self.recording_stream
             if stream:

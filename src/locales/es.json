@@ -276,5 +276,8 @@
   "Output volume while recording": "Volumen de salida al grabar",
   "Unchanged": "Sin cambios",
   "Mute": "Silenciar",
-  "Could not update recording volume": "No se pudo actualizar el volumen de grabación"
+  "Could not update recording volume": "No se pudo actualizar el volumen de grabación",
+  "Exact binding only": "Solo combinación exacta",
+  "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "Espera 150 ms. Si se pulsa otro botón, se considera una combinación diferente y el dictado no se inicia.",
+  "Could not update exact binding": "No se pudo actualizar la combinación exacta"
 }

@@ -38,6 +38,7 @@ for dependency_path in dependency_paths:
 from audio_runtime import ensure_audio_environment, setup_audio_environment
 from haptic_feedback import HapticFeedback
 from recording_volume import RecordingVolume
+from status_hook import StatusHook
 from recording_overlay_manager import RecordingOverlay
 from binding_capture import read_json, write_json
 from controller_debug_report import collect_runtime_metadata
@@ -179,6 +180,7 @@ DEFAULT_BUTTON_CONFIG = {
     "hapticFeedback": False,
     "recordingVolume": "off",
     "recordingIndicator": "toast",
+    "statusHookCommand": "",
     "enabled": False,
     "game": "wow",
     "confirmMode": False,
@@ -232,6 +234,19 @@ def _normalize_recording_indicator(indicator):
     if indicator not in SUPPORTED_RECORDING_INDICATORS:
         raise ValueError(f"Unsupported recording indicator: {indicator}")
     return indicator
+
+
+_status_hooks = StatusHook()
+
+
+def _status_hook(event):
+    try:
+        _status_hooks.submit(
+            _read_button_config().get("statusHookCommand", ""), event,
+            getattr(decky, "DECKY_USER_HOME", None),
+        )
+    except Exception:
+        logger.exception("Could not queue status hook for %s", event)
 
 
 def _read_button_config():
@@ -718,6 +733,7 @@ class Plugin:
                                         if Plugin.recording_overlay and _read_button_config()["recordingIndicator"] == "overlay":
                                             Plugin.recording_overlay.show("compact")
                                     except Exception as e:
+                                        _status_hook("error")
                                         if Plugin.haptic_feedback:
                                             Plugin.haptic_feedback.end_session()
                                         Plugin._finish_dictation_trace(False)
@@ -1042,6 +1058,11 @@ class Plugin:
 
     @staticmethod
     def _recording_transition(state):
+        event = {"started": "record_start", "stopped": "record_stop",
+                 "aborted": "record_abort", "transcribed": "transcription_done",
+                 "error": "error"}.get(state)
+        if event:
+            _status_hook(event)
         if Plugin.recording_volume:
             Plugin.recording_volume.transition(state)
         if Plugin.haptic_feedback and state in ("started", "stopped"):
@@ -1738,6 +1759,7 @@ class Plugin:
                     if Plugin.recording_overlay and _read_button_config()["recordingIndicator"] == "overlay":
                         Plugin.recording_overlay.show("compact")
                 except Exception as e:
+                    _status_hook("error")
                     if Plugin.haptic_feedback:
                         Plugin.haptic_feedback.end_session()
                     Plugin._finish_dictation_trace(False)

@@ -276,5 +276,8 @@
   "Output volume while recording": "녹음 중 출력 볼륨",
   "Unchanged": "변경 없음",
   "Mute": "음소거",
-  "Could not update recording volume": "녹음 중 볼륨을 변경하지 못했습니다"
+  "Could not update recording volume": "녹음 중 볼륨을 변경하지 못했습니다",
+  "Exact binding only": "정확히 일치하는 버튼 조합만",
+  "Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.": "150ms 동안 기다립니다. 다른 버튼이 추가로 눌리면 다른 조합으로 간주되어 받아쓰기가 시작되지 않습니다.",
+  "Could not update exact binding": "정확한 버튼 조합 설정을 업데이트하지 못했습니다"
 }
