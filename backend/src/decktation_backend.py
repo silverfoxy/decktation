@@ -173,7 +173,8 @@ if not os.path.exists(PRESETS_FILE):
     PRESETS_FILE = os.path.join(plugin_path, "defaults", "game_presets.json")
 
 DEFAULT_BUTTON_CONFIG = {
-    "controllerBackend": "sdl",
+    "controllerBackend": "legacy",
+    "controllerBackendOptIn": False,
     "buttons": ["L1", "R1"],
     "exactBindingMs": 0,
     "showNotifications": True,
@@ -283,8 +284,9 @@ def _read_button_config():
         config.get("recordingIndicator")
     )
     config["translateToEnglish"] = False
-    if config.get("controllerBackend") not in ("sdl", "legacy"):
-        config["controllerBackend"] = "sdl"
+    if (config.get("controllerBackend") not in ("sdl", "legacy") or
+            (config.get("controllerBackend") == "sdl" and config.get("controllerBackendOptIn") is not True)):
+        config["controllerBackend"] = "legacy"
     return config
 
 
@@ -602,7 +604,7 @@ class Plugin:
                 env={
                     **os.environ,
                     "DECKTATION_CONFIG_DIR": CONFIG_DIR,
-                    "DECKTATION_CONTROLLER_BACKEND": _read_button_config().get("controllerBackend", "sdl"),
+                    "DECKTATION_CONTROLLER_BACKEND": _read_button_config().get("controllerBackend", "legacy"),
                 },
             )
             logger.info(f"Started controller listener (PID {Plugin.listener_process.pid})")
@@ -1199,11 +1201,14 @@ class Plugin:
                                 voice.pending_snapshot()))):
                 return {"success": False, "error": "Finish recording, drafts, and controller capture before switching input."}
             config = _read_button_config()
-            previous = config.get("controllerBackend", "sdl")
+            previous = config.get("controllerBackend", "legacy")
+            previous_opt_in = config.get("controllerBackendOptIn", False)
             config["controllerBackend"] = backend
+            config["controllerBackendOptIn"] = backend == "sdl"
             _write_button_config(config)
             if not Plugin.start_controller_listener():
                 config["controllerBackend"] = previous
+                config["controllerBackendOptIn"] = previous_opt_in
                 _write_button_config(config)
                 Plugin.start_controller_listener()
                 return {"success": False, "error": "Controller reader failed to start; previous selection restored. Check the runtime log."}

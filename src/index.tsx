@@ -437,7 +437,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [textInsertionMode, setTextInsertionMode] = useState<string>("paste");
 	const [rememberLastChannel, setRememberLastChannel] = useState<boolean>(false);
 	const [shareDiagnostics, setShareDiagnostics] = useState<boolean>(false);
-	const [controllerBackend, setControllerBackend] = useState<string>("sdl");
+	const [controllerBackend, setControllerBackend] = useState<string>("legacy");
 	const [controllerClient] = useState(() => new ControllerDebugClient({
         start: startControllerDebug, get: getControllerDebug, stop: stopControllerDebug,
         resume: resumeControllerDebug, upload: uploadControllerDebug,
@@ -607,7 +607,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					if (config.shareDiagnostics !== undefined) {
 						setShareDiagnostics(config.shareDiagnostics);
 					}
-					setControllerBackend(config.controllerBackend === "legacy" ? "legacy" : "sdl");
+					setControllerBackend(config.controllerBackend === "sdl" ? "sdl" : "legacy");
 					if (config.modelSize) {
 						setModelSize(config.modelSize);
 					}
@@ -1205,7 +1205,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					</PanelSection>
 					<PanelSection title={t("Input and service")}>
 						<PanelSectionRow><DropdownItem label={t("Controller input (test build)")} menuLabel={t("Controller input (test build)")}
-							rgOptions={[{data:"sdl",label:t("SDL 3 (experimental)")},{data:"legacy",label:t("Legacy (evdev / HID)")}]} selectedOption={controllerBackend}
+							rgOptions={[{data:"legacy",label:t("Legacy (evdev / HID)")},{data:"sdl",label:t("SDL 3 (experimental)")}]} selectedOption={controllerBackend}
 							onChange={async (option) => { const backend = option.data as string; const result = await setControllerBackendRpc(backend); if (result.success) setControllerBackend(backend); else setRpcError(result.error || t("Could not switch controller input")); }} /></PanelSectionRow>
 						<PanelSectionRow><div>{t("Controller")}: {t(controllerStatus)}</div></PanelSectionRow>
 						<PanelSectionRow><div>{t("Binding supported")}: {controllerComboSupported ? t("Yes") : t("No")}</div></PanelSectionRow>

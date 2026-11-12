@@ -235,6 +235,27 @@ class ControllerDebug:
                 self.resync_baselines[path] = getattr(device, 'resync_count', 0)
                 self.observe_loss(path, device)
 
+    def observe_sdl(self, reader):
+        if not self.report or self.finished_written:
+            return
+        self.report.input_backend = 'sdl'
+        self.report.sdl = reader.diagnostics()
+        if self.report.sdl.get('enumeration_failed'):
+            return
+        observations = reader.diagnostic_devices
+        previous = getattr(self, '_sdl_observed', set()) if getattr(self, '_sdl_session', None) == self.report.session else set()
+        if self.report.sdl.get('joystick_count', 0) <= 16:
+            for path in previous - observations.keys():
+                self.report.disconnected(path)
+        for path, (status, identity) in observations.items():
+            if path in reader.devices:
+                self.observe_device(path, reader.devices[path], 'sdl_gamepad')
+            else:
+                self.device(path, status, identity)
+        self._sdl_observed, self._sdl_session = set(observations), self.report.session
+        if self.report.sdl.get('joystick_count', 0) > 16:
+            self.report.devices_truncated = True
+
     def observe_loss(self, path, device):
         if self.report and not self.finished_written:
             source = self.report.sources.get(path)
@@ -391,9 +412,8 @@ def main():
     capture_blocked = False
     debug = ControllerDebug(button_names)
     rejected = {}
-    # Standalone defaults to legacy for development; the experimental plugin
-    # explicitly selects SDL. Never silently fall back: testers need to know
-    # which reader actually supplied their binding and push-to-talk inputs.
+    # Legacy is the default; SDL requires an explicit plugin selection.
+    # Never silently mix readers: only one backend owns each binding.
     backend = os.environ.get('DECKTATION_CONTROLLER_BACKEND', 'legacy')
     if backend not in ('legacy', 'sdl'):
         raise ValueError('Unknown controller backend')
@@ -531,6 +551,7 @@ def main():
             sdl = SdlInput()
         next_scan = 0
         next_debug_refresh = 0
+        next_sdl_diagnostics = 0
         debug_active = False
         waiting = False
         with open(CONTROLLER_TYPE_FILE, 'w') as f:
@@ -547,6 +568,8 @@ def main():
             if debug_active and debug.report.session != previous_debug_session:
                 # Populate every source before an early Stop can finalize.
                 next_scan = 0
+                next_sdl_diagnostics = 0
+                debug.report.input_backend = backend
             for path in list(rejected):
                 if not debug_active:
                     device = rejected.pop(path)
@@ -584,6 +607,9 @@ def main():
                         details[path]['input_received'] = True
                         diagnostic('first_input', affected_controller=details[path])
                     publish(path, states, 'sdl_gamepad')
+                if debug_active and now >= next_sdl_diagnostics:
+                    debug.observe_sdl(sdl)
+                    next_sdl_diagnostics = now + 0.5
                 sdl.update_haptics()
             if time.monotonic() >= next_scan:
                 candidates = ({path: 'sdl_gamepad' for path in devices} if sdl is not None

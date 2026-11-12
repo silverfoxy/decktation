@@ -13,6 +13,23 @@ Most settings can be changed in the Decktation panel. The source configuration f
 - **Remember channel:** Reuses the last channel you spoke when the next message has no channel prefix.
 - **Recording cue:** Selects a Steam toast, the in-game Gamescope overlay, or no recording indicator.
 
+## Controller input
+
+Upcoming/test builds use **Legacy (evdev / HID)** by default. To investigate
+controller compatibility, select **Diagnostics → Input and service → Controller
+input → SDL 3 (experimental)**. Existing SDL settings reset to legacy once on
+upgrade, because earlier builds saved SDL as the default without distinguishing
+an explicit selection. Selecting SDL again persists the opt-in. Switching back
+uses only the selected reader; the plugin does not run both readers together.
+
+For a Legion Go report, note whether it is the original Go, Go S, or Go 2, the
+OS version, and whether L1+R1 or only rear buttons fail. Capture the same buttons
+once under SDL and once under Legacy using the controller input debugger. SDL
+reports include unrecognized joysticks, failed gamepad opens, numeric identities,
+effective SDL filter/hint evidence, and the InputPlumber version if its CLI is
+installed. Full SDL errors are in the local runtime log. Capture and preview do
+not upload anything; sending each report remains a separate explicit action.
+
 ## Game presets
 
 In upcoming/test builds, **Edit game profile → Sending → Casual chat formatting** controls whether the first letter is lowercased and automatic trailing periods are removed. Turn it off to preserve transcription capitalization and punctuation. The setting applies per profile immediately after saving; WoW, WoW Forever, and Guild Wars 2 default to On, while Generic defaults to Off.

@@ -7,6 +7,16 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Changed
+
+- Restore legacy controller input as the default following Legion Go compatibility
+  reports. Existing SDL selections reset to legacy once; SDL remains available
+  as an explicit experimental opt-in under Diagnostics → Controller input.
+- Expand reviewed SDL controller reports with unmapped joystick detection,
+  gamepad open-failure categories, effective controller-filter/hint evidence,
+  and the InputPlumber version when available. Full SDL open errors remain in
+  local logs; reports exclude device names, paths, and mapping strings.
+
 ### Added
 
 - Per-profile Casual chat formatting control in Edit game profile → Sending.
