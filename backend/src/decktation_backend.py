@@ -175,6 +175,7 @@ if not os.path.exists(PRESETS_FILE):
 DEFAULT_BUTTON_CONFIG = {
     "controllerBackend": "sdl",
     "buttons": ["L1", "R1"],
+    "exactBindingMs": 0,
     "showNotifications": True,
     "hapticFeedback": False,
     "recordingVolume": "off",
@@ -1242,6 +1243,23 @@ class Plugin:
             return {"success": True}
         except Exception as e:
             logger.error(f"Error setting button config: {traceback.format_exc()}")
+            return {"success": False, "error": str(e)}
+
+    async def set_exact_binding(self, enabled: bool):
+        """Turn "Exact binding only" on (150 ms window) or off, and restart input.
+
+        A window already set in the config file is kept when turning it on.
+        """
+        try:
+            config = _read_button_config()
+            current = config.get("exactBindingMs") or 0
+            config["exactBindingMs"] = (current if current else 150) if enabled else 0
+            _write_button_config(config)
+            Plugin.stop_controller_listener()
+            Plugin.start_controller_listener()
+            return {"success": True}
+        except Exception as e:
+            logger.error("Error saving exact binding: %s", e)
             return {"success": False, "error": str(e)}
 
     async def set_overlay_transcribing_label(self, label: str):
