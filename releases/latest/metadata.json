@@ -1,8 +1,8 @@
 {
   "plugin": "Decktation",
   "channel": "release-latest",
-  "ref": "v0.3.23",
-  "commit": "13f5ac35647304ee8870811678d1db7374bf461f",
-  "zip_url": "https://github.com/silverfoxy/decktation/releases/download/v0.3.23/Decktation.zip",
-  "generated_at": "2026-11-10T23:03:08Z"
+  "ref": "v0.3.24",
+  "commit": "ccf1a94e0b289337005a724618dbc9727342899c",
+  "zip_url": "https://github.com/silverfoxy/decktation/releases/download/v0.3.24/Decktation.zip",
+  "generated_at": "2026-11-12T22:24:03Z"
 }
