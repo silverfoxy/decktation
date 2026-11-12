@@ -35,7 +35,9 @@ test('catalog coverage and placeholders match',()=>{
  const en=require('../src/locales/en.json');
  for(const lang of ['es','ru','pt','pl','ko','ja','de','fr','zh']) {
  const es=require('../src/locales/'+lang+'.json');
- assert.deepEqual(Object.keys(es).sort(),Object.keys(en).sort());
+ const missing=Object.keys(en).filter(key=>!Object.hasOwn(es,key));
+ const extra=Object.keys(es).filter(key=>!Object.hasOwn(en,key));
+ assert.equal(missing.length+extra.length,0,lang+' catalog mismatch: '+JSON.stringify({missing,extra}));
  for(const key of Object.keys(en)){
   assert.ok(es[key].trim());
   assert.deepEqual((es[key].match(/\{\w+\}/g)||[]).sort(),(en[key].match(/\{\w+\}/g)||[]).sort(),key);

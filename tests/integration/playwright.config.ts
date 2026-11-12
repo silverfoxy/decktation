@@ -4,7 +4,7 @@ export default defineConfig({
   testDir: '.', testMatch: '**/*.spec.ts', fullyParallel: false, workers: 1,
   retries: 0, timeout: 45000, expect: { timeout: 8000 },
   outputDir: '../../test-results',
-  reporter: [['list'], ['html', { outputFolder: '../../playwright-report', open: 'never' }]],
+  reporter: [['list'], ['junit', { outputFile: '../../ci-results/chromium.xml' }], ['html', { outputFolder: '../../playwright-report', open: 'never' }]],
   use: {
     baseURL: 'http://127.0.0.1:5179', viewport: { width: 900, height: 1000 },
     trace: 'retain-on-failure', screenshot: 'only-on-failure',
