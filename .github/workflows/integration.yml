@@ -9,6 +9,7 @@ on:
       - 'main.py'
       - 'tests/**'
       - 'scripts/deck/**'
+      - 'scripts/summarize_test_results.py'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -21,6 +22,7 @@ on:
       - 'main.py'
       - 'tests/**'
       - 'scripts/deck/**'
+      - 'scripts/summarize_test_results.py'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -72,12 +74,20 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Install Wayland helper test dependencies
         run: sudo apt-get update -qq && sudo apt-get install -y libwayland-dev libwayland-bin
-      - name: Run existing protocol and component regressions
+      - name: Python protocol regressions
+        if: ${{ !cancelled() }}
+        run: python -m pytest tests/ -q --junitxml=ci-results/python.xml
+      - name: Frontend component regressions
+        if: ${{ !cancelled() }}
         run: |
-          python -m pytest tests/ -q
-          node --test tests/frontend-*.test.cjs
+          mkdir -p ci-results
+          node --test --test-reporter=spec --test-reporter=junit --test-reporter-destination=stdout --test-reporter-destination=ci-results/frontend.xml tests/frontend-*.test.cjs
       - name: Exercise the real panel and backend in Chromium
+        if: ${{ !cancelled() }}
         run: npm run test:integration
+      - name: Summarize test results
+        if: always()
+        run: python scripts/summarize_test_results.py Python=ci-results/python.xml Frontend=ci-results/frontend.xml Chromium=ci-results/chromium.xml
       - name: Upload integration evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -86,6 +96,8 @@ jobs:
           path: |
             playwright-report/
             test-results/
+            ci-results/
+            tests/integration/.artifacts/
           if-no-files-found: ignore
           retention-days: 7
 
@@ -107,4 +119,15 @@ jobs:
             python -m pip install -r requirements-device.txt
           fi
       - name: Verify device runner locally without a Steam device
-        run: python -m pytest tests/test_deck_*.py -q
+        run: python -m pytest tests/test_deck_*.py -q --junitxml=ci-results/device.xml
+      - name: Summarize device test results
+        if: always()
+        run: python scripts/summarize_test_results.py Device=ci-results/device.xml
+      - name: Upload device test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: device-test-results-${{ github.sha }}
+          path: ci-results/
+          if-no-files-found: ignore
+          retention-days: 7
