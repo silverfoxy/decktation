@@ -7,10 +7,14 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.3.25] - 2026-11-13
+
 ### Changed
 
 - Move Exact binding only to the bottom of Advanced settings → Sending, below
   Spoken punctuation.
+- Publish successful master builds as Latest at the top of the custom-store
+  version list, above numbered releases.
 
 ### Fixed
 
@@ -429,7 +433,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 - Initial packaged release of Decktation for Decky Loader.
 
-[Unreleased]: https://github.com/silverfoxy/decktation/compare/v0.3.22...HEAD
+[Unreleased]: https://github.com/silverfoxy/decktation/compare/v0.3.25...HEAD
+[0.3.25]: https://github.com/silverfoxy/decktation/compare/v0.3.24...v0.3.25
 [0.3.22]: https://github.com/silverfoxy/decktation/compare/v0.3.21...v0.3.22
 [0.3.18]: https://github.com/silverfoxy/decktation/compare/v0.3.17...v0.3.18
 [0.3.8]: https://github.com/silverfoxy/decktation/compare/v0.3.7...v0.3.8
