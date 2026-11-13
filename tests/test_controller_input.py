@@ -114,6 +114,27 @@ def exact_tracker(listener, buttons=('L4', 'R4'), window=0.15):
     return listener.ComboTracker(list(buttons), window, clock=clock), clock
 
 
+def test_activation_source_ignores_other_controller_during_exact_wait(listener):
+    tracker, clock = exact_tracker(listener)
+    tracker.update('xbox', {'L4': True, 'R4': True})
+    clock.now += 0.1
+    tracker.update('deck', {'A': True})
+    assert tracker.activation_source('deck') is None
+    clock.now += 0.1
+    assert tracker.activation_source('deck') == 'xbox'
+    tracker.remove('xbox')
+    assert tracker.activation_source('xbox') is None
+
+
+def test_activation_source_never_combines_controllers(listener):
+    tracker = listener.ComboTracker(['L1', 'R1'])
+    tracker.update('deck', {'L1': True})
+    tracker.update('xbox', {'R1': True})
+    assert tracker.activation_source('xbox') is None
+    tracker.update('deck', {'L1': True, 'R1': True})
+    assert tracker.activation_source('xbox') == 'deck'
+
+
 def test_exact_binding_off_by_default_keeps_other_buttons_allowed(listener):
     tracker = listener.ComboTracker(['L4', 'R4'])
     assert not tracker.update('deck', {'L5': True})

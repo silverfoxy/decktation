@@ -233,6 +233,9 @@ def test_controller_release_stops_existing_recording_even_if_model_becomes_busy(
     state = tmp_path / "ptt_state"
     state.write_text("1")
     monkeypatch.setattr(backend_module, "STATE_FILE", str(state))
+    controller_source = tmp_path / 'ptt_source.json'
+    controller_source.write_text('{"path":"/dev/hidraw3","kind":"steam_deck"}')
+    monkeypatch.setattr(backend_module, 'HAPTIC_SOURCE_FILE', str(controller_source))
     plugin.poll_running = plugin.controller_enabled = True
     plugin.model_operations = 0
     voice = plugin.voice_service = MagicMock()
@@ -240,7 +243,7 @@ def test_controller_release_stops_existing_recording_even_if_model_becomes_busy(
     voice.is_recording = False
     voice.pending_snapshot.return_value = None
     voice.pending_text = None
-    voice.start_recording.side_effect = lambda: setattr(voice, "is_recording", True)
+    voice.start_recording.side_effect = lambda **kwargs: setattr(voice, "is_recording", True)
     voice.stop_recording.side_effect = lambda: setattr(voice, "is_recording", False)
     ticks = 0
     def tick(_delay):
@@ -248,6 +251,8 @@ def test_controller_release_stops_existing_recording_even_if_model_becomes_busy(
         ticks += 1
         if ticks == 1:
             assert voice.is_recording
+            voice.start_recording.assert_called_once_with(
+                controller_source={'path': '/dev/hidraw3', 'kind': 'steam_deck'})
             plugin.model_operations = 1
             state.write_text("0")
         else:

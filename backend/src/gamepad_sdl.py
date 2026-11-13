@@ -63,6 +63,7 @@ def load_sdl(path=None):
         'SDL_PollEvent': (c.c_bool, [c.POINTER(Event)]),
         'SDL_GetGamepads': (c.POINTER(c.c_uint32), [c.POINTER(c.c_int)]),
         'SDL_OpenGamepad': (c.c_void_p, [c.c_uint32]),
+        'SDL_GetGamepadPath': (c.c_char_p, [c.c_void_p]),
         'SDL_CloseGamepad': (None, [c.c_void_p]),
         'SDL_GamepadConnected': (c.c_bool, [c.c_void_p]),
         'SDL_RumbleGamepad': (c.c_bool, [c.c_void_p, c.c_uint16, c.c_uint16, c.c_uint32]),
@@ -89,6 +90,8 @@ class SdlGamepad:
         if not self.handle:
             error = lib.SDL_GetError()
             raise RuntimeError(error.decode('utf-8', 'replace') if error else 'SDL could not open gamepad')
+        raw_path = lib.SDL_GetGamepadPath(self.handle) if hasattr(lib, 'SDL_GetGamepadPath') else None
+        self.evdev_path = raw_path.decode('utf-8', 'replace') if isinstance(raw_path, bytes) else None
         self.supported_buttons = {name for button, name in BUTTONS.items()
                                   if name and lib.SDL_GamepadHasButton(self.handle, button)}
         self.supported_buttons.update(name for axis, name in TRIGGERS.items()

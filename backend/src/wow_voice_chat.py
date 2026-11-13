@@ -25,6 +25,9 @@ from pathlib import Path
 import sounddevice as sd
 import numpy as np
 import wave
+from contextlib import ExitStack
+from copy import deepcopy
+from controller_output import capture_output, open_output, press_a, ControllerOutputError
 from audio_runtime import ensure_audio_environment
 from clipboard_injection import temporary_clipboard
 from resident_whisper import ResidentWhisper, parakeet_command
@@ -273,6 +276,9 @@ class WoWVoiceChat:
         self.review_mode = review_mode
         self.pending_callback = pending_callback
         self.pending_draft = None
+        self._recording_controller_output = None
+        self._pending_controller_output = None
+        self._injection_error = ''
         self._draft_generation = 0
         self.confirm_delay = confirm_delay  # seconds to wait before auto-sending (0 = disabled)
         self.manual_send = manual_send  # if True, skip final Enter press (user sends manually)
@@ -812,34 +818,43 @@ class WoWVoiceChat:
             except Exception:
                 logger.exception("Could not update transcription preview")
 
-    def queue_transcription(self, text, generation=None):
+    def queue_transcription(self, text, generation=None, controller_output=None):
         """Freeze the final message and destination before presenting a draft."""
         with self._pending_lock:
             if self._closing.is_set():
                 return
             if generation is not None and generation != self._draft_generation:
                 return
+            output = deepcopy(controller_output)
+            controller_submission = self.preset.get('chat_send_key') == 'controller_a' and not self.manual_send
+            immediate_failed = False
             if not self.review_mode and not self.confirm_delay:
-                self.send_to_wow_chat(text)
-                return
+                if controller_submission:
+                    immediate_failed = not self.send_to_wow_chat(text, controller_output=output)
+                    if not immediate_failed:
+                        return
+                else:
+                    self.send_to_wow_chat(text)
+                    return
             self.cancel_pending()
             channel, message, explicit = self._parse_channel_and_text(text)
             if not message:
                 return
             draft_id = uuid.uuid4().hex
-            delay = self._confirm_delay_for(message) if not self.review_mode else 0
+            delay = self._confirm_delay_for(message) if not self.review_mode and not immediate_failed else 0
             typing_only = self.manual_send or channel == "type" or (
                 self.preset.get("chat_send_key", "enter") is None
             )
             self.pending_text = message
+            self._pending_controller_output = output
             self.pending_draft = {
                 "id": draft_id, "text": message, "channel": channel,
                 "destination": channel.title() if channel != "type" else "Active app",
-                "mode": "review" if self.review_mode else "countdown",
+                "mode": "review" if self.review_mode or immediate_failed else "countdown",
                 "deadline": time.time() + delay if delay else None,
                 "action": "Type into chat" if typing_only else "Send",
                 "manual": self.manual_send, "explicit_channel": explicit,
-                "error": "", "sending": False,
+                "error": self._injection_error if immediate_failed else "", "sending": False,
             }
             self._publish_pending()
             self._report_metric(
@@ -875,6 +890,7 @@ class WoWVoiceChat:
                 )
             self.pending_text = None
             self.pending_draft = None
+            self._pending_controller_output = None
             if had_pending:
                 self._publish_pending("Cancelled" if feedback else None)
             return had_pending
@@ -906,7 +922,9 @@ class WoWVoiceChat:
             draft["sending"] = True
             self._publish_pending()
             try:
-                success = self.send_to_wow_chat(draft["text"], channel=draft["channel"])
+                kwargs = ({'controller_output': self._pending_controller_output}
+                          if self.preset.get('chat_send_key') == 'controller_a' else {})
+                success = self.send_to_wow_chat(draft["text"], channel=draft["channel"], **kwargs)
             except Exception as exc:
                 logger.error("Draft injection failed (%s)", type(exc).__name__)
                 success = False
@@ -920,12 +938,13 @@ class WoWVoiceChat:
                             logger.warning("Could not remember channel (%s)", type(exc).__name__)
                 self.pending_text = None
                 self.pending_draft = None
+                self._pending_controller_output = None
             else:
                 draft["id"] = uuid.uuid4().hex
                 draft["sending"] = False
                 draft["deadline"] = None
                 draft["mode"] = "review"
-                draft["error"] = "Typing failed. Check game focus before retrying; some input may already have been typed."
+                draft["error"] = self._injection_error or "Typing failed. Check game focus before retrying; some input may already have been typed."
             self._publish_pending(("Typed into chat" if draft["action"] == "Type into chat" else "Sent") if success else None)
             return bool(success)
 
@@ -1175,8 +1194,9 @@ class WoWVoiceChat:
         channel, message, _ = self._parse_channel_and_text(text)
         return channel, message
 
-    def send_to_wow_chat(self, text, channel=None):
+    def send_to_wow_chat(self, text, channel=None, controller_output=None):
         """Insert a transcription into the focused game via paste or keystrokes."""
+        self._injection_error = ''
         if not text or self._closing.is_set():
             return False
 
@@ -1252,7 +1272,12 @@ class WoWVoiceChat:
 
         key_delay = self.preset.get("key_delay", 1)
         key_hold = self.preset.get("key_hold", 0)
+        resources = ExitStack()
+        inserted = False
         try:
+            # Verify and hold the exact device before opening or modifying chat.
+            controller_fd = (resources.enter_context(open_output(controller_output))
+                             if send_key == 'controller_a' else None)
             if insertion_mode == "ydotool":
                 if (type(key_delay) is not int or type(key_hold) is not int or
                         not 0 <= key_delay <= 100 or not 0 <= key_hold <= 100):
@@ -1300,18 +1325,17 @@ class WoWVoiceChat:
                             f"ydotool Ctrl+V failed (exit {result.returncode})"
                         )
 
+            inserted = True
             if chat_send_delay > 0:
                 time.sleep(chat_send_delay)
 
             # Only submit after text insertion succeeds. This records command
             # success, not confirmation that the game displayed the text.
-            if send_key is not None:
-                # BTN_SOUTH (304) is controller A, not the keyboard letter A.
-                # Hold across several game frames so polling games see the press.
-                submit = (["key", "-d", "80", "304:1", "304:0"]
-                          if send_key == "controller_a" else ["key", "28:1", "28:0"])
+            if send_key == 'controller_a':
+                press_a(controller_fd)
+            elif send_key is not None:
                 result = subprocess.run(
-                    [ydotool, *submit],
+                    [ydotool, 'key', '28:1', '28:0'],
                     capture_output=True,
                     text=True,
                     env=env,
@@ -1322,9 +1346,15 @@ class WoWVoiceChat:
                     )
             return True
         except Exception as exc:
+            self._injection_error = (str(exc) if isinstance(exc, ControllerOutputError) else
+                                     'Typing failed. Check game focus before retrying.')
+            if inserted:
+                self._injection_error += ' Text may already be in chat; check it before retrying.'
             logger.error("Text injection failed (%s)", type(exc).__name__)
             self._report_diagnostic("text_injection.failed", exc)
             return False
+        finally:
+            resources.close()
 
     def run_once(self, duration=5):
         """Record, transcribe, and send to chat once"""
@@ -1365,7 +1395,7 @@ class WoWVoiceChat:
         except KeyboardInterrupt:
             print("\nStopping service...")
 
-    def start_recording(self):
+    def start_recording(self, controller_source=None):
         """Start recording audio (for push-to-talk)"""
         with self.recording_lock:
             if self._closing.is_set():
@@ -1373,6 +1403,7 @@ class WoWVoiceChat:
             ensure_audio_environment(sd, os.environ.get("DECKY_USER_HOME"))
             if self.is_recording:
                 return
+            self._recording_controller_output = capture_output(controller_source)
 
             # TEST MODE: Skip actual recording
             if self.test_mode:
@@ -1419,7 +1450,7 @@ class WoWVoiceChat:
                             self.last_transcription = text
                             self.last_transcription_time = time.time()
                             if text and send:
-                                self.queue_transcription(text, generation)
+                                self.queue_transcription(text, generation, self._recording_controller_output)
                         except Exception as e:
                             completion_state = "error"
                             print(f"[TEST MODE] Error: {e}")
@@ -1459,7 +1490,7 @@ class WoWVoiceChat:
                 self.last_transcription_time = time.time()
 
                 if text and send:
-                    self.queue_transcription(text, generation)
+                    self.queue_transcription(text, generation, self._recording_controller_output)
             except BaseException:
                 completion_state = "error"
                 raise
