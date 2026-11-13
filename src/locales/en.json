@@ -283,5 +283,6 @@
   "Casual chat formatting": "Casual chat formatting",
   "Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.": "Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.",
   "On": "On",
-  "Off": "Off"
+  "Off": "Off",
+  "Rootless test build: Decktation runs as your desktop user and relies on existing device permissions for controller input and text entry. Your transcription is passed to the bundled keyboard helper as data, never as a shell command.": "Rootless test build: Decktation runs as your desktop user and relies on existing device permissions for controller input and text entry. Your transcription is passed to the bundled keyboard helper as data, never as a shell command."
 }

@@ -2,9 +2,7 @@
   "name": "Decktation",
   "version": "0.3.24",
   "author": "silverfoxy",
-  "flags": [
-    "root"
-  ],
+  "flags": [],
   "api_version": 1,
   "publish": {
     "tags": [

@@ -146,6 +146,7 @@ jobs:
           unzip -l build-output/decktation.zip | grep -q 'decktation/bin/plugin_update.py'
           unzip -l build-output/decktation.zip | grep -q 'decktation/bin/controller_listener.py'
           unzip -l build-output/decktation.zip | grep -q 'decktation/bin/controller_output.py'
+          unzip -l build-output/decktation.zip | grep -q 'decktation/bin/runtime_paths.py'
           unzip -l build-output/decktation.zip | grep -q 'decktation/bin/gamepad_sdl.py'
           unzip -l build-output/decktation.zip | grep -q 'decktation/bin/lib/libSDL3.so.0'
           unzip -l build-output/decktation.zip | grep -q 'decktation/bin/licenses/SDL3-zlib.txt'

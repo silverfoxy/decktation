@@ -6,13 +6,14 @@ main thread. ctypes uses SDL's public SDL3 ABI; no Python wheel is required.
 """
 import ctypes as c
 import os
+from runtime_paths import ipc_path
 import time
 import uuid
 
 from binding_capture import read_json
 from controller_sdl_diagnostics import HINTS, error_category, hint_evidence
 
-HAPTIC_REQUEST_FILE = '/tmp/decktation_sdl_haptic.json'
+HAPTIC_REQUEST_FILE = ipc_path('decktation_sdl_haptic.json')
 
 BUTTONS = dict(enumerate((
     'A', 'B', 'X', 'Y', 'View', None, 'Menu', 'L3', 'R3', 'L1', 'R1',

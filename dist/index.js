@@ -45,7 +45,7 @@
         }
     }
 
-    var _manifest = {"name":"Decktation","version":"0.3.24","author":"silverfoxy","flags":["root"],"api_version":1,"publish":{"tags":["voice","dictation","speech-to-text","input","chat","gaming","accessibility"],"description":"Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using whisper.cpp.","image":"https://raw.githubusercontent.com/silverfoxy/decktation/master/store-card.png"}};
+    var _manifest = {"name":"Decktation","version":"0.3.24","author":"silverfoxy","flags":[],"api_version":1,"publish":{"tags":["voice","dictation","speech-to-text","input","chat","gaming","accessibility"],"description":"Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using whisper.cpp.","image":"https://raw.githubusercontent.com/silverfoxy/decktation/master/store-card.png"}};
 
     const manifest = _manifest;
     const API_VERSION = 2;
@@ -411,7 +411,8 @@
       "Casual chat formatting": "Casual chat formatting",
       "Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.": "Lowercase the first letter and remove automatic trailing periods. Turn off to preserve transcription capitalization and punctuation.",
       On: On$9,
-      Off: Off$9
+      Off: Off$9,
+      "Rootless test build: Decktation runs as your desktop user and relies on existing device permissions for controller input and text entry. Your transcription is passed to the bundled keyboard helper as data, never as a shell command.": "Rootless test build: Decktation runs as your desktop user and relies on existing device permissions for controller input and text entry. Your transcription is passed to the bundled keyboard helper as data, never as a shell command."
     };
 
     var af = "Afrikaans";
@@ -6049,7 +6050,7 @@
                             React__default["default"].createElement("div", { style: { fontSize: '13px', lineHeight: '1.6' } }, t("Say command gg to enter /gg, or command ready for /ready. Use English or Auto Detect. Commands follow your sending settings.")))),
                     React__default["default"].createElement(deckyFrontendLib.PanelSection, { title: t("Permissions") },
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                            React__default["default"].createElement("div", { style: { fontSize: '13px', lineHeight: '1.5' } }, t("Decktation uses Decky root access only to read raw Steam Deck controller input and to create virtual keyboard events for dictated text. Your transcription is passed to the bundled keyboard helper as data, never as a shell command."))))))));
+                            React__default["default"].createElement("div", { style: { fontSize: '13px', lineHeight: '1.5' } }, t("Rootless test build: Decktation runs as your desktop user and relies on existing device permissions for controller input and text entry. Your transcription is passed to the bundled keyboard helper as data, never as a shell command."))))))));
     };
     const DecktationIcon = ({ logic }) => {
         const [available, setAvailable] = React.useState(logic.updateAvailable);

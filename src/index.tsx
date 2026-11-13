@@ -1297,7 +1297,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					</PanelSection>
 					<PanelSection title={t("Permissions")}>
 						<PanelSectionRow><div style={{ fontSize: '13px', lineHeight: '1.5' }}>
-							{t("Decktation uses Decky root access only to read raw Steam Deck controller input and to create virtual keyboard events for dictated text. Your transcription is passed to the bundled keyboard helper as data, never as a shell command.")}
+							{t("Rootless test build: Decktation runs as your desktop user and relies on existing device permissions for controller input and text entry. Your transcription is passed to the bundled keyboard helper as data, never as a shell command.")}
 						</div></PanelSectionRow>
 					</PanelSection>
 				</>}

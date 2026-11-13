@@ -35,12 +35,23 @@ During capture, a dedicated focusable screen consumes Decky controller navigatio
 
 ## Decky permission
 
-Decktation declares Decky’s `_root` permission for controller input and text entry:
+This experimental branch does not request Decky root access. The backend and
+its helpers run as the desktop user and rely on existing OS permissions for
+controller input and text entry:
 
 - It reads Valve raw controller reports from `/dev/hidraw*` so Steam Deck buttons and grips work independently of a game’s Steam Input layout.
 - The legacy reader reads gamepad events from `/dev/input/event*` for other controllers. It does not exclusively grab devices or change their mappings.
 - The SDL experimental reader uses a bundled SDL3 library with background gamepad input enabled and no video/audio initialization. SDL chooses its Linux or supported HID controller drivers; some HID drivers configure device modes when opened. This reader does not request an exclusive grab or enable sensors. Normal game controls and coexistence with Steam require hardware testing.
-- Its bundled `ydotoold` helper uses `/dev/uinput` to enter the transcription in the active window. The helper uses a private, owner-only socket in `/tmp` and stops when the plugin unloads.
+- Its bundled `ydotoold` helper uses `/dev/uinput` to enter the transcription in the active window. The helper uses an owner-only socket in `/tmp/decktation-<uid>/` and stops when the plugin unloads.
 - Transcribed text is passed to the helper as data; it is never evaluated as a shell command.
 
 Decktation does not install system packages, modify the system filesystem, or create system services.
+
+Rootless testing must verify Gaming Mode device access, physical buttons and
+back grips, haptics, clipboard paste and key typing, controller A submission,
+overlays, reconnects, and suspend/resume. This branch does not install udev
+rules, change device permissions, or launch an elevated fallback. Existing
+root-owned settings or model-cache files may still need ownership repair;
+report permission failures before changing the system. Runtime IPC uses a
+private per-user directory so older root-owned `/tmp/decktation_*` files do not
+block the test build.
