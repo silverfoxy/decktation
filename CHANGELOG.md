@@ -18,8 +18,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   ydotool. Controller submission retains the push-to-talk destination through
   transcription and review, checks for device changes before typing, and keeps
   failed messages for review. Multiple unmatched Steam outputs require resolving
-  the ambiguity before recording again. Validated in a Proton controller tester;
-  WoW Forever chat submission still needs in-game verification.
+  the ambiguity before recording again.
 
 ## [0.3.24] - 2026-11-12
 
