@@ -34,7 +34,7 @@ def test_publisher_uses_build_sha_instead_of_workflow_run_master_sha(tmp_path, m
     output, _ = record_pr_metadata(tmp_path, monkeypatch)
     assert json.loads(output.read_text())['commit'] == 'b' * 40
     workflow = (REPO / '.github/workflows/publish.yml').read_text()
-    assert workflow.count('BUILD_SHA: ${{ github.event.workflow_run.head_sha }}') == 2
+    assert workflow.count('BUILD_SHA: ${{ github.event.workflow_run.head_sha }}') == 3
     assert 'GITHUB_SHA:' not in workflow
 
 
@@ -113,9 +113,12 @@ def test_pr_metadata_is_written_without_copying_zip_to_pages(tmp_path, monkeypat
     assert data['head_repository'] == 'contributor/decktation'
 
 
-def test_publisher_does_not_publish_branch_packages():
+def test_publisher_only_allows_master_branch_packages():
     script = (REPO / 'scripts/publish-pages.sh').read_text()
-    assert 'Only releases and PR builds are published' in script
+    assert 'Only releases, master, and PR builds are published' in script
+    assert '[ "$REF_TYPE" = "branch" ] && [ "$REF_NAME" = "master" ]' in script
+    assert 'master-$BUILD_SHA/decktation.zip' in script
+    assert '--latest-metadata' in script
     assert 'cp "$ZIP_SOURCE" "$PAGES_DIR/branches/' not in script
     assert 'Branch ZIP pattern' not in script
     workflow = (REPO / '.github/workflows/publish.yml').read_text()

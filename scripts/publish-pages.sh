@@ -29,8 +29,9 @@ if [ "$CLEANUP_ONLY" != "true" ]; then
   : "${BUILD_SHA:?BUILD_SHA is required}"
   : "${REF_NAME:?REF_NAME is required}"
   : "${REF_TYPE:?REF_TYPE is required}"
-  if [ "$REF_TYPE" != "tag" ] && [ "$REF_TYPE" != "pull_request" ]; then
-    echo "Only releases and PR builds are published" >&2
+  if [ "$REF_TYPE" != "tag" ] && [ "$REF_TYPE" != "pull_request" ] &&
+     ! { [ "$REF_TYPE" = "branch" ] && [ "$REF_NAME" = "master" ]; }; then
+    echo "Only releases, master, and PR builds are published" >&2
     exit 1
   fi
   if [ "$REF_TYPE" = "pull_request" ]; then
@@ -270,9 +271,15 @@ render_pages_content() {
       "$PAGES_BASE_URL/releases/latest/metadata.json"
   fi
 
-  if [ "$CLEANUP_ONLY" != "true" ] && [ "$REF_TYPE" = "tag" ]; then
+  if [ "$CLEANUP_ONLY" != "true" ] && { [ "$REF_TYPE" = "tag" ] || [ "$REF_NAME" = "master" ]; }; then
+    local latest_args=()
+    if [ "$REF_TYPE" = "branch" ]; then latest_args=(--publish-latest); fi
     local catalog_artifact_url
-    catalog_artifact_url="https://github.com/$GITHUB_REPOSITORY/releases/download/$RELEASE_TAG/decktation.zip"
+    if [ "$REF_TYPE" = "branch" ]; then
+      catalog_artifact_url="https://github.com/$GITHUB_REPOSITORY/releases/download/master-$BUILD_SHA/decktation.zip"
+    else
+      catalog_artifact_url="https://github.com/$GITHUB_REPOSITORY/releases/download/$RELEASE_TAG/decktation.zip"
+    fi
     mkdir -p "$PAGES_DIR/store"
     local catalog_plugin_manifest="$WORKSPACE_DIR/plugin.json"
     local catalog_package_manifest="$WORKSPACE_DIR/package.json"
@@ -293,6 +300,7 @@ render_pages_content() {
       --artifact "$ZIP_SOURCE" \
       --artifact-url "$catalog_artifact_url" \
       --github-repository "$GITHUB_REPOSITORY" \
+      --latest-metadata "$PAGES_DIR/store/latest.json" "${latest_args[@]}" \
       --output "$PAGES_DIR/store/plugins.json"
     if [ "$REF_TYPE" = "tag" ]; then rm -rf "$tag_manifests"; fi
   fi

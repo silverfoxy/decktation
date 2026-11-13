@@ -67,21 +67,27 @@ def compare_versions(left, right):
 
 
 def github_release_versions(repository: str):
-    request = Request(
-        f"https://api.github.com/repos/{repository}/releases?per_page=100",
-        headers={
-            "Accept": "application/vnd.github+json",
-            "User-Agent": "decktation-store-catalog",
-            "X-GitHub-Api-Version": "2022-11-28",
-        },
-    )
-    token = os.environ.get("GITHUB_TOKEN")
-    if token:
-        request.add_header("Authorization", f"Bearer {token}")
-
+    releases = []
+    page = 1
     try:
-        with urlopen(request, timeout=30) as response:
-            releases = json.load(response)
+        while True:
+            request = Request(
+                f"https://api.github.com/repos/{repository}/releases?per_page=100&page={page}",
+                headers={
+                    "Accept": "application/vnd.github+json",
+                    "User-Agent": "decktation-store-catalog",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                },
+            )
+            token = os.environ.get("GITHUB_TOKEN")
+            if token:
+                request.add_header("Authorization", f"Bearer {token}")
+            with urlopen(request, timeout=30) as response:
+                batch = json.load(response)
+            releases.extend(batch)
+            if len(batch) < 100:
+                break
+            page += 1
     except (HTTPError, URLError, TimeoutError) as error:
         print(f"warning: unable to load historical GitHub releases: {error}", file=sys.stderr)
         return []
@@ -132,6 +138,8 @@ def main():
         "--github-repository",
         help="include installable historical versions from this GitHub repository",
     )
+    parser.add_argument("--latest-metadata", type=Path)
+    parser.add_argument("--publish-latest", action="store_true")
     args = parser.parse_args()
 
     plugin = read_json(args.plugin_manifest)
@@ -156,17 +164,34 @@ def main():
         "hash": artifact_hash,
         "artifact": args.artifact_url,
     }
-    versions = [current_version]
+    versions = [] if args.publish_latest else [current_version]
     if args.github_repository:
         versions.extend(github_release_versions(args.github_repository))
 
     versions_by_name = {version["name"]: version for version in versions}
-    versions_by_name[current_version["name"]] = current_version
+    if not args.publish_latest:
+        versions_by_name[current_version["name"]] = current_version
     versions = sorted(
         versions_by_name.values(),
         key=cmp_to_key(compare_versions),
         reverse=True,
     )
+
+    if args.publish_latest:
+        latest = {**current_version, "name": "Latest"}
+        if not args.latest_metadata:
+            raise SystemExit('--publish-latest requires --latest-metadata')
+        args.latest_metadata.parent.mkdir(parents=True, exist_ok=True)
+        args.latest_metadata.write_text(json.dumps(latest, indent=2) + "\n")
+    elif args.latest_metadata and args.latest_metadata.is_file():
+        latest = read_json(args.latest_metadata)
+    else:
+        latest = None
+    if latest:
+        validate_url(latest['artifact'])
+        if latest.get('name') != 'Latest' or not re.fullmatch(r'[0-9a-f]{64}', latest.get('hash', '')):
+            raise SystemExit('Invalid Latest build metadata')
+        versions.insert(0, latest)
 
     catalog = [
         {

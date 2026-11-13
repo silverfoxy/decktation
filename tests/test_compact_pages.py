@@ -70,3 +70,13 @@ def test_required_metadata_over_budget_fails_without_expiring_it(tmp_path):
     with pytest.raises(ValueError, match="exceed"):
         MODULE.compact(tmp_path, "owner/repo", budget=1)
     assert (directory / "metadata.json").exists()
+
+
+def test_latest_build_keeps_immutable_url_and_hash_during_compaction(tmp_path):
+    catalog = tmp_path / 'store/plugins.json'
+    catalog.parent.mkdir()
+    latest = {'name': 'Latest', 'hash': 'a' * 64,
+              'artifact': 'https://github.com/owner/repo/releases/download/master-sha/decktation.zip'}
+    catalog.write_text(json.dumps([{'versions': [latest, {'name': '0.3.24', 'hash': 'b' * 64}]}]))
+    MODULE.compact(tmp_path, 'owner/repo')
+    assert json.loads(catalog.read_text())[0]['versions'][0] == latest

@@ -33,8 +33,11 @@ def compact(root, repository, current_branch="", budget=8 * 1024 * 1024):
         data = json.loads(catalog.read_text())
         for plugin in data:
             plugin["versions"] = [version for version in plugin["versions"]
-                                  if re.fullmatch(r"\d+\.\d+\.\d+", version["name"])]
+                                  if version["name"] == "Latest" or
+                                  re.fullmatch(r"\d+\.\d+\.\d+", version["name"])]
             for version in plugin["versions"]:
+                if version["name"] == "Latest":
+                    continue
                 version["artifact"] = f"{release_base}/download/v{version['name']}/decktation.zip"
         catalog.write_text(json.dumps(data, indent=2) + "\n")
 
