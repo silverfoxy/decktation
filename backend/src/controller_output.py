@@ -5,6 +5,7 @@ Multiple outputs require an explicit association; never guess by event number.
 """
 import glob
 import os
+from runtime_paths import ipc_path
 import stat
 import struct
 import time
@@ -16,7 +17,7 @@ from binding_capture import read_json, write_json
 
 
 STEAM_OUTPUT_ID = (0x28de, 0x11ff)
-INJECTION_FILE = '/tmp/decktation_controller_injection.json'
+INJECTION_FILE = ipc_path('decktation_controller_injection.json')
 
 
 def without_injected_a(path, states):

@@ -6,6 +6,7 @@ Writes button state to /tmp/decktation_l5 file.
 Listens for configurable button combo (default: L1+R1).
 """
 import os
+from runtime_paths import ipc_path
 import sys
 import time
 import json
@@ -22,13 +23,13 @@ from controller_debug_report import InputReport, DURATION
 from controller_debug_session import PROTOCOL, START_TIMEOUT, finite_number, read_bounded
 import uuid
 
-STATE_FILE = "/tmp/decktation_l5"
-PREVIEW_FILE = "/tmp/decktation_button_preview"
-PID_FILE = "/tmp/decktation_listener.pid"
-CONTROLLER_TYPE_FILE = "/tmp/decktation_controller_type"
-HAPTIC_SOURCE_FILE = "/tmp/decktation_haptic_source.json"
-RECENT_SOURCE_FILE = "/tmp/decktation_recent_controller.json"
-STATUS_FILE = "/tmp/decktation_controller_status"
+STATE_FILE = ipc_path('decktation_l5')
+PREVIEW_FILE = ipc_path('decktation_button_preview')
+PID_FILE = ipc_path('decktation_listener.pid')
+CONTROLLER_TYPE_FILE = ipc_path('decktation_controller_type')
+HAPTIC_SOURCE_FILE = ipc_path('decktation_haptic_source.json')
+RECENT_SOURCE_FILE = ipc_path('decktation_recent_controller.json')
+STATUS_FILE = ipc_path('decktation_controller_status')
 # The Decky backend passes its user-owned settings directory. The fallback is
 # retained for standalone development runs.
 CONFIG_DIR = os.environ.get(

@@ -9,6 +9,7 @@ from recording_overlay_manager import RecordingOverlay
 
 
 def test_resolves_decky_user_home_owner_without_assuming_account_name(monkeypatch):
+    monkeypatch.setattr(recording_overlay_manager.os, "geteuid", lambda: 0)
     user = SimpleNamespace(
         pw_uid=2345,
         pw_gid=2345,
@@ -123,3 +124,45 @@ def test_status_reports_active_whisper_cpp_device(monkeypatch):
     assert result["success"] is True, result
     assert result["model_ready"] is True
     assert result["inference_device"] == "cpu"
+
+
+def test_rootless_overlay_uses_current_account_and_inherits_process_identity(monkeypatch):
+    import os
+    import subprocess
+    user = SimpleNamespace(pw_uid=2345, pw_gid=2345, pw_dir='/home/gamer', pw_name='gamer')
+    monkeypatch.setattr(recording_overlay_manager.os, 'geteuid', lambda: 2345)
+    monkeypatch.setattr(recording_overlay_manager.pwd, 'getpwuid', lambda uid: user)
+    overlay = RecordingOverlay('/plugin', MagicMock(), '/another/home', enabled=False)
+    assert overlay.session_user is user
+    assert overlay._process_identity() == {}
+    subprocess.run(['/usr/bin/true'], check=True, **overlay._process_identity())
+
+
+def test_root_overlay_still_drops_child_privileges(monkeypatch):
+    overlay = RecordingOverlay('/plugin', MagicMock(), enabled=False)
+    overlay.session_user = SimpleNamespace(pw_uid=2345, pw_gid=2345)
+    monkeypatch.setattr(recording_overlay_manager.os, 'geteuid', lambda: 0)
+    assert overlay._process_identity() == {'user': 2345, 'group': 2345, 'extra_groups': []}
+
+
+def test_rootless_overlay_probe_and_launch_do_not_change_identity(tmp_path, monkeypatch):
+    import os
+    overlay = RecordingOverlay(tmp_path, MagicMock(), enabled=False)
+    overlay.session_user = SimpleNamespace(pw_uid=os.geteuid(), pw_gid=os.getegid(),
+                                          pw_dir=str(tmp_path), pw_name='gamer')
+    monkeypatch.setattr(recording_overlay_manager.os, 'geteuid', lambda: overlay.session_user.pw_uid or 1000)
+    monkeypatch.setattr(overlay, '_display_candidates', lambda: [':1'])
+    probe = MagicMock(return_value=SimpleNamespace(returncode=0, stdout='GAMESCOPE_XWAYLAND_SERVER_ID = 0'))
+    launch = MagicMock()
+    monkeypatch.setattr(recording_overlay_manager.subprocess, 'run', probe)
+    monkeypatch.setattr(recording_overlay_manager.subprocess, 'Popen', launch)
+    monkeypatch.setattr(recording_overlay_manager.os, 'chown', MagicMock(side_effect=AssertionError('chown')))
+    (tmp_path / 'bin').mkdir()
+    (tmp_path / 'bin/recording_overlay.py').touch()
+    overlay.display = overlay._find_display()
+    overlay._show_ready('compact')
+    for call in (probe.call_args, launch.call_args):
+        assert not {'user', 'group', 'extra_groups'} & call.kwargs.keys()
+    assert json.loads((overlay.directory / 'state').read_text()) == {'mode': 'compact'}
+    import shutil
+    shutil.rmtree(overlay.directory)

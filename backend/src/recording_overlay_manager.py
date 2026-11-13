@@ -30,6 +30,8 @@ class RecordingOverlay:
 
     def _resolve_session_user(self, decky_user_home):
         """Resolve Decky's configured desktop account without assuming its name."""
+        if os.geteuid() != 0:
+            return pwd.getpwuid(os.geteuid())
         candidate_uids = []
         if decky_user_home:
             try:
@@ -55,6 +57,12 @@ class RecordingOverlay:
                 continue
         self.logger.warning("Recording overlay: no desktop session user found")
         return None
+
+    def _process_identity(self):
+        if os.geteuid() != 0:
+            return {}
+        return {"user": self.session_user.pw_uid,
+                "group": self.session_user.pw_gid, "extra_groups": []}
 
     def _env(self, display):
         user = self.session_user
@@ -90,8 +98,7 @@ class RecordingOverlay:
             try:
                 result = subprocess.run(
                     ["/usr/bin/xprop", "-root", "GAMESCOPE_XWAYLAND_SERVER_ID"],
-                    env=self._env(display), user=self.session_user.pw_uid,
-                    group=self.session_user.pw_gid, extra_groups=[],
+                    env=self._env(display), **self._process_identity(),
                     capture_output=True, text=True, timeout=0.5, check=False,
                 )
                 if result.returncode == 0 and (
@@ -167,11 +174,11 @@ class RecordingOverlay:
         if self.directory is None:
             self.directory = Path(tempfile.mkdtemp(prefix="decktation-overlay-"))
             os.chmod(self.directory, 0o755)
-            # The child owns only its acknowledgment directory, allowing atomic
-            # publication without permission to change the root-owned state file.
+            # When launched by root, give the session user the acknowledgment
+            # directory. A rootless parent already owns both directories.
             acknowledgments = self.directory / "ack"
             acknowledgments.mkdir(mode=0o755)
-            if self.session_user:
+            if self.session_user and os.geteuid() == 0:
                 os.chown(acknowledgments, self.session_user.pw_uid, self.session_user.pw_gid)
         self._write_state(state)
         if self.process and self.process.poll() is None:
@@ -186,8 +193,7 @@ class RecordingOverlay:
                 self.process = subprocess.Popen(
                     ["/usr/bin/python3", str(script), str(self.directory / "state"), str(os.getpid())],
                     env=self._env(self.display), cwd=self.directory,
-                    user=self.session_user.pw_uid, group=self.session_user.pw_gid,
-                    extra_groups=[], stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
+                    **self._process_identity(), stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
                     start_new_session=True, close_fds=True,
                 )
             finally:

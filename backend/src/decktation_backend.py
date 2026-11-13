@@ -1,4 +1,5 @@
 import os
+from runtime_paths import ipc_path
 import sys
 import json
 import re
@@ -140,6 +141,8 @@ logger.info(f"Python executable: {sys.executable}")
 logger.info(f"Python version: {sys.version}")
 logger.info(f"sys.path (first 5): {sys.path[:5]}")
 logger.info(f"Current working directory: {os.getcwd()}")
+logger.info("Rootless test runtime: uid=%s gid=%s groups=%s",
+            os.geteuid(), os.getegid(), os.getgroups())
 
 # Import our voice chat service
 WoWVoiceChat = None
@@ -156,15 +159,15 @@ except ImportError as e:
         telemetry_capture_error("voice_service.import_failed", e)
 
 # File paths for subprocess communication
-STATE_FILE = "/tmp/decktation_l5"
-PREVIEW_FILE = "/tmp/decktation_button_preview"
-PID_FILE = "/tmp/decktation_listener.pid"
-CONTROLLER_TYPE_FILE = "/tmp/decktation_controller_type"
-HAPTIC_SOURCE_FILE = "/tmp/decktation_haptic_source.json"
-RECENT_SOURCE_FILE = "/tmp/decktation_recent_controller.json"
-CONTROLLER_STATUS_FILE = "/tmp/decktation_controller_status"
+STATE_FILE = ipc_path('decktation_l5')
+PREVIEW_FILE = ipc_path('decktation_button_preview')
+PID_FILE = ipc_path('decktation_listener.pid')
+CONTROLLER_TYPE_FILE = ipc_path('decktation_controller_type')
+HAPTIC_SOURCE_FILE = ipc_path('decktation_haptic_source.json')
+RECENT_SOURCE_FILE = ipc_path('decktation_recent_controller.json')
+CONTROLLER_STATUS_FILE = ipc_path('decktation_controller_status')
 # Decktation owns this socket and never modifies a system ydotool service.
-YDOTOOL_SOCKET = "/tmp/decktation-ydotool.sock"
+YDOTOOL_SOCKET = ipc_path('decktation-ydotool.sock')
 
 PRESETS_FILE = os.path.join(plugin_path, "game_presets.json")
 if not os.path.exists(PRESETS_FILE):

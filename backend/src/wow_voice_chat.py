@@ -6,6 +6,7 @@ Captures voice input, transcribes with whisper.cpp, and sends to WoW chat
 
 import hashlib
 import os
+from runtime_paths import ipc_path
 import json
 import logging
 import shutil
@@ -1251,7 +1252,7 @@ class WoWVoiceChat:
             return False
 
         env = os.environ.copy()
-        env["YDOTOOL_SOCKET"] = "/tmp/decktation-ydotool.sock"
+        env["YDOTOOL_SOCKET"] = ipc_path('decktation-ydotool.sock')
 
         if channel == "type":
             open_key = None
