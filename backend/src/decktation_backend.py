@@ -730,7 +730,8 @@ class Plugin:
                                         Plugin.haptic_feedback.begin_session(HAPTIC_SOURCE_FILE)
                                     Plugin._start_dictation_trace()
                                     try:
-                                        Plugin.voice_service.start_recording()
+                                        Plugin.voice_service.start_recording(
+                                            controller_source=read_json(HAPTIC_SOURCE_FILE))
                                         Plugin.recording_start_count += 1
                                         if Plugin.recording_overlay and _read_button_config()["recordingIndicator"] == "overlay":
                                             Plugin.recording_overlay.show("compact")

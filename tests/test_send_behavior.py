@@ -402,7 +402,14 @@ def test_command_preserves_argument_case_and_bypasses_remembered_party(mock_run)
 
 @pytest.mark.parametrize("mode", ["paste", "ydotool"])
 @patch("subprocess.run")
-def test_controller_a_submits_after_text_insertion(mock_run, mode):
+def test_controller_a_submits_after_text_insertion(mock_run, mode, monkeypatch):
+    @contextmanager
+    def verified(_resolution):
+        yield 42
+    monkeypatch.setattr('wow_voice_chat.open_output', verified)
+    observed = []
+    pressed = MagicMock(side_effect=lambda fd: observed.append(len(commands(mock_run))))
+    monkeypatch.setattr('wow_voice_chat.press_a', pressed)
     mock_run.return_value = MagicMock(returncode=0)
     svc = make_service({**WOW_PRESET, "chat_send_key": "controller_a"})
     svc.text_insertion_mode = mode
@@ -410,7 +417,9 @@ def test_controller_a_submits_after_text_insertion(mock_run, mode):
     sent = commands(mock_run)
     assert sent[0] == ENTER
     assert sent[1][0] == ("key" if mode == "paste" else "type")
-    assert sent[2:] == [["key", "-d", "80", "304:1", "304:0"]]
+    assert len(sent) == 2
+    pressed.assert_called_once_with(42)
+    assert observed == [2]
 
 
 @pytest.mark.parametrize("manual,channel", [(True, "say"), (False, "type")])
@@ -425,12 +434,55 @@ def test_controller_a_respects_manual_and_type_modes(mock_run, manual, channel):
 
 @pytest.mark.parametrize("failure", [1, 2])
 @patch("subprocess.run")
-def test_controller_a_reports_insertion_and_submission_failures(mock_run, failure):
+def test_controller_a_reports_insertion_and_submission_failures(mock_run, failure, monkeypatch):
+    @contextmanager
+    def verified(_resolution):
+        yield 42
+    monkeypatch.setattr('wow_voice_chat.open_output', verified)
+    pressed = MagicMock(side_effect=RuntimeError('submission failed') if failure == 2 else None)
+    monkeypatch.setattr('wow_voice_chat.press_a', pressed)
     mock_run.side_effect = [MagicMock(returncode=1 if index == failure else 0)
                             for index in range(3)]
     svc = make_service({**WOW_PRESET, "chat_send_key": "controller_a"})
     assert not svc.send_to_wow_chat("hello", channel="say")
-    assert len(commands(mock_run)) == failure + 1
+    assert len(commands(mock_run)) == 2
+    assert pressed.call_count == (1 if failure == 2 else 0)
+
+
+@patch('subprocess.run')
+def test_ambiguous_controller_preserves_draft_without_typing(mock_run):
+    svc = make_service({**WOW_PRESET, 'chat_send_key': 'controller_a'})
+    svc.queue_transcription('hello', controller_output={'status': 'ambiguous', 'target': None})
+    mock_run.assert_not_called()
+    assert svc.pending_snapshot()['mode'] == 'review'
+    assert 'ambiguous' in svc.pending_snapshot()['error']
+
+
+def test_controller_destination_stays_with_review_draft(monkeypatch):
+    svc = make_service({**WOW_PRESET, 'chat_send_key': 'controller_a'})
+    svc.review_mode = True
+    destination = {'status': 'single_candidate', 'target': {'path': 'original'}}
+    svc.queue_transcription('hello', controller_output=destination)
+    destination['target']['path'] = 'another'
+    send = MagicMock(return_value=True)
+    monkeypatch.setattr(svc, 'send_to_wow_chat', send)
+    assert svc.confirm_pending(svc.pending_snapshot()['id'])
+    assert send.call_args.kwargs['controller_output']['target']['path'] == 'original'
+
+
+def test_recording_freezes_controller_snapshot(monkeypatch):
+    svc = make_service({**WOW_PRESET, 'chat_send_key': 'controller_a'})
+    svc.test_mode = True
+    source = {'output_controller': {'status': 'single_candidate', 'target': {'path': 'first'}}}
+    monkeypatch.setattr('wow_voice_chat.ensure_audio_environment', lambda *args: None)
+    svc.start_recording(controller_source=source)
+    source['output_controller']['target']['path'] = 'second'
+    assert svc._recording_controller_output['target']['path'] == 'first'
+    svc.start_recording(controller_source=source)
+    assert svc._recording_controller_output['target']['path'] == 'first'
+    svc.is_recording = False
+    svc.start_recording()
+    assert svc._recording_controller_output['status'] == 'missing_source'
 
 
 def test_no_submission_profile_labels_review_as_typing():

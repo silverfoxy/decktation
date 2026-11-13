@@ -236,7 +236,7 @@ def configure_ptt_replay(backend, tmp_path, monkeypatch):
     voice.is_recording = voice.is_transcribing = False
     voice.pending_text = None
     voice.pending_snapshot.return_value = None
-    voice.start_recording.side_effect = lambda: setattr(voice, 'is_recording', True)
+    voice.start_recording.side_effect = lambda **kwargs: setattr(voice, 'is_recording', True)
     voice.stop_recording.side_effect = lambda: setattr(voice, 'is_recording', False)
     return plugin, voice, state
 
@@ -311,7 +311,7 @@ def test_debug_entry_serializes_with_inflight_ptt_start(backend, tmp_path, monke
         def __exit__(self, *args):
             dispatch_lock.release()
     monkeypatch.setattr(plugin, 'controller_lock', ObservedLock())
-    def start_recording():
+    def start_recording(**kwargs):
         entered.set()
         assert release.wait(3)
         voice.is_recording = True

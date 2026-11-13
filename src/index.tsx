@@ -1106,12 +1106,6 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 						<PanelSectionRow><div style={{ fontSize: '12px' }}>{modelTypeOf(modelSize) === "parakeet" ? t("Parakeet automatically detects the spoken language.") : t("Base is fastest. Small balances speed and accuracy. Medium is more accurate but slower and may download on first use.")}</div></PanelSectionRow>
 					</PanelSection>
 					<PanelSection title={t("Sending")}>
-						<PanelSectionRow><ToggleField label={t("Exact binding only")} description={t("Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.")}
-							checked={exactBinding} disabled={recording} onChange={async (next) => {
-								const result = await setExactBindingRpc(next);
-								if (result.success) setExactBinding(next);
-								else setRpcError(result.error || t("Could not update exact binding"));
-							}} /></PanelSectionRow>
 						<PanelSectionRow><DropdownItem label={t("Transcription sending")} menuLabel={t("Transcription sending")} rgOptions={[{data:"immediate",label:t("Send immediately")},{data:"review",label:t("Review before sending")},{data:"countdown",label:t("Send after countdown")}]} selectedOption={sendingMode} onChange={async (option) => {
 							const next = option.data as string;
 							const result = await setSendingModeRpc(next);
@@ -1146,6 +1140,12 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 									if (result.success) { setSpokenPunctuation(next); setRpcError(""); }
 									else setRpcError(result.error || t("Could not set spoken punctuation"));
 								} catch (error) { setRpcError(String(error)); }
+							}} /></PanelSectionRow>
+						<PanelSectionRow><ToggleField label={t("Exact binding only")} description={t("Waits 150 ms. If another button joins, it's a different binding and dictation doesn't start.")}
+							checked={exactBinding} disabled={recording} onChange={async (next) => {
+								const result = await setExactBindingRpc(next);
+								if (result.success) setExactBinding(next);
+								else setRpcError(result.error || t("Could not update exact binding"));
 							}} /></PanelSectionRow>
 					</PanelSection>
 					<PanelSection title={t("Feedback")}>

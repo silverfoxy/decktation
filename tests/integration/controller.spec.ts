@@ -59,10 +59,14 @@ test('delayed listener ACK starts a full real-time 30-second window', async ({ p
   expect(Date.now() - requested).toBeGreaterThan(3000);
   const acknowledged = Date.now();
   await expect(page.getByText('30 seconds remaining', { exact: true })).toBeVisible();
-  await expect(page.getByText('29 seconds remaining', { exact: true })).toBeVisible();
+  // Status polling can skip a particular second; require countdown progress
+  // without depending on seeing a one-second display value.
+  await expect(page.getByText(/^(?:[12]\d|[1-9]) seconds remaining$/)).toBeVisible();
   await expect(page.getByText('Controller report ready for review', { exact: true })).toBeVisible({ timeout: 34000 });
   expect(Date.now() - acknowledged).toBeGreaterThan(29000);
-  expect(JSON.parse(await page.locator('pre').innerText()).phase).toBe('complete');
+  const report = JSON.parse(await page.locator('pre').innerText());
+  expect(report.phase).toBe('complete');
+  expect(report.duration_ms).toBeGreaterThanOrEqual(29900);
 });
 
 test('duplicate Start and activating A release cannot Stop; mock A B arrows are consumed', async ({ page, harness }) => {

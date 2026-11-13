@@ -14,6 +14,7 @@ import selectors
 import tempfile
 from deck_hid import STEAM_DECK_BUTTON_BITS
 from gamepad_evdev import EvdevGamepad
+from controller_output import discover_outputs, resolve_output, without_injected_a
 from controller_profiles import PROFILES_BY_KIND, HidGamepad, find_hidraw
 from gamepad_sdl import SdlInput, SdlGamepad
 from binding_capture import BindingCapture, read_json, write_json
@@ -354,6 +355,13 @@ class ComboTracker:
     def active(self):
         return any(self._qualifies(source, states) for source, states in self.sources.items())
 
+    def activation_source(self, preferred=None):
+        """Return a source whose own binding qualifies, never merged inputs."""
+        if preferred in self.sources and self._qualifies(preferred, self.sources[preferred]):
+            return preferred
+        return next((source for source, states in self.sources.items()
+                     if self._qualifies(source, states)), None)
+
     def time_to_active(self):
         """Seconds until a press waiting out its window becomes active, or None."""
         if not self.window:
@@ -455,7 +463,7 @@ def main():
         print(DIAGNOSTIC_PREFIX + json.dumps(snapshot), flush=True)
 
     def update_combo():
-        nonlocal combo_active
+        nonlocal combo_active, active_source
         debug_blocked = debug.blocks_actions(tracker.sources)
         if combo_active:
             # Once armed, keep the recording active until every configured
@@ -469,9 +477,14 @@ def main():
         if active != combo_active:
             combo_active = active
             if combo_active:
-                # The source completing the combo is selected in publish(),
-                # before the backend can observe STATE_FILE=1.
-                write_source(HAPTIC_SOURCE_FILE, source_snapshot(active_source))
+                # Exact-binding waits can expire after another controller moves.
+                # Freeze a qualifying source before exposing STATE_FILE=1.
+                active_source = tracker.activation_source(active_source)
+                snapshot = source_snapshot(active_source)
+                if snapshot is not None:
+                    snapshot['output_controller'] = resolve_output(snapshot, discover_outputs())
+                write_source(HAPTIC_SOURCE_FILE, snapshot)
+                diagnostic('ptt_activated', activation_source=snapshot)
             print(f"{combo_str} COMBO: {'pressed' if combo_active else 'released'}", flush=True)
             with open(STATE_FILE, 'w') as f:
                 f.write("1" if combo_active else "0")
@@ -480,6 +493,7 @@ def main():
         if path not in details:
             return None
         return {'path': path, 'kind': devices[path][1],
+                'evdev_path': getattr(devices[path][0], 'evdev_path', None),
                 'sdl_session': sdl.session if sdl is not None else None,
                 'identity': {key: details[path].get(key) for key in
                              ('bus', 'vendor_id', 'product_id')},
@@ -487,6 +501,7 @@ def main():
 
     def publish(path, states, controller_type):
         nonlocal active_source
+        states = without_injected_a(getattr(devices[path][0], 'evdev_path', None) or path, states)
         if debug.report and not debug.finished_written:
             debug.report.initial(path, states, getattr(devices[path][0], 'keys', ()), time.monotonic())
         previous = tracker.sources.get(path, {})

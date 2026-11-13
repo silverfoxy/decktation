@@ -7,6 +7,19 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Changed
+
+- Move Exact binding only to the bottom of Advanced settings → Sending, below
+  Spoken punctuation.
+
+### Fixed
+
+- Send controller A through the existing Steam virtual gamepad instead of
+  ydotool. Controller submission retains the push-to-talk destination through
+  transcription and review, checks for device changes before typing, and keeps
+  failed messages for review. Multiple unmatched Steam outputs require resolving
+  the ambiguity before recording again.
+
 ## [0.3.24] - 2026-11-12
 
 ### Changed
