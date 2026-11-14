@@ -260,3 +260,7 @@ not establish rumble support. Valve profiles retain read/write access for
 hid-steam input delivery; the Legion Go S profile opens read-only. Verify actual
 presses/releases and concurrent access with Steam/InputPlumber on hardware before
 claiming support. A successfully opened interface may still deliver no input.
+
+## External recognition vocabulary
+
+Profiles can read vocabulary supplied by addons or companion applications. See [Recognition context files](RECOGNITION_CONTEXT.md) for setup, the JSON contract, limits, and model support.

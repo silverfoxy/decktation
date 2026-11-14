@@ -119,8 +119,18 @@ def convert_context(input_file, output_file="wow_context.json"):
 
         # Write JSON
         output_path = Path(output_file)
-        with open(output_path, 'w', encoding='utf-8') as f:
-            json.dump(context, f, indent=2)
+        from datetime import datetime, timezone
+        terms = [context.get(key, "") for key in ("zone", "subzone", "boss", "target")]
+        terms.extend(context.get("party", []))
+        vocabulary = list(dict.fromkeys(term.strip() for term in terms
+                                        if isinstance(term, str) and term.strip()))[:100]
+        snapshot = {"version": 1, "source": "wow-savedvariables",
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                    "terms": vocabulary}
+        temporary = output_path.with_name(output_path.name + ".tmp")
+        with open(temporary, 'w', encoding='utf-8') as f:
+            json.dump(snapshot, f, ensure_ascii=False, indent=2)
+        temporary.replace(output_path)
 
         print(f"Converted: {input_file} -> {output_file}")
         print(f"Context: {context['zone']} - {context['subzone']}")

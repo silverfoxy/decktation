@@ -26,6 +26,8 @@ find ~/.local/share/Steam/steamapps/compatdata -name DecktationContext.lua 2>/de
 
 ## Convert and connect the context
 
+The converter exports the generic [recognition context format](RECOGNITION_CONTEXT.md). You can select its output using **Context file** in any profile; the built-in WoW profiles retain their default `wow_context.json` path.
+
 From the repository root, run the converter at `backend/src/convert_wow_context.py`:
 
 ```bash

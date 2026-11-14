@@ -39,6 +39,7 @@ from audio_runtime import ensure_audio_environment, setup_audio_environment
 from haptic_feedback import HapticFeedback
 from recording_volume import RecordingVolume
 from status_hook import StatusHook
+from recognition_context import read_context
 from recording_overlay_manager import RecordingOverlay
 from binding_capture import read_json, write_json
 from controller_debug_report import collect_runtime_metadata
@@ -1611,6 +1612,15 @@ class Plugin:
         except Exception as error:
             return {"success": False, "error": str(error)}
 
+    async def get_recognition_context_status(self, path: str):
+        if not isinstance(path, str) or len(path) > 4096:
+            return {"status": "invalid", "count": 0}
+        snapshot, status = read_context(path, plugin_path)
+        model = getattr(Plugin.voice_service, "model_size", None) or _read_button_config().get("modelSize", "base")
+        if str(model).startswith("parakeet"):
+            status = "unsupported"
+        return {"status": status, "count": len(snapshot.get("terms", []))}
+
     async def get_profile_editor(self, game: str):
         presets = _load_game_presets()
         if game not in presets:
@@ -1620,6 +1630,7 @@ class Plugin:
             builtin_profiles = json.load(source)
         return {"success": True, "can_delete": game not in builtin_profiles, "profile": {
             "hotwords": profile.get("hotwords", []),
+            "context_file": profile.get("context_file", ""),
             "channels": profile.get("channels", {}),
             "channel_triggers": profile.get("channel_triggers", {}),
             "default_channel": profile.get("default_channel", "type"),
@@ -1640,6 +1651,10 @@ class Plugin:
                 raise ValueError("Finish recording or the pending draft before editing a profile.")
             channels = profile.get("channels")
             hotwords = profile.get("hotwords")
+            context_file = profile.get("context_file", presets[game].get("context_file", ""))
+            if (not isinstance(context_file, str) or len(context_file) > 4096
+                    or any(ord(c) < 32 or ord(c) == 127 for c in context_file)):
+                raise ValueError("Use a single-line context file path.")
             triggers = profile.get("channel_triggers")
             def valid_text(value, limit):
                 return (isinstance(value, str) and len(value) <= limit
@@ -1679,6 +1694,7 @@ class Plugin:
                 "hotwords", "channels", "channel_triggers", "default_channel")})
             override["chat_send_key"] = send_key
             override["casual_case"] = casual_case
+            override["context_file"] = context_file.strip()
             existing[game] = override
             path = os.path.join(CONFIG_DIR, "profiles.json")
             temporary = path + ".tmp"

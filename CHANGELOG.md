@@ -7,6 +7,10 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- Profiles can read recognition vocabulary from a local addon or companion JSON file, with validation, expiry, and a context status check. Whisper uses the vocabulary; Parakeet context remains unsupported.
+
 ## [0.3.26] - 2026-11-13
 
 ### Fixed

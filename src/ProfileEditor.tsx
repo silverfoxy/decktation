@@ -11,6 +11,7 @@ export function openProfileEditor() {
 }
 type Profile = {
     hotwords: string[];
+    context_file?: string;
     channels: Record<string, string>;
     channel_triggers: Record<string, string>;
     default_channel: string;
@@ -20,6 +21,7 @@ type Profile = {
 type Preset = { id: string; name: string };
 const loadProfile = callable<[game: string], any>("get_profile_editor");
 const saveProfile = callable<[game: string, profile: Profile], any>("save_profile_editor");
+const contextStatus = callable<[path: string], any>("get_recognition_context_status");
 const getPresets = callable<[], any>("get_presets");
 const getActivePreset = callable<[], any>("get_active_preset");
 const createProfile = callable<[name: string], any>("create_profile");
@@ -108,6 +110,7 @@ export function ProfileEditor() {
     const [busy, setBusy] = useState(false);
     const [dirty, setDirty] = useState(false);
     const [message, setMessage] = useState("");
+    const [contextMessage, setContextMessage] = useState("");
     const [error, setError] = useState("");
     const [pendingAction, setPendingAction] = useState<{ game?: string } | null>(null);
     const keyboardManager = useSteamKeyboardManager?.();
@@ -225,7 +228,7 @@ export function ProfileEditor() {
         if (!game) return;
         let active = true;
         setCanDelete(false);
-        setProfile(null); setError(""); setMessage(""); setDirty(false); setSearch("");
+        setProfile(null); setError(""); setMessage(""); setContextMessage(""); setDirty(false); setSearch("");
         setTrigger(""); setKeyword(""); setNewChannel(""); setAddingChannel(false);
         loadProfile(game).then(result => {
             if (!active) return;
@@ -380,6 +383,22 @@ export function ProfileEditor() {
                 }}>{t("Add keyword")}</DialogButton></Focusable>
             <Focusable className="chips" flow-children="row" data-nav-row>{profile.hotwords.map((word, index) => <DialogButton className="editor-button" key={`${index}-${word}`} disabled={disabled}
                 onClick={() => update({ ...profile, hotwords:profile.hotwords.filter((_, position) => position !== index) })}>{t("Remove keyword")}: {word} ×</DialogButton>)}</Focusable>
+            <EditorTextField label={t("Context file")} value={profile.context_file || ""} disabled={disabled}
+                onChange={event => { setContextMessage(""); update({ ...profile, context_file: event.target.value }); }} />
+            <p className="hint">{t("Optional local JSON vocabulary from an addon or companion. Leave empty to disable.")}</p>
+            <DialogButton className="editor-button" disabled={disabled} onClick={async () => {
+                try {
+                    const result = await contextStatus(profile.context_file || "");
+                    const labels: Record<string, string> = {
+                        loaded: t("Loaded {count} context terms", { count: result.count }),
+                        disabled: t("External context disabled"), missing: t("Context file not found"),
+                        invalid: t("Invalid or unreadable context file"), expired: t("Context file expired"),
+                        unsupported: t("The selected model does not support recognition context"),
+                    };
+                    setContextMessage(labels[result.status] || t("Invalid or unreadable context file"));
+                } catch (error) { setError(String(error)); }
+            }}>{t("Check context file")}</DialogButton>
+            {contextMessage && <p className="hint" aria-live="polite">{contextMessage}</p>}
             {!profile.hotwords.length && <p className="hint">{t("No custom keywords yet. Add character names, places, or unusual game terms.")}</p>}
         </Focusable>}
         <Focusable className="editor-footer" role="contentinfo" flow-children="row" data-nav-row><DialogButton className="editor-button" disabled={disabled || !profile} onClick={() => {

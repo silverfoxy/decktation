@@ -31,6 +31,7 @@ from controller_output import capture_output, open_output, press_a, press_b, Con
 from audio_runtime import ensure_audio_environment
 from clipboard_injection import temporary_clipboard
 from resident_whisper import ResidentWhisper, parakeet_command
+from recognition_context import read_context, merge_terms
 
 
 _AUDIO_CUE_PATTERN = re.compile(
@@ -265,6 +266,7 @@ class WoWVoiceChat:
         self.text_insertion_mode = "ydotool" if enabled else "paste"
 
     def __init__(self, context_file="wow_context.json", sample_rate=44100, default_channel="say", lazy_load=False, test_mode=False, test_audio_file=None, preset=None, confirm_delay=0, manual_send=False, transcription_language=None, model_size="base", diagnostic_reporter=None, remember_last_channel=False, last_channel=None, channel_rememberer=None, recording_state_callback=None, review_mode=False, pending_callback=None, metric_reporter=None, spoken_punctuation=False, type_as_keys=False, text_insertion_mode=None):
+        self._standalone_context = preset is None
         self.preset = preset or {}
         self.diagnostic_reporter = diagnostic_reporter
         self.metric_reporter = metric_reporter
@@ -657,7 +659,8 @@ class WoWVoiceChat:
             self.save_audio_to_wav(audio_input, wav_path, source_rate=self.whisper_sample_rate)
             if not self.whisper_worker:
                 raise RuntimeError("Resident worker is not loaded")
-            prompt = ". ".join(part for part in (hotwords, initial_prompt) if part)
+            prompt = "" if self.model_size in PARAKEET_MODELS else ". ".join(
+                part for part in (hotwords, initial_prompt) if part)
             started = time.monotonic()
             backend = "vulkan" if self.inference_device == "gpu" else "cpu"
             attributes = {"backend": backend, "model_size": self.model_size}
@@ -731,7 +734,9 @@ class WoWVoiceChat:
     def set_preset(self, preset: dict):
         """Update the active game preset without restarting the service"""
         self.cancel_pending()
+        self._standalone_context = False
         self.preset = preset
+        self.context = {}
         self.default_channel = preset.get("default_channel", "say")
         self.channel_commands = preset.get("channels") or {"say": "", "type": ""}
         self.casual_case = bool(preset.get("casual_case", False))
@@ -954,15 +959,11 @@ class WoWVoiceChat:
             self.confirm_pending(draft_id or snapshot["id"], countdown=True)
 
     def load_context(self):
-        """Load WoW context from addon-generated file"""
-        if self.context_file.exists():
-            try:
-                with open(self.context_file) as f:
-                    self.context = json.load(f)
-                return True
-            except Exception as e:
-                print(f"Warning: Could not load context: {e}")
-        return False
+        """Read a fresh snapshot for the selected profile, including failures."""
+        path = self.preset.get("context_file", str(self.context_file) if self._standalone_context else "")
+        base = self.context_file.parent if "context_file" in self.preset else None
+        self.context, self.context_status = read_context(path, base)
+        return self.context_status == "loaded"
 
     def build_prompt_from_context(self):
         """Build initial_prompt and hotwords from context"""
@@ -985,21 +986,11 @@ class WoWVoiceChat:
         else:
             hotwords = []
 
-        # Keep dynamic context language-neutral: vocabulary and actual game
-        # names are useful without constructing English prose around them.
-        if not self.preset.get("context_file"):
-            return initial_prompt, ", ".join(hotwords) or None
-        zone = self.context.get("zone", "")
-        boss = self.context.get("boss", "")
-        target = self.context.get("target", "")
-
-        # Preserve the context-derived hotwords used by existing presets while
-        # allowing user profiles to add their own vocabulary.
-        for contextual_hotword in (zone, boss, target):
-            if contextual_hotword and contextual_hotword not in hotwords:
-                hotwords.append(contextual_hotword)
-
-        return initial_prompt, ", ".join(hotwords) or None
+        external = self.context.get("terms", [])
+        # Compatibility for callers supplying a legacy snapshot directly.
+        if not external and self.preset.get("context_file"):
+            external = [self.context.get(key, "") for key in ("zone", "boss", "target")]
+        return initial_prompt, merge_terms(hotwords, external)
 
     def audio_callback(self, indata, frames, time_info, status):
         """Callback for audio recording"""
@@ -1142,9 +1133,6 @@ class WoWVoiceChat:
         preparation_started = time.monotonic()
         self.load_context()
         initial_prompt, hotwords = self.build_prompt_from_context()
-
-        print(f"Context: {initial_prompt}")
-        print(f"Hotwords: {hotwords}")
 
         if isinstance(audio_input, (str, os.PathLike, Path)):
             audio_input = self._load_wav(audio_input)
@@ -1595,7 +1583,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="WoW Voice-to-Chat Service")
     parser.add_argument("--context", default="wow_context.json",
-                       help="Path to WoW context JSON file")
+                       help="Path to recognition context JSON file")
     parser.add_argument("--mode", choices=["once", "continuous", "daemon"],
                        default="once",
                        help="Recording mode (default: once)")

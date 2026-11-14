@@ -15,7 +15,7 @@ cp src/runtime_proxy.py src/runtime_worker.py src/resident_whisper.py src/audio_
     src/haptic_feedback.py src/recording_volume.py src/status_hook.py \
     src/deck_hid.py src/gamepad_evdev.py src/gamepad_sdl.py src/controller_output.py src/controller_sdl_diagnostics.py src/legion_go_s.py src/controller_profiles.py src/telemetry.py src/convert_wow_context.py \
     src/recording_overlay.py src/recording_overlay_manager.py src/overlay_render.py src/review_gesture.py \
-    src/parakeet_server.py out/
+    src/parakeet_server.py src/recognition_context.py out/
 
 # Omit installation-time tools, tests, and caches from the bundled Python
 # runtime. Inference itself is provided by whisper.cpp.

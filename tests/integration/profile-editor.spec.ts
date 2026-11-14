@@ -366,3 +366,14 @@ test('casual formatting persists independently for each game profile', async ({ 
   await expect(page.getByLabel('Casual chat formatting')).toHaveValue('off');
   expect((await harness.rpc('get_profile_editor', ['generic'])).profile.casual_case).toBe(true);
 });
+
+test('context file setting persists and missing files have a clear status', async ({ page, harness }) => {
+  await openEditor(page);
+  await page.getByRole('button', { name: 'Keywords', exact: false }).click();
+  await page.getByLabel('Context file', { exact: true }).fill('/tmp/decktation-context-missing-test.json');
+  await page.getByRole('button', { name: 'Check context file', exact: true }).click();
+  await expect(page.getByText('Context file not found', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(page.getByRole('status')).toHaveText('Saved');
+  expect((await harness.rpc('get_profile_editor', ['wow'])).profile.context_file).toBe('/tmp/decktation-context-missing-test.json');
+});
