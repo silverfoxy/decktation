@@ -410,6 +410,9 @@ def test_controller_a_submits_after_text_insertion(mock_run, mode, monkeypatch):
     observed = []
     pressed = MagicMock(side_effect=lambda fd: observed.append(len(commands(mock_run))))
     monkeypatch.setattr('wow_voice_chat.press_a', pressed)
+    closed = MagicMock(side_effect=lambda fd: observed.append(('B', fd, len(commands(mock_run)))))
+    monkeypatch.setattr('wow_voice_chat.press_b', closed)
+    monkeypatch.setattr('wow_voice_chat.time.sleep', lambda seconds: observed.append(('wait', seconds)))
     mock_run.return_value = MagicMock(returncode=0)
     svc = make_service({**WOW_PRESET, "chat_send_key": "controller_a"})
     svc.text_insertion_mode = mode
@@ -419,17 +422,23 @@ def test_controller_a_submits_after_text_insertion(mock_run, mode, monkeypatch):
     assert sent[1][0] == ("key" if mode == "paste" else "type")
     assert len(sent) == 2
     pressed.assert_called_once_with(42)
-    assert observed == [2]
+    closed.assert_called_once_with(42)
+    assert observed[-3:] == [2, ('wait', 0.15), ('B', 42, 2)]
 
 
 @pytest.mark.parametrize("manual,channel", [(True, "say"), (False, "type")])
 @patch("subprocess.run")
-def test_controller_a_respects_manual_and_type_modes(mock_run, manual, channel):
+def test_controller_a_respects_manual_and_type_modes(mock_run, manual, channel, monkeypatch):
+    pressed, closed = MagicMock(), MagicMock()
+    monkeypatch.setattr('wow_voice_chat.press_a', pressed)
+    monkeypatch.setattr('wow_voice_chat.press_b', closed)
     mock_run.return_value = MagicMock(returncode=0)
     svc = make_service({**WOW_PRESET, "chat_send_key": "controller_a"})
     svc.manual_send = manual
     assert svc.send_to_wow_chat("hello", channel=channel)
     assert commands(mock_run) == ([ENTER, PASTE] if manual else [PASTE])
+    pressed.assert_not_called()
+    closed.assert_not_called()
 
 
 @pytest.mark.parametrize("failure", [1, 2])
@@ -441,12 +450,15 @@ def test_controller_a_reports_insertion_and_submission_failures(mock_run, failur
     monkeypatch.setattr('wow_voice_chat.open_output', verified)
     pressed = MagicMock(side_effect=RuntimeError('submission failed') if failure == 2 else None)
     monkeypatch.setattr('wow_voice_chat.press_a', pressed)
+    closed = MagicMock()
+    monkeypatch.setattr('wow_voice_chat.press_b', closed)
     mock_run.side_effect = [MagicMock(returncode=1 if index == failure else 0)
                             for index in range(3)]
     svc = make_service({**WOW_PRESET, "chat_send_key": "controller_a"})
     assert not svc.send_to_wow_chat("hello", channel="say")
     assert len(commands(mock_run)) == 2
     assert pressed.call_count == (1 if failure == 2 else 0)
+    closed.assert_not_called()
 
 
 @patch('subprocess.run')
@@ -490,3 +502,21 @@ def test_no_submission_profile_labels_review_as_typing():
     svc.review_mode = True
     svc.queue_transcription("party hello")
     assert svc.pending_snapshot()["action"] == "Type into chat"
+
+
+@patch('subprocess.run')
+def test_b_failure_after_a_does_not_queue_already_submitted_message(mock_run, monkeypatch, caplog):
+    @contextmanager
+    def verified(_resolution):
+        yield 42
+    monkeypatch.setattr('wow_voice_chat.open_output', verified)
+    pressed = MagicMock()
+    monkeypatch.setattr('wow_voice_chat.press_a', pressed)
+    monkeypatch.setattr('wow_voice_chat.press_b', MagicMock(side_effect=OSError('disconnected')))
+    monkeypatch.setattr('wow_voice_chat.time.sleep', lambda seconds: None)
+    mock_run.return_value = MagicMock(returncode=0)
+    svc = make_service({**WOW_PRESET, 'chat_send_key': 'controller_a'})
+    svc.queue_transcription('hello', controller_output={'status': 'single_candidate', 'target': {}})
+    pressed.assert_called_once_with(42)
+    assert svc.pending_snapshot() is None
+    assert 'controller B failed to close chat' in caplog.text

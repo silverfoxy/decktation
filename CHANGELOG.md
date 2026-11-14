@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Fixed
+
+- Follow controller A submission with controller B on the same Steam gamepad
+  to close chat after sending. Mask both injected buttons from push-to-talk.
+
 ## [0.3.25] - 2026-11-13
 
 ### Changed

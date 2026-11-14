@@ -19,15 +19,15 @@ STEAM_OUTPUT_ID = (0x28de, 0x11ff)
 INJECTION_FILE = '/tmp/decktation_controller_injection.json'
 
 
-def without_injected_a(path, states):
-    """Do not interpret our virtual A pulse as another PTT activation."""
+def without_injected_buttons(path, states):
+    """Do not interpret our virtual submit/close pulses as PTT activations."""
     marker = read_json(INJECTION_FILE)
     if not isinstance(marker, dict):
         return states
     if (marker.get('path') == path and
             type(marker.get('until')) in (int, float) and
             time.monotonic() < marker['until']):
-        return {**states, 'A': False}
+        return {**states, 'A': False, 'B': False}
     return states
 
 
@@ -78,16 +78,27 @@ def open_output(resolution):
 
 
 def press_a(fd):
-    """Pulse the already verified device; always attempt release after down."""
-    if 304 in bits(ioctl_read(fd, 0x18, 96)):
-        raise ControllerOutputError('Controller A is held. Release it before retrying.')
+    """Submit chat on the already verified device."""
+    _press_button(fd, 304, 'A')
+
+
+def press_b(fd):
+    """Close chat on the same device after submission."""
+    _press_button(fd, 305, 'B')
+
+
+def _press_button(fd, code, name):
+    """Always attempt release after down; never release an already held button."""
+    if code in bits(ioctl_read(fd, 0x18, 96)):
+        raise ControllerOutputError(f'Controller {name} is held. Release it before retrying.')
     # Publish before down, and leave a bounded grace period for queued reports.
-    # Only the destination's A is masked; physical input remains independent.
+    # Mask both buttons throughout the submit/close sequence and report grace.
+    # Physical input on other devices remains independent.
     write_json(INJECTION_FILE, {'path': os.readlink(f'/proc/self/fd/{fd}'),
                                 'until': time.monotonic() + 1})
 
     def emit(value):
-        packet = EVENT.pack(0, 0, 1, 304, value) + EVENT.pack(0, 0, 0, 0, 0)
+        packet = EVENT.pack(0, 0, 1, code, value) + EVENT.pack(0, 0, 0, 0, 0)
         if os.write(fd, packet) != len(packet):
             raise ControllerOutputError('Controller input write was incomplete.')
 

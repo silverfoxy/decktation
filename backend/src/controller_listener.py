@@ -14,7 +14,7 @@ import selectors
 import tempfile
 from deck_hid import STEAM_DECK_BUTTON_BITS
 from gamepad_evdev import EvdevGamepad
-from controller_output import discover_outputs, resolve_output, without_injected_a
+from controller_output import discover_outputs, resolve_output, without_injected_buttons
 from controller_profiles import PROFILES_BY_KIND, HidGamepad, find_hidraw
 from gamepad_sdl import SdlInput, SdlGamepad
 from binding_capture import BindingCapture, read_json, write_json
@@ -501,7 +501,7 @@ def main():
 
     def publish(path, states, controller_type):
         nonlocal active_source
-        states = without_injected_a(getattr(devices[path][0], 'evdev_path', None) or path, states)
+        states = without_injected_buttons(getattr(devices[path][0], 'evdev_path', None) or path, states)
         if debug.report and not debug.finished_written:
             debug.report.initial(path, states, getattr(devices[path][0], 'keys', ()), time.monotonic())
         previous = tracker.sources.get(path, {})

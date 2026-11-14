@@ -27,7 +27,7 @@ import numpy as np
 import wave
 from contextlib import ExitStack
 from copy import deepcopy
-from controller_output import capture_output, open_output, press_a, ControllerOutputError
+from controller_output import capture_output, open_output, press_a, press_b, ControllerOutputError
 from audio_runtime import ensure_audio_environment
 from clipboard_injection import temporary_clipboard
 from resident_whisper import ResidentWhisper, parakeet_command
@@ -1333,6 +1333,15 @@ class WoWVoiceChat:
             # success, not confirmation that the game displayed the text.
             if send_key == 'controller_a':
                 press_a(controller_fd)
+                try:
+                    # Give the game time to process submission before closing chat.
+                    time.sleep(0.15)
+                    press_b(controller_fd)
+                except Exception as exc:
+                    # A already submitted the message. Do not queue a retry that
+                    # would insert and send the same message again.
+                    logger.warning("Chat submitted, but controller B failed to close chat (%s)",
+                                   type(exc).__name__)
             elif send_key is not None:
                 result = subprocess.run(
                     [ydotool, 'key', '28:1', '28:0'],

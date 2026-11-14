@@ -92,7 +92,8 @@ def test_reconnected_device_is_rejected(destination, field, value):
     module.os.close.assert_called_once_with(42)
 
 
-def test_pulse_releases_when_hold_is_interrupted(monkeypatch):
+@pytest.mark.parametrize('button,code', [('press_a', 304), ('press_b', 305)])
+def test_pulse_releases_when_hold_is_interrupted(monkeypatch, button, code):
     monkeypatch.setattr(module, 'write_json', MagicMock())
     monkeypatch.setattr(module.os, 'readlink', lambda path: '/dev/input/event10')
     monkeypatch.setattr(module, 'ioctl_read', lambda *args: bytes(96))
@@ -100,27 +101,28 @@ def test_pulse_releases_when_hold_is_interrupted(monkeypatch):
     monkeypatch.setattr(module.os, 'write', lambda fd, data: packets.append(data) or len(data))
     monkeypatch.setattr(module.time, 'sleep', MagicMock(side_effect=KeyboardInterrupt))
     with pytest.raises(KeyboardInterrupt):
-        module.press_a(42)
-    assert [module.EVENT.unpack(data[:module.EVENT.size])[4] for data in packets] == [1, 0]
+        getattr(module, button)(42)
+    assert [module.EVENT.unpack(data[:module.EVENT.size])[3:5] for data in packets] == [(code, 1), (code, 0)]
 
 
-def test_held_a_does_not_get_released_by_injection(monkeypatch):
+@pytest.mark.parametrize('button,code', [('press_a', 304), ('press_b', 305)])
+def test_held_button_does_not_get_released_by_injection(monkeypatch, button, code):
     data = bytearray(96)
-    data[304 // 8] = 1 << (304 % 8)
+    data[code // 8] = 1 << (code % 8)
     monkeypatch.setattr(module, 'ioctl_read', lambda *args: data)
     write = MagicMock()
     monkeypatch.setattr(module.os, 'write', write)
     with pytest.raises(module.ControllerOutputError, match='held'):
-        module.press_a(42)
+        getattr(module, button)(42)
     write.assert_not_called()
 
 
-def test_injected_a_is_ignored_only_on_destination_during_pulse(monkeypatch):
+def test_injected_buttons_are_ignored_only_on_destination_during_sequence(monkeypatch):
     monkeypatch.setattr(module, 'read_json', lambda path: {
         'path': '/dev/input/event10', 'until': 101})
     monkeypatch.setattr(module.time, 'monotonic', lambda: 100)
-    states = {'A': True, 'L1': True}
-    assert module.without_injected_a('/dev/input/event10', states) == {'A': False, 'L1': True}
-    assert module.without_injected_a('/dev/hidraw3', states) == states
+    states = {'A': True, 'B': True, 'L1': True}
+    assert module.without_injected_buttons('/dev/input/event10', states) == {'A': False, 'B': False, 'L1': True}
+    assert module.without_injected_buttons('/dev/hidraw3', states) == states
     monkeypatch.setattr(module.time, 'monotonic', lambda: 102)
-    assert module.without_injected_a('/dev/input/event10', states) == states
+    assert module.without_injected_buttons('/dev/input/event10', states) == states
