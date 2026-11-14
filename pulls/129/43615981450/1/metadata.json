@@ -1,0 +1,14 @@
+{
+  "channel": "pull_request",
+  "number": 129,
+  "run_id": 43615981450,
+  "run_attempt": 1,
+  "commit": "a10dea77c9f01b546f273acbc0cdf41ea20e4fa3",
+  "head_repository": "silverfoxy/decktation",
+  "sha256": "bc53078eed9678ee8db25204e3066a70242a487e2cf07e62f5f9f80867a1c34d",
+  "zip_url": "https://decktation.com/pulls/129/43615981450/1/Decktation.zip",
+  "artifact_id": 14122117633,
+  "expires_at": "2026-12-14T16:39:49Z",
+  "size_in_bytes": 48573781,
+  "version": "0.3.27-dev.pr-129.a10dea7"
+}

@@ -3,7 +3,7 @@
     "id": 1,
     "name": "Decktation",
     "author": "silverfoxy",
-    "description": "Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using whisper.cpp. UNREVIEWED experimental code: PR #124 (5d2cf8b)",
+    "description": "Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using whisper.cpp. UNREVIEWED experimental code: PR #124 (5d2cf8b), PR #129 (a10dea7)",
     "tags": [
       "voice",
       "dictation",
@@ -19,6 +19,11 @@
         "name": "0.3.25-dev.pr-124.5d2cf8b",
         "hash": "e8dc246f1781dbf239cecc2859995d3eaf934beb606dcbf2176d42990cddc4b8",
         "artifact": "https://decktation.com/pulls/124/43518142041/1/Decktation.zip"
+      },
+      {
+        "name": "0.3.27-dev.pr-129.a10dea7",
+        "hash": "bc53078eed9678ee8db25204e3066a70242a487e2cf07e62f5f9f80867a1c34d",
+        "artifact": "https://decktation.com/pulls/129/43615981450/1/Decktation.zip"
       }
     ]
   }
