@@ -7,10 +7,14 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.3.26] - 2026-11-13
+
 ### Fixed
 
 - Follow controller A submission with controller B on the same Steam gamepad
   to close chat after sending. Mask both injected buttons from push-to-talk.
+  If closing chat fails after submission, keep the message sent rather than
+  queueing it for another send.
 
 ## [0.3.25] - 2026-11-13
 
@@ -438,7 +442,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 - Initial packaged release of Decktation for Decky Loader.
 
-[Unreleased]: https://github.com/silverfoxy/decktation/compare/v0.3.25...HEAD
+[Unreleased]: https://github.com/silverfoxy/decktation/compare/v0.3.26...HEAD
+[0.3.26]: https://github.com/silverfoxy/decktation/compare/v0.3.25...v0.3.26
 [0.3.25]: https://github.com/silverfoxy/decktation/compare/v0.3.24...v0.3.25
 [0.3.22]: https://github.com/silverfoxy/decktation/compare/v0.3.21...v0.3.22
 [0.3.18]: https://github.com/silverfoxy/decktation/compare/v0.3.17...v0.3.18
