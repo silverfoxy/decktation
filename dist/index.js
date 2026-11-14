@@ -3783,6 +3783,7 @@
     }
     const loadProfile = callable("get_profile_editor");
     const saveProfile = callable("save_profile_editor");
+    const contextStatus = callable("get_recognition_context_status");
     const getPresets$1 = callable("get_presets");
     const getActivePreset = callable("get_active_preset");
     const createProfile = callable("create_profile");
@@ -3869,6 +3870,7 @@
         const [busy, setBusy] = React.useState(false);
         const [dirty, setDirty] = React.useState(false);
         const [message, setMessage] = React.useState("");
+        const [contextMessage, setContextMessage] = React.useState("");
         const [error, setError] = React.useState("");
         const [pendingAction, setPendingAction] = React.useState(null);
         const keyboardManager = useSteamKeyboardManager?.();
@@ -4020,6 +4022,7 @@
             setProfile(null);
             setError("");
             setMessage("");
+            setContextMessage("");
             setDirty(false);
             setSearch("");
             setTrigger("");
@@ -4277,6 +4280,24 @@
                     ": ",
                     word,
                     " \u00D7"))),
+                React__default["default"].createElement(EditorTextField, { label: t("Context file"), value: profile.context_file || "", disabled: disabled, onChange: event => { setContextMessage(""); update({ ...profile, context_file: event.target.value }); } }),
+                React__default["default"].createElement("p", { className: "hint" }, t("Optional local JSON vocabulary from an addon or companion. Leave empty to disable.")),
+                React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled, onClick: async () => {
+                        try {
+                            const result = await contextStatus(profile.context_file || "");
+                            const labels = {
+                                loaded: t("Loaded {count} context terms", { count: result.count }),
+                                disabled: t("External context disabled"), missing: t("Context file not found"),
+                                invalid: t("Invalid or unreadable context file"), expired: t("Context file expired"),
+                                unsupported: t("The selected model does not support recognition context"),
+                            };
+                            setContextMessage(labels[result.status] || t("Invalid or unreadable context file"));
+                        }
+                        catch (error) {
+                            setError(String(error));
+                        }
+                    } }, t("Check context file")),
+                contextMessage && React__default["default"].createElement("p", { className: "hint", "aria-live": "polite" }, contextMessage),
                 !profile.hotwords.length && React__default["default"].createElement("p", { className: "hint" }, t("No custom keywords yet. Add character names, places, or unusual game terms."))),
             React__default["default"].createElement(deckyFrontendLib.Focusable, { className: "editor-footer", role: "contentinfo", "flow-children": "row", "data-nav-row": true },
                 React__default["default"].createElement(deckyFrontendLib.DialogButton, { className: "editor-button", disabled: disabled || !profile, onClick: () => {

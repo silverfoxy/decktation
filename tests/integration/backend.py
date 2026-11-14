@@ -74,7 +74,7 @@ class Runtime:
         'get_controller_debug': 1, 'stop_controller_debug': 1,
         'upload_controller_debug': 2, 'get_status': 0,
         'get_button_config': 0, 'get_presets': 0,
-        'get_profile_editor': 1, 'save_profile_editor': 2,
+        'get_recognition_context_status': 1, 'get_profile_editor': 1, 'save_profile_editor': 2,
         'get_active_preset': 0, 'set_active_preset': 1, 'create_profile': 1, 'delete_profile': 1,
         'set_review_context': 2,
     }
