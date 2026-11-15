@@ -257,6 +257,14 @@ interfaces cannot be decoded as controller buttons.
 Add a decoder and synthetic report/interface tests for a new layout. Set feedback
 only when an existing output protocol is known to work; input support alone does
 not establish rumble support. Valve profiles retain read/write access for
-hid-steam input delivery; the Legion Go S profile opens read-only. Verify actual
-presses/releases and concurrent access with Steam/InputPlumber on hardware before
+hid-steam input delivery; the Legion Go and Go S profiles open read-only. Verify
+actual presses/releases and concurrent access with Steam/InputPlumber on hardware before
 claiming support. A successfully opened interface may still deliver no input.
+
+The Legion Go profile reads 60-byte reports on USB interface `02` for Lenovo
+`17ef:6182`, `6183`, `6184`, and `61eb`. It decodes physical controls directly
+without taking an exclusive grab or changing InputPlumber configuration. Use the
+default **Legacy** controller reader for this profile; the opt-in SDL reader
+does not use these HID profiles. FPS mode is excluded, and a mode change to FPS
+releases held recording controls. Device nodes moved out of `/dev/hidraw*` by
+InputPlumber are not discovered by this profile.
