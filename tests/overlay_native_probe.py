@@ -28,6 +28,15 @@ with tempfile.TemporaryDirectory(prefix='decktation-overlay-check-') as folder:
         native = xdisplay.create_resource_object('window', xid)
         mapped = native.get_attributes().map_state
         assert mapped == (X.IsViewable if expected else X.IsUnmapped), mapped
+        # Gamescope can select unmapped external overlays and retain their last
+        # frame. Map state alone does not prove that a hidden overlay is gone.
+        overlay = native.get_full_property(xdisplay.intern_atom('GAMESCOPE_EXTERNAL_OVERLAY'), X.AnyPropertyType)
+        assert overlay is not None and list(overlay.value) == [int(expected)], overlay
+        opacity = native.get_full_property(xdisplay.intern_atom('_NET_WM_WINDOW_OPACITY'), X.AnyPropertyType)
+        if expected:
+            assert opacity is None or list(opacity.value) == [0xffffffff], opacity
+        else:
+            assert opacity is not None and list(opacity.value) == [0], opacity
 
     assert_mapped(False)
     window.tick()
@@ -62,6 +71,18 @@ with tempfile.TemporaryDirectory(prefix='decktation-overlay-check-') as folder:
         window.tick()
         assert_mapped(visible)
         assert window.get_window() == native_window
+    # Exercise the real GLib timer: Cancelled is initially visible, then expires
+    # without a new state-file write or a manual tick call.
+    result = {'mode': 'result', 'message': 'Cancelled', 'expires': module.time.time() + 0.15}
+    state.write_text(json.dumps(result))
+    window.tick()
+    assert_mapped(True)
+    loop = module.GLib.MainLoop()
+    module.GLib.timeout_add(300, lambda: (loop.quit(), False)[1])
+    loop.run()
+    assert state.read_text() == json.dumps(result)
+    assert window.mode == 'hidden'
+    assert_mapped(False)
     window.close_focus_connection()
     xdisplay.close()
     print('Real GTK/X11 check passed: map/unmap lifecycle, focus IDs, and atomic acknowledgments.')
