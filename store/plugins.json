@@ -17,8 +17,8 @@
     "versions": [
       {
         "name": "Latest",
-        "hash": "f9f6841f3c896fd28e3bb0b156bb15f41920d6ae07b7f1d82b961a156090898f",
-        "artifact": "https://github.com/silverfoxy/decktation/releases/download/master-68d9d2a414b630cc46db16191e79cd04612d0781/decktation.zip"
+        "hash": "0822c214ad0f9e40192edac528aace6116d86484ffc9cad26038e0bb3822221c",
+        "artifact": "https://github.com/silverfoxy/decktation/releases/download/master-f6d2a87d6ff8ccd55f9951b05d020722c322eb37/decktation.zip"
       },
       {
         "name": "0.3.27",
