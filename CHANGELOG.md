@@ -7,7 +7,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
-## [0.3.27] - 2026-11-14
+## [0.3.28] - 2026-11-15
 
 ### Fixed
 
@@ -15,6 +15,10 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   overlay slot for Steam's performance HUD. Clear its external-overlay
   registration and opacity before unmapping to prevent Gamescope from keeping
   the last frame (such as “Cancelled”) on screen.
+
+## [0.3.27] - 2026-11-14
+
+### Fixed
 
 - Add a read-only Legion Go HID input profile for recording bindings and
   controller diagnostics with the default Legacy reader, including `17ef:61eb`.
