@@ -61,8 +61,9 @@ class Indicator(Gtk.Window):
             raise RuntimeError("Xwayland has no RGBA visual")
         self.set_visual(visual)
         self.move(0, 0)
-        self.set_opacity(0)
-        self.show_all()
+        # Create the X window without mapping it. A transparent, mapped external
+        # overlay can still displace Steam's performance HUD in Gamescope.
+        self.realize()
         window = self.get_window()
         window.set_pass_through(True)
         window.input_shape_combine_region(cairo.Region(), 0, 0)
@@ -107,7 +108,10 @@ class Indicator(Gtk.Window):
         if mode != self.last_state:
             self.mode = mode
             self.last_state = mode
-            self.set_opacity(0 if mode == "hidden" else 1)
+            if mode == "hidden":
+                self.hide()
+            else:
+                self.show_all()
             print(f"state={mode}", flush=True)
         if mode != "hidden":
             self.queue_draw()
