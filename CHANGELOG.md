@@ -7,6 +7,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.3.27] - 2026-11-14
+
 ### Fixed
 
 - Add a read-only Legion Go HID input profile for recording bindings and
