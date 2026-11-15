@@ -7,6 +7,7 @@ import os
 from deck_hid import (STEAM_DECK_BUTTON_BITS, STEAM_CONTROLLER_BUTTON_BITS,
                       TRITON_BUTTON_MASKS, raw_button_states, triton_button_states)
 from legion_go_s import BUTTON_BITS, button_states
+from legion_go import BUTTON_BITS as GO_BUTTON_BITS, button_states as go_button_states
 
 
 def valve_states(report):
@@ -60,6 +61,8 @@ PROFILES = (
           (0x1305, 'steam_controller_2026_receiver', tuple(f'/input{i}' for i in range(2, 6)), 3, None),
           (0x1302, 'steam_controller_2026_wired', ('/input0', '/input1', '/input2'), 3, None),
           (0x1303, 'steam_controller_2026_bluetooth', None, 5, None))),
+    ControllerProfile('legion_go', 3, 0x17ef, (0x6182, 0x6183, 0x6184, 0x61eb), go_button_states,
+                      frozenset(GO_BUTTON_BITS), report_size=60, access=os.O_RDONLY, usb_interface='02'),
     ControllerProfile('legion_go_s', 3, 0x1a86, (0xe310, 0xe311), button_states,
                       frozenset(BUTTON_BITS), report_size=32, access=os.O_RDONLY, usb_interface='06'),
 )

@@ -7,6 +7,12 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Fixed
+
+- Add a read-only Legion Go HID input profile for recording bindings and
+  controller diagnostics with the default Legacy reader, including `17ef:61eb`.
+  Concurrent access with Steam/InputPlumber still needs hardware validation.
+
 ## [0.3.26] - 2026-11-13
 
 ### Fixed
