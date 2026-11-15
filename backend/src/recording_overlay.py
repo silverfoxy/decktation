@@ -65,16 +65,21 @@ class Indicator(Gtk.Window):
         # overlay can still displace Steam's performance HUD in Gamescope.
         self.realize()
         window = self.get_window()
+        window.set_opacity(0)
         window.set_pass_through(True)
         window.input_shape_combine_region(cairo.Region(), 0, 0)
+        self.set_overlay_registered(False)
         xid = GdkX11.X11Window.get_xid(window)
-        subprocess.run(
-            ["xprop", "-id", str(xid), "-f", "GAMESCOPE_EXTERNAL_OVERLAY", "32c",
-             "-set", "GAMESCOPE_EXTERNAL_OVERLAY", "1"], check=True
-        )
         print(f"window={hex(xid)} display={os.environ['DISPLAY']} rgba=1 pass_through=1", flush=True)
         GLib.timeout_add(50, self.tick)
         GLib.timeout_add(1000, self.sync_geometry)
+
+    def set_overlay_registered(self, enabled):
+        xid = GdkX11.X11Window.get_xid(self.get_window())
+        subprocess.run(
+            ["xprop", "-id", str(xid), "-f", "GAMESCOPE_EXTERNAL_OVERLAY", "32c",
+             "-set", "GAMESCOPE_EXTERNAL_OVERLAY", str(int(enabled))], check=True
+        )
 
     def sync_geometry(self, *_args):
         screen = self.get_screen()
@@ -109,9 +114,17 @@ class Indicator(Gtk.Window):
             self.mode = mode
             self.last_state = mode
             if mode == "hidden":
+                # Gamescope may retain the last commit and select an external
+                # overlay even when unmapped. Withdraw its registration before
+                # unmapping, after which Gamescope stops watching properties.
+                self.get_window().set_opacity(0)
+                self.get_display().sync()
+                self.set_overlay_registered(False)
                 self.hide()
-            else:
+            elif not self.get_visible():
+                self.set_overlay_registered(True)
                 self.show_all()
+                self.get_window().set_opacity(1)
             print(f"state={mode}", flush=True)
         if mode != "hidden":
             self.queue_draw()

@@ -12,7 +12,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ### Fixed
 
 - Unmap Decktation's native overlay while hidden so it releases Gamescope's
-  overlay slot for Steam's performance HUD.
+  overlay slot for Steam's performance HUD. Clear its external-overlay
+  registration and opacity before unmapping to prevent Gamescope from keeping
+  the last frame (such as “Cancelled”) on screen.
 
 - Add a read-only Legion Go HID input profile for recording bindings and
   controller diagnostics with the default Legacy reader, including `17ef:61eb`.
