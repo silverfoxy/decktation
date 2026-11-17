@@ -112,7 +112,7 @@ class DecktationLogic {
 
 	enabled: boolean = false;
 	recording: boolean = false;
-	recordingIndicator: string = "toast";
+	recordingIndicator: string = "overlay";
 	prevRecordingStartCount: number = 0;
 	prevPendingId: string = "";
 	pendingSince: number = 0;
@@ -195,7 +195,6 @@ class DecktationLogic {
 	) => {
 		onPhase("recording");
 		try {
-			if (this.recordingIndicator === "toast") this.notify("Decktation", 1000, t("Recording for 3 seconds..."));
 			const started = await startRecording();
 			if (!started.success) throw new Error(started.error || t("Could not start test recording"));
 
@@ -203,7 +202,6 @@ class DecktationLogic {
 			// Keep the no-send argument: test text must never reach the active game.
 			onPhase("transcribing");
 			const transcription = stopRecording(false);
-			if (this.recordingIndicator === "toast") this.notify("Decktation", 1500, t("Transcribing..."));
 			const stopped = await transcription;
 			if (!stopped.success) throw new Error(stopped.error || t("Could not transcribe test recording"));
 
@@ -394,7 +392,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 	const [controllerStatus, setControllerStatus] = useState<string>("Waiting for input");
 	const [controllerComboSupported, setControllerComboSupported] = useState<boolean>(true);
 	const [buttons, setButtons] = useState<string[]>(["L1", "R1"]);
-	const [recordingIndicator, setRecordingIndicator] = useState<string>("toast");
+	const [recordingIndicator, setRecordingIndicator] = useState<string>("overlay");
 	const [recordingVolume, setRecordingVolume] = useState<string>("off");
 	const [hapticFeedback, setHapticFeedback] = useState<boolean>(false);
 	const [exactBinding, setExactBinding] = useState<boolean>(false);
@@ -583,7 +581,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
 					if (config.buttons) {
 						setButtons(config.buttons);
 					}
-					const indicator = config.recordingIndicator || (config.showNotifications === false ? "none" : "toast");
+					const indicator = config.recordingIndicator === "none" || (config.recordingIndicator == null && config.showNotifications === false) ? "none" : "overlay";
 					setRecordingIndicator(indicator);
                     setRecordingVolume(config.recordingVolume === "mute" ? "mute" : "off");
 					logic.recordingIndicator = indicator;
@@ -1159,7 +1157,7 @@ const DecktationPanel: VFC<{ logic: DecktationLogic }> = ({ logic }) => {
                                     else setRpcError(result.error || t("Could not update recording volume"));
                                 } catch (error) { setRpcError(String(error)); }
                             }} /></PanelSectionRow>
-						<PanelSectionRow><DropdownItem label={t("Recording cue")} menuLabel={t("Recording cue")} rgOptions={[{data:"toast",label:t("Toast")},{data:"overlay",label:t("Overlay")},{data:"none",label:t("None")}]} selectedOption={recordingIndicator} onChange={async (option) => { const mode = option.data as string; setRecordingIndicator(mode); logic.recordingIndicator = mode; const result = await setRecordingIndicatorRpc(mode); if (!result.success) setRpcError(result.error || t("Could not update recording cue")); }} /></PanelSectionRow>
+						<PanelSectionRow><DropdownItem label={t("Recording cue")} menuLabel={t("Recording cue")} rgOptions={[{data:"overlay",label:t("Overlay")},{data:"none",label:t("None")}]} selectedOption={recordingIndicator} onChange={async (option) => { const mode = option.data as string; setRecordingIndicator(mode); logic.recordingIndicator = mode; const result = await setRecordingIndicatorRpc(mode); if (!result.success) setRpcError(result.error || t("Could not update recording cue")); }} /></PanelSectionRow>
 						<PanelSectionRow><ToggleField label={t("Haptic feedback")} description={t("Cues on the controller when recording starts and stops")}
 							checked={hapticFeedback} onChange={async (next) => {
 								const result = await setHapticFeedbackRpc(next);
@@ -1355,11 +1353,7 @@ export default definePlugin(() => {
 			}
 			const result = await getStatus();
 			if (result.success) {
-				const startCount: number = result.recording_start_count || 0;
-				if (logic.recordingIndicator === "toast" && startCount > logic.prevRecordingStartCount) {
-					logic.notify(t("Recording"), 1500, "🎤 " + t("Recording..."));
-				}
-				logic.prevRecordingStartCount = startCount;
+				logic.prevRecordingStartCount = result.recording_start_count || 0;
 
 				const draft = result.pending_draft as PendingDraft | null;
 				const draftId = draft?.id || "";

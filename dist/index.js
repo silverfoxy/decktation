@@ -45,7 +45,7 @@
         }
     }
 
-    var _manifest = {"name":"Decktation","version":"0.3.27","author":"silverfoxy","flags":["root"],"api_version":1,"publish":{"tags":["voice","dictation","speech-to-text","input","chat","gaming","accessibility"],"description":"Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using whisper.cpp.","image":"https://raw.githubusercontent.com/silverfoxy/decktation/master/store-card.png"}};
+    var _manifest = {"name":"Decktation","version":"0.3.28","author":"silverfoxy","flags":["root"],"api_version":1,"publish":{"tags":["voice","dictation","speech-to-text","input","chat","gaming","accessibility"],"description":"Push-to-talk dictation for Steam Deck. Context-aware speech-to-text using whisper.cpp.","image":"https://raw.githubusercontent.com/silverfoxy/decktation/master/store-card.png"}};
 
     const manifest = _manifest;
     const API_VERSION = 2;
@@ -4471,7 +4471,7 @@
         }
     }
 
-    var version = "0.3.27";
+    var version = "0.3.28";
 
     // Read the actual QAM surface. Document visibility alone does not establish
     // whether a persistent Steam sidebar is on screen.
@@ -4651,7 +4651,7 @@
             this.updateListeners = new Set();
             this.enabled = false;
             this.recording = false;
-            this.recordingIndicator = "toast";
+            this.recordingIndicator = "overlay";
             this.prevRecordingStartCount = 0;
             this.prevPendingId = "";
             this.pendingSince = 0;
@@ -4730,8 +4730,6 @@
             this.testRecording = async (onComplete, onPhase) => {
                 onPhase("recording");
                 try {
-                    if (this.recordingIndicator === "toast")
-                        this.notify("Decktation", 1000, t("Recording for 3 seconds..."));
                     const started = await startRecording();
                     if (!started.success)
                         throw new Error(started.error || t("Could not start test recording"));
@@ -4739,8 +4737,6 @@
                     // Keep the no-send argument: test text must never reach the active game.
                     onPhase("transcribing");
                     const transcription = stopRecording(false);
-                    if (this.recordingIndicator === "toast")
-                        this.notify("Decktation", 1500, t("Transcribing..."));
                     const stopped = await transcription;
                     if (!stopped.success)
                         throw new Error(stopped.error || t("Could not transcribe test recording"));
@@ -4928,7 +4924,7 @@
         const [controllerStatus, setControllerStatus] = React.useState("Waiting for input");
         const [controllerComboSupported, setControllerComboSupported] = React.useState(true);
         const [buttons, setButtons] = React.useState(["L1", "R1"]);
-        const [recordingIndicator, setRecordingIndicator] = React.useState("toast");
+        const [recordingIndicator, setRecordingIndicator] = React.useState("overlay");
         const [recordingVolume, setRecordingVolume] = React.useState("off");
         const [hapticFeedback, setHapticFeedback] = React.useState(false);
         const [exactBinding, setExactBinding] = React.useState(false);
@@ -5133,7 +5129,7 @@
                         if (config.buttons) {
                             setButtons(config.buttons);
                         }
-                        const indicator = config.recordingIndicator || (config.showNotifications === false ? "none" : "toast");
+                        const indicator = config.recordingIndicator === "none" || (config.recordingIndicator == null && config.showNotifications === false) ? "none" : "overlay";
                         setRecordingIndicator(indicator);
                         setRecordingVolume(config.recordingVolume === "mute" ? "mute" : "off");
                         logic.recordingIndicator = indicator;
@@ -5823,7 +5819,7 @@
                                     }
                                 } })),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
-                            React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: t("Recording cue"), menuLabel: t("Recording cue"), rgOptions: [{ data: "toast", label: t("Toast") }, { data: "overlay", label: t("Overlay") }, { data: "none", label: t("None") }], selectedOption: recordingIndicator, onChange: async (option) => { const mode = option.data; setRecordingIndicator(mode); logic.recordingIndicator = mode; const result = await setRecordingIndicatorRpc(mode); if (!result.success)
+                            React__default["default"].createElement(deckyFrontendLib.DropdownItem, { label: t("Recording cue"), menuLabel: t("Recording cue"), rgOptions: [{ data: "overlay", label: t("Overlay") }, { data: "none", label: t("None") }], selectedOption: recordingIndicator, onChange: async (option) => { const mode = option.data; setRecordingIndicator(mode); logic.recordingIndicator = mode; const result = await setRecordingIndicatorRpc(mode); if (!result.success)
                                     setRpcError(result.error || t("Could not update recording cue")); } })),
                         React__default["default"].createElement(deckyFrontendLib.PanelSectionRow, null,
                             React__default["default"].createElement(deckyFrontendLib.ToggleField, { label: t("Haptic feedback"), description: t("Cues on the controller when recording starts and stops"), checked: hapticFeedback, onChange: async (next) => {
@@ -6100,11 +6096,7 @@
                 }
                 const result = await getStatus();
                 if (result.success) {
-                    const startCount = result.recording_start_count || 0;
-                    if (logic.recordingIndicator === "toast" && startCount > logic.prevRecordingStartCount) {
-                        logic.notify(t("Recording"), 1500, "🎤 " + t("Recording..."));
-                    }
-                    logic.prevRecordingStartCount = startCount;
+                    logic.prevRecordingStartCount = result.recording_start_count || 0;
                     const draft = result.pending_draft;
                     const draftId = draft?.id || "";
                     if (draftId !== logic.prevPendingId) {

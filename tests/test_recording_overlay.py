@@ -87,6 +87,49 @@ def test_overlay_mode_keeps_legacy_notifications_flag_compatible(tmp_path, monke
     assert written["recordingIndicator"] == "overlay"
     assert written["showNotifications"] is True
 
+def test_toast_recording_cue_migrates_to_overlay(tmp_path, monkeypatch):
+    config_file = tmp_path / "button_config.json"
+    config_file.write_text(json.dumps({"recordingIndicator": "toast", "showNotifications": True}))
+    monkeypatch.setattr(decktation_backend, "BUTTON_CONFIG_FILE", str(config_file))
+
+    assert decktation_backend.DEFAULT_BUTTON_CONFIG["recordingIndicator"] == "overlay"
+    assert decktation_backend._read_button_config()["recordingIndicator"] == "overlay"
+    assert decktation_backend._write_button_config({"recordingIndicator": "overlay"})["recordingIndicator"] == "overlay"
+
+def test_old_toast_overrides_legacy_disabled_flag_and_persists_overlay(tmp_path, monkeypatch):
+    config_file = tmp_path / "button_config.json"
+    config_file.write_text(json.dumps({"recordingIndicator": "toast", "showNotifications": False}))
+    monkeypatch.setattr(decktation_backend, "BUTTON_CONFIG_FILE", str(config_file))
+
+    config = decktation_backend._read_button_config()
+    assert config["recordingIndicator"] == "overlay"
+    decktation_backend._write_button_config(config)
+    saved = json.loads(config_file.read_text())
+    assert saved["recordingIndicator"] == "overlay"
+    assert saved["showNotifications"] is True
+
+def test_legacy_enabled_notifications_migrate_to_overlay(tmp_path, monkeypatch):
+    config_file = tmp_path / "button_config.json"
+    config_file.write_text(json.dumps({"showNotifications": True}))
+    monkeypatch.setattr(decktation_backend, "BUTTON_CONFIG_FILE", str(config_file))
+
+    assert decktation_backend._read_button_config()["recordingIndicator"] == "overlay"
+
+def test_explicit_none_remains_none(tmp_path, monkeypatch):
+    config_file = tmp_path / "button_config.json"
+    config_file.write_text(json.dumps({"recordingIndicator": "none", "showNotifications": True}))
+    monkeypatch.setattr(decktation_backend, "BUTTON_CONFIG_FILE", str(config_file))
+
+    assert decktation_backend._read_button_config()["recordingIndicator"] == "none"
+
+def test_toast_recording_cue_is_rejected_by_rpc(tmp_path, monkeypatch):
+    config_file = tmp_path / "button_config.json"
+    monkeypatch.setattr(decktation_backend, "BUTTON_CONFIG_FILE", str(config_file))
+
+    result = asyncio.run(decktation_backend.Plugin().set_recording_indicator("toast"))
+    assert result["success"] is False
+    assert "Unsupported recording indicator" in result["error"]
+
 
 def test_model_size_rpc_reports_resident_vulkan_reload(tmp_path, monkeypatch):
     config_file = tmp_path / "button_config.json"
