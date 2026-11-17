@@ -180,7 +180,7 @@ DEFAULT_BUTTON_CONFIG = {
     "showNotifications": True,
     "hapticFeedback": False,
     "recordingVolume": "off",
-    "recordingIndicator": "toast",
+    "recordingIndicator": "overlay",
     "statusHookCommand": "",
     "enabled": False,
     "game": "wow",
@@ -198,7 +198,7 @@ DEFAULT_BUTTON_CONFIG = {
 }
 
 SUPPORTED_WHISPER_MODEL_SIZES = {"base", "small", "medium", "parakeet-v3", "parakeet-ultra"}
-SUPPORTED_RECORDING_INDICATORS = {"toast", "overlay", "none"}
+SUPPORTED_RECORDING_INDICATORS = {"overlay", "none"}
 
 SUPPORTED_WHISPER_LANGUAGES = {
     "af", "am", "ar", "as", "az", "ba", "be", "bg", "bn", "bo", "br",
@@ -231,7 +231,7 @@ def _normalize_model_size(model_size):
 
 
 def _normalize_recording_indicator(indicator):
-    indicator = (indicator or "toast").strip().lower()
+    indicator = (indicator or "overlay").strip().lower()
     if indicator not in SUPPORTED_RECORDING_INDICATORS:
         raise ValueError(f"Unsupported recording indicator: {indicator}")
     return indicator
@@ -259,12 +259,12 @@ def _read_button_config():
         if isinstance(saved_config, dict):
             config.update(saved_config)
 
-    # Pre-overlay versions used one boolean for recording and confirmation
-    # toasts. Preserve that preference when the new setting is first read.
+    # Replace old toast cues with the overlay, retaining explicit None and
+    # the older disabled-notifications preference when no cue was saved.
     if "recordingIndicator" not in saved_config:
-        config["recordingIndicator"] = (
-            "toast" if config.get("showNotifications", True) else "none"
-        )
+        config["recordingIndicator"] = "none" if config.get("showNotifications") is False else "overlay"
+    elif config.get("recordingIndicator") == "toast":
+        config["recordingIndicator"] = "overlay"
 
     if "sendingMode" not in saved_config:
         config["sendingMode"] = "countdown" if config.get("confirmMode") else "immediate"
@@ -1281,7 +1281,7 @@ class Plugin:
             return {"success": False, "error": str(exc)}
 
     async def set_recording_indicator(self, mode: str):
-        """Select toast, Gamescope overlay, or no recording cue."""
+        """Select Gamescope overlay or no recording cue."""
         try:
             mode = _normalize_recording_indicator(mode)
             config = _read_button_config()
