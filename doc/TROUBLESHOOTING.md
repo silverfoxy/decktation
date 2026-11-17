@@ -72,6 +72,7 @@ When reporting a persistent problem, include your Deck model (LCD or OLED), Stea
 ## Text is missing or goes to the wrong place
 
 - Put focus in the intended text field before using push-to-talk.
+- For GeForce NOW clipboard paste, enable **Clipboard** in both the main GeForce NOW settings and its overlay settings; enabling it only in the overlay is not enough.
 - Use **Generic** to enter text directly in the focused field. WoW and GW2 presets open their in-game chat and add a channel command.
 - If **Manual** is on, Decktation enters the message and waits for you to press Enter.
 - Check the panel for **Keyboard helper unavailable** and inspect the latest plugin log for `ydotoold` errors. Reload or reinstall the packaged plugin if the helper did not start.
