@@ -5,13 +5,18 @@ ARG WHISPER_CPP_COMMIT=f24588a272ae8e23280d9c220536437164e6ed28
 ARG TRANSCRIBE_CPP_COMMIT=4d7c1ccefd39e5a9ea36cca5f8fefc6dcc14b99b
 ARG SDL_COMMIT=829a65d769d935c4852f8159e964312c0957260a
 
-# holo-base already ships glslc, shaderc, Vulkan headers, binutils, and libusb.
-# Reinstalling those packages fails because their files are untracked by pacman.
+# holo-base ships glslc, shaderc, binutils, and libusb. Some image versions
+# also ship Vulkan headers as untracked files; install them only when absent.
 RUN pacman -Sydd --noconfirm --dbpath /var/lib/pacman \
         alsa-lib cmake cppdap git libuv python-pip rhash spirv-headers vulkan-icd-loader xclip wayland \
     && command -v strip \
     && cmake --version \
     && glslc --version
+
+RUN if [ ! -f /usr/include/vulkan/vulkan.h ]; then \
+        pacman -Sdd --noconfirm --dbpath /var/lib/pacman vulkan-headers; \
+    fi \
+    && test -f /usr/include/vulkan/vulkan.h
 
 # SDL 3.4.18, pinned for reproducible controller testing. No video/audio device
 # initialization is needed by the headless controller listener.
