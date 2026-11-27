@@ -95,15 +95,13 @@ RUN git init /xclip-src \
 # Benchmark-only Vulkan build. One binary exercises both paths: its normal
 # mode uses Vulkan, while --no-gpu runs the same whisper.cpp revision/model on
 # CPU for an apples-to-apples comparison on the Deck. Shader generation has its
-# own parallelism; limit it independently of make -j2 for CI runner memory.
+# own parallelism; run it synchronously to avoid retaining async thread stacks.
+COPY patches/whisper-shader-generation.patch /tmp/whisper-shader-generation.patch
 RUN git init /whisper.cpp \
     && git -C /whisper.cpp remote add origin https://github.com/ggml-org/whisper.cpp.git \
     && git -C /whisper.cpp fetch --depth 1 origin "${WHISPER_CPP_COMMIT}" \
     && git -C /whisper.cpp checkout --detach FETCH_HEAD \
-    && grep -Fq 'std::min(16u, std::thread::hardware_concurrency())' \
-        /whisper.cpp/ggml/src/ggml-vulkan/vulkan-shaders/vulkan-shaders-gen.cpp \
-    && sed -i 's/std::min(16u, std::thread::hardware_concurrency())/std::min(1u, std::thread::hardware_concurrency())/' \
-        /whisper.cpp/ggml/src/ggml-vulkan/vulkan-shaders/vulkan-shaders-gen.cpp \
+    && git -C /whisper.cpp apply /tmp/whisper-shader-generation.patch \
     && cmake -S /whisper.cpp -B /whisper.cpp/build \
         -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_SHARED_LIBS=OFF \
