@@ -402,7 +402,8 @@ def test_command_preserves_argument_case_and_bypasses_remembered_party(mock_run)
 
 @pytest.mark.parametrize("mode", ["paste", "ydotool"])
 @patch("subprocess.run")
-def test_controller_a_submits_after_text_insertion(mock_run, mode, monkeypatch):
+def test_controller_a_submits_after_text_insertion(mock_run, mode, monkeypatch, caplog):
+    caplog.set_level("INFO")
     @contextmanager
     def verified(_resolution):
         yield 42
@@ -424,11 +425,16 @@ def test_controller_a_submits_after_text_insertion(mock_run, mode, monkeypatch):
     pressed.assert_called_once_with(42)
     closed.assert_called_once_with(42)
     assert observed[-3:] == [2, ('wait', 0.15), ('B', 42, 2)]
+    assert f'insertion={mode} manual_send=False channel=party open=enter submit=controller_a_then_b' in caplog.text
+    assert 'Chat submission input completed: input=controller_a' in caplog.text
+    assert 'Chat close input completed: input=controller_b' in caplog.text
+    assert 'hello' not in caplog.text
 
 
 @pytest.mark.parametrize("manual,channel", [(True, "say"), (False, "type")])
 @patch("subprocess.run")
-def test_controller_a_respects_manual_and_type_modes(mock_run, manual, channel, monkeypatch):
+def test_controller_a_respects_manual_and_type_modes(mock_run, manual, channel, monkeypatch, caplog):
+    caplog.set_level("INFO")
     pressed, closed = MagicMock(), MagicMock()
     monkeypatch.setattr('wow_voice_chat.press_a', pressed)
     monkeypatch.setattr('wow_voice_chat.press_b', closed)
@@ -439,11 +445,14 @@ def test_controller_a_respects_manual_and_type_modes(mock_run, manual, channel, 
     assert commands(mock_run) == ([ENTER, PASTE] if manual else [PASTE])
     pressed.assert_not_called()
     closed.assert_not_called()
+    reason = 'manual_send' if manual else 'type_channel'
+    assert f'Chat submission skipped: reason={reason}' in caplog.text
+    assert 'Chat submission attempted' not in caplog.text
 
 
 @pytest.mark.parametrize("failure", [1, 2])
 @patch("subprocess.run")
-def test_controller_a_reports_insertion_and_submission_failures(mock_run, failure, monkeypatch):
+def test_controller_a_reports_insertion_and_submission_failures(mock_run, failure, monkeypatch, caplog):
     @contextmanager
     def verified(_resolution):
         yield 42
@@ -459,6 +468,9 @@ def test_controller_a_reports_insertion_and_submission_failures(mock_run, failur
     assert len(commands(mock_run)) == 2
     assert pressed.call_count == (1 if failure == 2 else 0)
     closed.assert_not_called()
+    stage = 'insert_text' if failure == 1 else 'submit_a'
+    assert f'Text injection failed: stage={stage}' in caplog.text
+    assert 'Chat submission input completed' not in caplog.text
 
 
 @patch('subprocess.run')

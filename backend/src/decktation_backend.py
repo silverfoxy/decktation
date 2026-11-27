@@ -814,7 +814,7 @@ class Plugin:
     async def _main(self):
         """Initialize the plugin"""
         try:
-            logger.info("Initializing Decktation plugin")
+            logger.info("Initializing Decktation plugin: version=%s", plugin_version)
             try:
                 await asyncio.to_thread(cleanup_stale)
             except Exception as error:
@@ -1390,6 +1390,7 @@ class Plugin:
             if Plugin.voice_service:
                 Plugin.voice_service.type_as_keys = enabled
                 Plugin.voice_service.text_insertion_mode = config["textInsertionMode"]
+            logger.info("Text insertion mode set to %s", config["textInsertionMode"])
             return {"success": True}
         except Exception as e:
             logger.error("Error setting text insertion mode: %s", type(e).__name__)
@@ -1407,6 +1408,7 @@ class Plugin:
             _write_button_config(config)
             if Plugin.voice_service:
                 Plugin.voice_service.text_insertion_mode = mode
+            logger.info("Text insertion mode set to %s", mode)
             return {"success": True}
         except Exception as e:
             logger.error("Error setting text insertion mode: %s", type(e).__name__)
