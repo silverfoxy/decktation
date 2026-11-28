@@ -21,6 +21,11 @@
         "artifact": "https://github.com/silverfoxy/decktation/releases/download/master-356a9df2f4c081b52f84b5bbd46193bc609a55e5/decktation.zip"
       },
       {
+        "name": "0.3.29",
+        "hash": "0ef12cd7657f4a805bb09a968f640330194fc0c1de961476c5f2c973789c9fd6",
+        "artifact": "https://github.com/silverfoxy/decktation/releases/download/v0.3.29/decktation.zip"
+      },
+      {
         "name": "0.3.28",
         "hash": "6b95b8f4cd77b665e3b89fe7ec9ce89b16d14166f869ebbdbc6a8700bc8c8350",
         "artifact": "https://github.com/silverfoxy/decktation/releases/download/v0.3.28/decktation.zip"
