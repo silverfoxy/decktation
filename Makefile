@@ -1,14 +1,19 @@
 VERSION := $(shell node scripts/release-version.mjs print)
 TAG := v$(VERSION)
+PYTHON ?= python3.11
+TEST_PYTHON ?= .venv/bin/python
 
-.PHONY: test-setup test version version-check version-set release-check release-tag
+.PHONY: test-setup test python-version-check version version-check version-set release-check release-tag
 
 test-setup:
-	python3 -m venv .venv
-	.venv/bin/python -m pip install -r requirements-test.txt
+	$(PYTHON) -m venv .venv
+	$(TEST_PYTHON) -m pip install -r requirements-test.txt
 
-test:
-	.venv/bin/python -m pytest tests/ -q
+python-version-check:
+	@$(TEST_PYTHON) -c 'import sys; assert sys.version_info[:2] == (3, 11), "Backend tests require Python 3.11; recreate .venv with make test-setup PYTHON=python3.11"'
+
+test: python-version-check
+	$(TEST_PYTHON) -m pytest tests/ -q
 
 version:
 	@node scripts/release-version.mjs print
@@ -20,12 +25,8 @@ version-set:
 	@test -n "$(VERSION)" || (echo "usage: make version-set VERSION=X.Y.Z" >&2; exit 1)
 	@node scripts/release-version.mjs set "$(VERSION)"
 
-release-check: version-check
-	@set -eu; \
-	if [ -x venv/bin/pytest ]; then venv/bin/pytest tests/ -q; \
-	elif [ -x .venv/bin/pytest ]; then .venv/bin/pytest tests/ -q; \
-	else python -m pytest tests/ -q; fi
-	@python -m py_compile main.py backend/src/audio_runtime.py backend/src/decktation_backend.py backend/src/wow_voice_chat.py backend/src/controller_listener.py backend/src/deck_hid.py backend/src/telemetry.py
+release-check: version-check test
+	@$(TEST_PYTHON) -m py_compile main.py backend/src/audio_runtime.py backend/src/decktation_backend.py backend/src/wow_voice_chat.py backend/src/controller_listener.py backend/src/deck_hid.py backend/src/telemetry.py
 
 release-tag: release-check
 	@set -eu; \

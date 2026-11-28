@@ -18,6 +18,7 @@ permissions:
   contents: read
 
 jobs:
+  # Only the standard-library Decky bridge is tested on the loader's Python too.
   bridge-compatibility:
     runs-on: ubuntu-latest
     strategy:
@@ -37,7 +38,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version-file: '.python-version'
       - run: sudo apt-get update -qq && sudo apt-get install -y libwayland-dev libwayland-bin
       - run: pip install pytest sentry-sdk==2.66.0 certifi==2026.1.4
       - run: pytest tests/ --ignore=tests/test_gamepad_sdl.py -v
@@ -50,7 +51,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version-file: '.python-version'
       - run: sudo apt-get update -qq && sudo apt-get install -y libudev-dev libusb-1.0-0-dev
       - name: Build pinned SDL for virtual controller tests
         run: |

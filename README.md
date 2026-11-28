@@ -93,3 +93,11 @@ Decktation uses Decky’s `_root` permission to read controller inputs and type 
 Built with [whisper.cpp](https://github.com/ggml-org/whisper.cpp) and [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader). Decktation is licensed under the MIT License.
 
 Website hosting and domain setup: [decktation.com setup](doc/DOMAIN_SETUP.md).
+
+### Development Python
+
+Backend development and tests use Python 3.11, matching the bundled runtime.
+The exact runtime version is pinned in `.python-version`, which backend CI also
+uses. Run `make test-setup PYTHON=python3.11`, then `make test`. Override
+`TEST_PYTHON` to use another Python 3.11 virtual environment. The separate Decky
+bridge compatibility checks also cover Python 3.14 used by the loader.

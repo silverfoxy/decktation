@@ -15,6 +15,11 @@ The build writes the compiled panel to `dist/index.js`. Use `npm run watch` whil
 
 ## Run the Python tests
 
+Use Python 3.11, matching the bundled backend runtime. The exact version is in
+`.python-version`; backend and integration CI read this same pin. Install that
+version with your Python version manager before creating the test environment.
+The separate Decky loader bridge also retains Python 3.14 compatibility checks.
+
 Install the test dependencies in a virtual environment, then run the unit tests:
 
 ```bash

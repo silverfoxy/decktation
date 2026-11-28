@@ -7,6 +7,33 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.3.29] - 2026-11-27
+
+### Changed
+
+- Standardize backend development and CI on the bundled Python 3.11 runtime.
+  Keep Python 3.14 coverage for the separate Decky loader bridge.
+- Use the native recording overlay by default and replace the old Toast recording
+  cue with Overlay. Existing Toast selections migrate to Overlay; None stays off.
+
+### Added
+
+- Local chat-injection logs now show the installed version, paste or keyboard
+  insertion mode, manual-send setting, submission skip reasons, and each
+  controller A/B press and release write result. These logs help diagnose text
+  remaining in chat without recording additional dictated text; successful input
+  writes do not confirm that the game received them.
+
+### Fixed
+
+- Restore package builds when the build image lacks Vulkan headers, and avoid
+  memory exhaustion while compiling Whisper's Vulkan shaders.
+
+### Documentation
+
+- Explain that GeForce NOW clipboard paste requires Clipboard to be enabled in
+  both the main app settings and overlay settings.
+
 ## [0.3.28] - 2026-11-15
 
 ### Fixed

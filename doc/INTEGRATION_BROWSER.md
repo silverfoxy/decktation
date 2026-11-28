@@ -11,7 +11,7 @@ fabricated.
 
 ## Run
 
-Requirements: Node 20+ and Python 3.11+, with pnpm 9.15.9 (the CI version).
+Requirements: Node 20+ and Python 3.11 (the exact version is in `.python-version`), with pnpm 9.15.9 (the CI version).
 The bridge itself uses only Python's standard library and the repository's backend
 modules; no additional integration requirements file is needed. Existing backend
 tests have their own requirements.
