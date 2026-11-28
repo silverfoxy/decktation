@@ -1212,15 +1212,31 @@ class WoWVoiceChat:
 
         full_message = f"{channel_cmd}{text}"
         insertion_mode = self.text_insertion_mode  # Snapshot validation and insertion together.
+        if channel == "type":
+            open_key = None
+            send_key = None
+        else:
+            open_key = self.preset.get("chat_open_key", "enter")
+            send_key = self.preset.get("chat_send_key", "enter")
+            if self.manual_send:
+                send_key = None
+
+        import logging
+
+        logger = logging.getLogger()
+        logger.info("Chat injection settings: insertion=%s manual_send=%s channel=%s open=%s submit=%s",
+                    insertion_mode, self.manual_send, channel, open_key,
+                    "controller_a_then_b" if send_key == "controller_a" else send_key)
+        if send_key is None:
+            reason = ("type_channel" if channel == "type" else
+                      "manual_send" if self.manual_send else "profile_no_submit")
+            logger.info("Chat submission skipped: reason=%s", reason)
         if insertion_mode not in {"paste", "ydotool"}:
             self._report_diagnostic("text_injection.failed")
             return False
         if any(ord(char) < 32 or ord(char) == 127 for char in full_message):
             self._report_diagnostic("text_injection.failed")
             return False
-        import logging
-
-        logger = logging.getLogger()
         # ydotool's type command maps only 7-bit ASCII to keycodes. Do not
         # silently drop non-ASCII characters or fall back to paste in a game
         # whose chat rejects pasting.
@@ -1253,15 +1269,6 @@ class WoWVoiceChat:
         env = os.environ.copy()
         env["YDOTOOL_SOCKET"] = "/tmp/decktation-ydotool.sock"
 
-        if channel == "type":
-            open_key = None
-            send_key = None
-        else:
-            open_key = self.preset.get("chat_open_key", "enter")
-            send_key = self.preset.get("chat_send_key", "enter")
-            if self.manual_send:
-                send_key = None
-
         if send_key not in (None, "enter", "controller_a"):
             logger.error("Unsupported chat submission input")
             self._report_diagnostic("text_injection.failed")
@@ -1274,14 +1281,17 @@ class WoWVoiceChat:
         key_hold = self.preset.get("key_hold", 0)
         resources = ExitStack()
         inserted = False
+        stage = "validate_controller"
         try:
             # Verify and hold the exact device before opening or modifying chat.
             controller_fd = (resources.enter_context(open_output(controller_output))
                              if send_key == 'controller_a' else None)
+            stage = "validate_key_timing"
             if insertion_mode == "ydotool":
                 if (type(key_delay) is not int or type(key_hold) is not int or
                         not 0 <= key_delay <= 100 or not 0 <= key_hold <= 100):
                     raise ValueError("Key timing must be an integer between 0 and 100 ms")
+            stage = "open_chat"
             if open_key == "enter":
                 result = subprocess.run(
                     [ydotool, "key", "28:1", "28:0"],
@@ -1296,6 +1306,7 @@ class WoWVoiceChat:
                 if chat_open_delay > 0:
                     time.sleep(chat_open_delay)
 
+            stage = "insert_text"
             if insertion_mode == "ydotool":
                 # Match the former fast path; per-preset timing can slow down
                 # games that drop rapid key events. Stdin keeps text literal.
@@ -1326,23 +1337,32 @@ class WoWVoiceChat:
                         )
 
             inserted = True
+            logger.info("Chat text insertion completed: insertion=%s", insertion_mode)
             if chat_send_delay > 0:
                 time.sleep(chat_send_delay)
 
             # Only submit after text insertion succeeds. This records command
             # success, not confirmation that the game displayed the text.
             if send_key == 'controller_a':
+                stage = 'submit_a'
+                logger.info('Chat submission attempted: input=controller_a hold_ms=100 close_delay_ms=150')
                 press_a(controller_fd)
+                logger.info('Chat submission input completed: input=controller_a')
                 try:
                     # Give the game time to process submission before closing chat.
                     time.sleep(0.15)
+                    stage = 'close_b'
+                    logger.info('Chat close attempted: input=controller_b')
                     press_b(controller_fd)
+                    logger.info('Chat close input completed: input=controller_b')
                 except Exception as exc:
                     # A already submitted the message. Do not queue a retry that
                     # would insert and send the same message again.
-                    logger.warning("Chat submitted, but controller B failed to close chat (%s)",
+                    logger.warning("Controller A input completed, but controller B failed to close chat (%s)",
                                    type(exc).__name__)
             elif send_key is not None:
+                stage = "submit_enter"
+                logger.info("Chat submission attempted: input=enter")
                 result = subprocess.run(
                     [ydotool, 'key', '28:1', '28:0'],
                     capture_output=True,
@@ -1353,13 +1373,15 @@ class WoWVoiceChat:
                     raise RuntimeError(
                         f"ydotool chat-send key failed (exit {result.returncode})"
                     )
+                logger.info("Chat submission input completed: input=enter")
             return True
         except Exception as exc:
             self._injection_error = (str(exc) if isinstance(exc, ControllerOutputError) else
                                      'Typing failed. Check game focus before retrying.')
             if inserted:
                 self._injection_error += ' Text may already be in chat; check it before retrying.'
-            logger.error("Text injection failed (%s)", type(exc).__name__)
+            logger.error("Text injection failed: stage=%s inserted=%s error=%s",
+                         stage, inserted, type(exc).__name__)
             self._report_diagnostic("text_injection.failed", exc)
             return False
         finally:

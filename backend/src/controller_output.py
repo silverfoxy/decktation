@@ -4,6 +4,7 @@ Single-candidate selection is a fallback, not proof of physical/virtual pairing.
 Multiple outputs require an explicit association; never guess by event number.
 """
 import glob
+import logging
 import os
 import stat
 import struct
@@ -13,6 +14,9 @@ from copy import deepcopy
 
 from gamepad_evdev import EvdevGamepad, ioctl_read, bits, EVENT
 from binding_capture import read_json, write_json
+
+
+logger = logging.getLogger(__name__)
 
 
 STEAM_OUTPUT_ID = (0x28de, 0x11ff)
@@ -69,6 +73,8 @@ def open_output(resolution):
             raise ControllerOutputError('Destination is not a compatible gamepad.')
         if 304 in bits(ioctl_read(fd, 0x18, 96)):
             raise ControllerOutputError('Controller A is held. Release it before retrying.')
+        logger.info("Controller output verified: transport=evdev target=%s selection=%s",
+                    path, resolution["status"])
         yield fd
     except OSError as error:
         raise ControllerOutputError('Controller unavailable. Reconnect it and record again.') from error
@@ -94,13 +100,23 @@ def _press_button(fd, code, name):
     # Publish before down, and leave a bounded grace period for queued reports.
     # Mask both buttons throughout the submit/close sequence and report grace.
     # Physical input on other devices remains independent.
-    write_json(INJECTION_FILE, {'path': os.readlink(f'/proc/self/fd/{fd}'),
+    path = os.readlink(f'/proc/self/fd/{fd}')
+    write_json(INJECTION_FILE, {'path': path,
                                 'until': time.monotonic() + 1})
 
     def emit(value):
         packet = EVENT.pack(0, 0, 1, code, value) + EVENT.pack(0, 0, 0, 0, 0)
-        if os.write(fd, packet) != len(packet):
-            raise ControllerOutputError('Controller input write was incomplete.')
+        state = "down" if value else "up"
+        logger.info("Controller output write attempted: target=%s button=%s state=%s", path, name, state)
+        try:
+            if os.write(fd, packet) != len(packet):
+                raise ControllerOutputError('Controller input write was incomplete.')
+        except Exception as error:
+            logger.warning("Controller output write failed: target=%s button=%s state=%s error=%s",
+                           path, name, state, type(error).__name__)
+            raise
+        logger.info("Controller output write succeeded: target=%s button=%s state=%s",
+                    path, name, state)
 
     try:
         emit(1)

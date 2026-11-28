@@ -1,0 +1,15 @@
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/vulkan-shaders-gen.cpp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/vulkan-shaders-gen.cpp
+@@ -421,8 +421,10 @@
+     }
+ 
+     compile_count_guard slot = acquire_compile_slot();
+-    compiles.push_back(std::async(
+-        string_to_spv_func, name, input_filepath, out_path, defines, coopmat, generate_dep_file, std::move(slot)));
++    // Completed async tasks retain thread stacks until their futures are joined.
++    // Compile synchronously to bound build memory; make still parallelizes sources.
++    string_to_spv_func(name, input_filepath, out_path, defines, coopmat,
++                       generate_dep_file, std::move(slot));
+     // Don't write the same dep file from multiple processes
+     generate_dep_file = false;
+ }

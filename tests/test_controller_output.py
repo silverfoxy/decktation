@@ -126,3 +126,36 @@ def test_injected_buttons_are_ignored_only_on_destination_during_sequence(monkey
     assert module.without_injected_buttons('/dev/hidraw3', states) == states
     monkeypatch.setattr(module.time, 'monotonic', lambda: 102)
     assert module.without_injected_buttons('/dev/input/event10', states) == states
+
+
+@pytest.mark.parametrize('button,code', [('press_a', 304), ('press_b', 305)])
+@pytest.mark.parametrize('failed_down', [False, True])
+def test_pulse_logs_written_events_without_claiming_failed_down_succeeded(
+        monkeypatch, caplog, button, code, failed_down):
+    caplog.set_level('INFO')
+    monkeypatch.setattr(module, 'write_json', MagicMock())
+    monkeypatch.setattr(module.os, 'readlink', lambda path: '/dev/input/event10')
+    monkeypatch.setattr(module, 'ioctl_read', lambda *args: bytes(96))
+    monkeypatch.setattr(module.time, 'sleep', lambda seconds: None)
+
+    def write(fd, data):
+        value = module.EVENT.unpack(data[:module.EVENT.size])[4]
+        if failed_down and value == 1:
+            raise OSError('write failed')
+        return len(data)
+
+    monkeypatch.setattr(module.os, 'write', write)
+    if failed_down:
+        with pytest.raises(OSError):
+            getattr(module, button)(42)
+    else:
+        getattr(module, button)(42)
+    name = 'A' if code == 304 else 'B'
+    prefix = f'target=/dev/input/event10 button={name}'
+    assert f'Controller output write attempted: {prefix} state=down' in caplog.text
+    assert f'Controller output write succeeded: {prefix} state=up' in caplog.text
+    if failed_down:
+        assert f'Controller output write failed: {prefix} state=down error=OSError' in caplog.text
+        assert f'Controller output write succeeded: {prefix} state=down' not in caplog.text
+    else:
+        assert f'Controller output write succeeded: {prefix} state=down' in caplog.text
